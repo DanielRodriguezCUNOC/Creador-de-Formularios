@@ -1,8 +1,8 @@
 package com.example.proyecto1_compi1_1s_2026.ui.screens
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Button
@@ -32,13 +34,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
-    var editorText by remember { mutableStateOf("") }
+    var editorValue by remember { mutableStateOf(TextFieldValue("")) }
 
     Scaffold(
         topBar = {
@@ -67,72 +72,67 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            // ── Lienzo ──────────────────────────────────────────────────
+            // ── Vista previa con resaltado de sintaxis ──────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .border(
                         width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = Color(0xFF404040),
                         shape = RoundedCornerShape(8.dp)
                     )
-                    .background(Color.White, RoundedCornerShape(8.dp))
-            )
-            {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val paint = android.graphics.Paint().apply {
-                        color = android.graphics.Color.BLACK
-                        textSize = 48f
-                        isAntiAlias = true
-                        typeface = android.graphics.Typeface.MONOSPACE
-                    }
+                    .background(SyntaxHighlighter.bgColor, RoundedCornerShape(8.dp))
+            ) {
+                val verticalScroll   = rememberScrollState()
+                val horizontalScroll = rememberScrollState()
 
-                    val paddingLeft = 24f
-                    val paddingTop  = 60f
-                    val lineHeight  = 60f
-                    val maxWidth    = size.width - paddingLeft * 2
-
-                    var y = paddingTop
-
-                    // Dividir por saltos de línea reales primero
-                    val lines = editorText.split("\n")
-                    for (rawLine in lines) {
-                        if (rawLine.isEmpty()) {
-                            y += lineHeight
-                            continue
-                        }
-                        // Word-wrap dentro de cada línea
-                        val words = rawLine.split(" ")
-                        var current = ""
-                        for (word in words) {
-                            val test = if (current.isEmpty()) word else "$current $word"
-                            if (paint.measureText(test) <= maxWidth) {
-                                current = test
-                            } else {
-                                drawContext.canvas.nativeCanvas.drawText(current, paddingLeft, y, paint)
-                                y += lineHeight
-                                current = word
-                            }
-                        }
-                        if (current.isNotEmpty()) {
-                            drawContext.canvas.nativeCanvas.drawText(current, paddingLeft, y, paint)
-                            y += lineHeight
-                        }
-                    }
-                }
-
+                Text(
+                    text = SyntaxHighlighter.highlight(editorValue.text),
+                    style = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize   = 14.sp,
+                        color      = SyntaxHighlighter.textColor,
+                        lineHeight = 22.sp
+                    ),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(verticalScroll)
+                        .horizontalScroll(horizontalScroll)
+                        .padding(12.dp)
+                )
             }
 
-            // ── Editor de texto ─────────────────────────────────────────
+            // ── Editor de código ─────────────────────────────────────────
             OutlinedTextField(
-                value = editorText,
-                onValueChange = { editorText = it },
+                value = editorValue,
+                onValueChange = { newValue ->
+                    editorValue = TextFieldValue(
+                        annotatedString = SyntaxHighlighter.highlight(newValue.text),
+                        selection       = newValue.selection,
+                        composition     = newValue.composition
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp),
-                label = { Text("Editor de texto") },
+                label       = { Text("Editor de código") },
                 placeholder = { Text("Escribe aquí...") },
+                textStyle = TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize   = 14.sp
+                ),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor   = SyntaxHighlighter.bgColor,
+                    unfocusedContainerColor = SyntaxHighlighter.bgColor,
+                    focusedTextColor        = SyntaxHighlighter.textColor,
+                    unfocusedTextColor      = SyntaxHighlighter.textColor,
+                    focusedBorderColor      = Color(0xFF569CD6),
+                    unfocusedBorderColor    = Color(0xFF404040),
+                    cursorColor             = Color.White,
+                    focusedLabelColor       = Color(0xFF9CDCFE),
+                    unfocusedLabelColor     = Color(0xFF6E7681)
+                ),
                 maxLines = Int.MAX_VALUE
             )
 
@@ -156,7 +156,7 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                     Text("Agregar")
                 }
                 Button(
-                    onClick = { onFinalize(editorText) },
+                    onClick = { onFinalize(editorValue.text) },
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("Finalizar")
