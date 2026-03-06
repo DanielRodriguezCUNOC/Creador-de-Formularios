@@ -1,0 +1,16 @@
+package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente
+
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.Expresion
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.Instruccion
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_principal.Visitor
+
+class ComponenteSeccion(
+    atributos: Map<String, Expresion>,
+    //* Almacenar lo que ira dentro de la seccion
+    val elementosInternos: List<Instruccion>
+): ComponenteUI(atributos){
+    override fun <T> accept(visitor: Visitor<T>):T{
+        return visitor.visit(this)
+
+    }
+}
