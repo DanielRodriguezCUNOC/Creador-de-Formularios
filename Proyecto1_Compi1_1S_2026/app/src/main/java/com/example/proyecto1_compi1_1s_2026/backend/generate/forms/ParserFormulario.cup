@@ -1,0 +1,131 @@
+package com.example.proyecto1_compi1_1s_2026.backend.generate.forms
+
+import java_cup.runtime.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.*
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.*
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.*
+
+//Inicio del parser
+
+parser code {
+
+    public void syntax_error(Symbol s){
+        System.out.println("Error Sintactico en la Linea: " + (s.left) +
+        " Columna: " + (s.right) +
+        ". No se esperaba: " + s.value + ".");
+    }
+
+    public void unrecovered_syntax_error(Symbol s){
+        System.out.println("Error Sintactico Irrecuperable en la Linea: " + (s.left) +
+        " Columna: " + (s.right) +
+        ". Componente " + s.value + " no reconocido");
+
+//================================
+// Declarar Terminales (Tokens)
+//================================
+
+//* Palabras reservadas e identificadores
+terminal SECTION, TABLE, TYPE_NUMBER, TYPE_STRING, IF, WHILE;
+terminal ASIGNACION, MAS, MENOS, POR, DIV, MAYOR, MENOR;
+terminal PAREN_IZQ, PAREN_DER, LLAVE_IZQ, LLAVE_DER, CORCHETE_IZQ, CORCHETE_DER;
+
+//================================
+// Declarar No Terminales (Nodos del AST)
+//================================
+
+//* Retorno de objetos a Kotlin (los nodos)
+non terminal List<Instruccion> inicio;
+non terminal List<Instruccion> listaInstrucciones;
+non terminal Instruccion instruccion;
+
+non terminal NodoExpresion expresion;
+non terminal NodoInstruccion instruccion;
+non terminal ComponenteUI componenteUI;
+
+//* Para los atributos de etiquetas
+non terminal Map<String, NodoExpresion> listaAtributos;
+non terminal Map<String, NodoExpresion> atributo;
+
+//================================
+// Precedencia de Operadores
+//================================
+
+start with inicio;
+
+inicio ::= listaInstrucciones:lista {: RESULT = lista; :}
+         ;
+
+listaInstrucciones ::= listaInstrucciones:lista instruccion:inst
+                        {:
+                            lista.add(inst);
+                            RESULT = lista;
+                        :}
+                        | instruccion:inst
+                        {:
+                            List<NodoInstruccion> lista = new ArrayList<NodoInstruccion>();
+                            lista.add(inst);
+                            RESULT = lista;
+                        :}
+                        ;
+
+instruccion ::=
+
+    //* Regla para Asignacion
+    ID: id ASIGNACION expresion:exp
+     {: RESULT = new NodoAsignacion(id, exp); :}
+
+    //* Regla para condicional IF
+    | IF PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:lista1 LLAVE_DER
+        {: RESULT = new NodoSentenciaIf(cond, lista1); :}
+
+    //* Regla para crear una seccion desde UI
+    | SECTION LLAVE_IZQ listaAtributos:attrs listaInstrucciones:elementos LLAVE_DER
+        {: RESULT = new ComponenteSeccion(attrs, elementos); :}
+    ;
+
+expresion ::=
+
+    //Operaciones Binarias
+    expresion:izq MAS expresion:der
+        {: RESULT = new NodoOperacionBinaria(izq, "+", der); :}
+    | expresion:izq MENOS expresion:der
+        {: RESULT = new NodoOperacionBinaria(izq, "*", der); :}
+
+    //Literales
+    | NUMBER_LITERAL:num
+        {: RESULT = new NodoLiteral(Double.parseDouble(num), "number"); :}
+    | STRING_LITERAL:str
+        {: RESULT = new NodoLiteral(str, "string"); :}
+
+    //* Acceso a Variables
+    | ID:id
+        {: RESULT = new NodoAccesoVariable(id); :}
+
+    //* Agrupacion
+    | PAREN_IZQ expresion:exp PAREN_DER
+        {: RESULT = exp; :}
+
+    ;
+
+listaAtributos ::= listaAtributos:mapa atributo:attr
+                    {:
+                        mapa.putAll(attr);
+                        RESULT = mapa;
+                    :}
+                   | atributo:attr
+                    {:
+                        Result = attr;
+                    :}
+                   ;
+atributo ::= ID:clave ASIGNACION expresion:valor
+                {:
+                    Map<String, NodoExpresion> mapa = new HashMap<>();
+                    mapa.put(clave, valor);
+                    RESULT = mapa;
+                :}
+}

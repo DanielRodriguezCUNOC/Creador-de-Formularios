@@ -7,7 +7,7 @@ class NodoDeclaracion(
     val id: String,
     val tipo: String, // puede ser number, string o especial
     val valorInicio: Expresion? // puede ser null si no se inicializa
-): Instruccion{
+): NodoInstruccion{
     override fun <T> accept(visitor: Visitor<T>): T{
         return visitor.visit(this)
     }

@@ -4,9 +4,9 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.E
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_principal.Visitor
 
 class NodoCicloDoWhile(
-    val instrucciones: List<Instruccion>,
+    val instrucciones: List<NodoInstruccion>,
     val condicion: Expresion
-): Instruccion {
+): NodoInstruccion {
     override fun <T> accept(visitor: Visitor<T>):T{
         return visitor.visit(this)
     }

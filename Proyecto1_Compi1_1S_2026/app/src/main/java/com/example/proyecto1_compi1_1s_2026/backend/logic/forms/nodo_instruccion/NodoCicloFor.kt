@@ -7,8 +7,8 @@ class NodoCicloFor(
     val idVariable: String,
     val rangoInicio: Expresion,
     val rangoFin: Expresion,
-    val instruccionesFor: List<Instruccion>
-): Instruccion {
+    val instruccionesFor: List<NodoInstruccion>
+): NodoInstruccion {
     override fun <T> accept(visitor: Visitor<T>):T{
         return visitor.visit(this)
     }

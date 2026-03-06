@@ -7,7 +7,7 @@ class NodoDraw(
     val idVariableEspecial: String,
     //* Permite que recibamos los comodines
     val parametros: List<Expresion>
-): Instruccion {
+): NodoInstruccion {
     override fun <T> accept(visitor: Visitor <T>): T {
         return visitor.visit(this)
     }

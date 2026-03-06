@@ -3,10 +3,10 @@ package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_principal.Visitor
 
 class NodoOperacionBinaria(
-    val izq: Expresion,
+    val izq: NodoExpresion,
     val operador: String,
-    val der: Expresion
-): Expresion{
+    val der: NodoExpresion
+): NodoExpresion{
     override fun <T> accept(visitor: Visitor<T>): T{
         return visitor.visit(this)
     }
