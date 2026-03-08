@@ -39,12 +39,17 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.LexerFormulario
+import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.ParserFormulario
 import java.io.StringReader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
     var editorValue by remember { mutableStateOf(TextFieldValue("")) }
+    var erroresLexicos by remember { mutableStateOf(emptyList<String>()) }
+    var erroresSintacticos by remember { mutableStateOf(emptyList<String>()) }
+    var mostrarErrores by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -136,6 +141,72 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                 ),
                 maxLines = Int.MAX_VALUE
             )
+            // ── Panel de Errores (si hay) ────────────────────────────────
+            if (mostrarErrores && (erroresLexicos.isNotEmpty() || erroresSintacticos.isNotEmpty())) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .border(
+                            width = 1.dp,
+                            color = Color.Red,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .background(Color(0xFF1E1E1E), RoundedCornerShape(8.dp))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        // Errores Léxicos
+                        if (erroresLexicos.isNotEmpty()) {
+                            Text(
+                                text = " Errores Léxicos (${erroresLexicos.size}):",
+                                style = TextStyle(
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFFF6B6B)
+                                )
+                            )
+                            for (error in erroresLexicos) {
+                                Text(
+                                    text = "  • $error",
+                                    style = TextStyle(
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 11.sp,
+                                        color = Color(0xFFFFB3B3)
+                                    )
+                                )
+                            }
+                        }
+
+                        // Errores Sintácticos
+                        if (erroresSintacticos.isNotEmpty()) {
+                            Text(
+                                text = "Errores Sintácticos (${erroresSintacticos.size}):",
+                                style = TextStyle(
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFFFD700)
+                                )
+                            )
+                            for (error in erroresSintacticos) {
+                                Text(
+                                    text = "  • $error",
+                                    style = TextStyle(
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 11.sp,
+                                        color = Color(0xFFFFE082)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             // ── Botones de acción ────────────────────────────────────────
             Row(
@@ -170,19 +241,36 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                             val parser = ParserFormulario(lexer)
                             val resultado = parser.parse()
 
-                            if(parser.erroresSintacticos.isEmpty()){
+                            erroresLexicos = lexer.lexicalErrors
+                            erroresSintacticos = parser.erroresSintacticos
+
+
+                            if(parser.erroresSintacticos.isEmpty() && erroresSintacticos.isEmpty()){
                                 println("Sintaxis correcta")
                                 println("AST: ${resultado?.value}")
-                                onFinalize(editorValue.text)
-                            }else{
-                                println("Sintaxis incorrecta")
-                                for (error in parser.erroresSintacticos) {
-                                    println(error)
+                                mostrarErrores = false
+                            }else {
+                                println("Errores Encontrados:")
+                                mostrarErrores = true
+
+                                if (erroresLexicos.isNotEmpty()) {
+                                    println("Errores Léxicos:")
+                                    for (error in erroresLexicos) {
+                                        println(" - $error")
+                                    }
+                                }
+                                if (erroresSintacticos.isNotEmpty()) {
+                                    println("Errores Sintácticos:")
+                                    for (error in erroresSintacticos) {
+                                        println(" - $error")
+                                    }
                                 }
                             }
                         }catch (e: Exception){
-                            println("Errores de sintaxis:")
+                            println("Excepcion mientras se analizaba")
                             e.printStackTrace()
+                            mostrarErrores = true
+                            erroresLexicos = listOf("Excepcion: ${e.message}")
                         }
                     },
                     modifier = Modifier.weight(1f)

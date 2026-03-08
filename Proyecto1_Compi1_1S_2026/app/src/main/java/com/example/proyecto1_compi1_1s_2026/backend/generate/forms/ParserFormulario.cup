@@ -1,4 +1,4 @@
-package com.example.proyecto1_compi1_1s_2026.backend.generate.forms
+package com.example.proyecto1_compi1_1s_2026.backend.generate.forms;
 
 import java_cup.runtime.*;
 import java.util.ArrayList;
@@ -6,134 +6,145 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.*
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.*
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.*
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.*;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.*;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.*;
 
-//Inicio del parser
+//================================
+// Código del Parser
+//================================
 
-parser code {
+parserFormulario code {:
+     private List<String> erroresSintacticos = new ArrayList<>();
+        private List<String> erroresSemanticos = new ArrayList<>();
 
-private List<String> erroresSintacticos = new ArrayList<>();
+        public List<String> getErroresSintacticos() {
+            return erroresSintacticos;
+        }
 
-public List<String> getErroresSintacticos(){
-    return erroresSintacticos;
-}
+        public List<String> getErroresSemanticos() {
+            return erroresSemanticos;
+        }
 
-    public void syntax_error(Symbol s) {
-           String error = "Error Sintáctico en la Línea: " + (s.left) +
-                         ", Columna: " + (s.right) +
-                         ". No se esperaba: " + s.value + ".";
-           System.out.println(error);
-           erroresSintacticos.add(error);
-       }
-
-       public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception {
-           String error = "Error Sintáctico Irrecuperable en la Línea: " + (s.left) +
-                         ", Columna: " + (s.right) +
-                         ". Componente " + s.value + " no reconocido.";
-           System.out.println(error);
-           erroresSintacticos.add(error);
-       }
+        public void syntax_error(Symbol s) {
+            String nombreToken = "desconocido";
+            if (s != null) {
+                nombreToken = s.value != null ? s.value.toString() : "Token desconocido";
+            }
+            String error = "Error Sintáctico en línea " + (s.left + 1) +
+                           ", columna " + (s.right + 1) +
+                           ": Se encontró '" + nombreToken + "'";
+            erroresSintacticos.add(error);
+            System.err.println(error);
+        }
+        
+        public void agregarErrorSemantico(String error) {
+            erroresSemanticos.add(error);
+            System.err.println("Error Semántico: " + error);
+        }
+:};
 
 //================================
 // Declarar Terminales (Tokens)
 //================================
 
-//* Componentes UI
-terminal SECTION, TABLE, TEXT, OPEN_QUESTION, DROP_QUESTION, SELECT_QUESTION, MULTIPLE_QUESTION;
+// Palabras reservadas - Componentes UI
+terminal SECTION, TABLE, TEXT, OPEN_QUESTION, DROP_QUESTION;
+terminal SELECT_QUESTION, MULTIPLE_QUESTION;
 
-//* Atributos para el formulario
+// Atributos de Formulario
 terminal WIDTH, HEIGHT, POINT_X, POINT_Y, ORIENTATION, ELEMENTS, STYLES;
 terminal COLOR_ATTR, BACKGROUND_COLOR, FONT_FAMILY, TEXT_SIZE, BORDER;
-terminal CONTENT, LABEL, OPTION, CORRECT;
+terminal CONTENT, LABEL, OPTIONS, CORRECT;
 
-//* Tipo de datos
+// Tipos de datos
 terminal TYPE_NUMBER, TYPE_STRING, TYPE_SPECIAL;
 
-//* Valores de orientacion
-terminal HORIZONTAL, VERTICAL, MONO;
+// Valores de orientación
+terminal VERTICAL, HORIZONTAL, MONO;
 
-//* Colores
+// Colores
 terminal String COLOR_NAME, COLOR_HEX;
 
-//* Estructuras de control
+// Estructuras de control
 terminal IF, ELSE, WHILE, DO, FOR, IN;
 
-//* Funciones especiales
+// Funciones especiales
 terminal FUNC_POKEMON, DRAW;
 
-//* Simbolos estructurales
+// Símbolos estructurales
 terminal CORCHETE_IZQ, CORCHETE_DER, LLAVE_IZQ, LLAVE_DER;
 terminal PAREN_IZQ, PAREN_DER, COMA, DOS_PUNTOS, ASIGNACION;
-terminal COMODIN, PUNTO, RANGO;
+terminal COMODIN, RANGO;
 
-//* Operadores aritmeticos
+// Operadores aritméticos
 terminal MAS, MENOS, POR, DIV, POTENCIA, MODULO;
 
-//* Operadores logicos
-terminal AND, OR, NOT;
-
-//* Operadores relacionales
+// Operadores relacionales
 terminal MAYOR, MAYOR_IGUAL, MENOR, MENOR_IGUAL, IGUALDAD, DIFERENTE;
 
-//* Literales e identificadores
+// Operadores lógicos
+terminal OR, AND, NOT;
+
+// Literales e identificadores
 terminal String ID, NUMBER_LITERAL, STRING_LITERAL;
 
-//* Error lexico
-terminal ERROR;
-
+// Error léxico
+//terminal ERROR;
 
 //================================
 // Declarar No Terminales (Nodos del AST)
 //================================
 
-//* Inicio y lista de instrucciones
+// Inicio y lista de instrucciones
 non terminal List<NodoInstruccion> inicio;
 non terminal List<NodoInstruccion> listaInstrucciones;
 non terminal NodoInstruccion instruccion;
 
-//* Expresiones
+// Expresiones
 non terminal NodoExpresion expresion;
-non terminal NodoInstruccion instruccion;
-non terminal ComponenteUI componenteUI;
+non terminal List<NodoExpresion> listaExpresiones;
+non terminal List<NodoExpresion> listaExpresionesOpcional;
 
-//* Para la UI
+// Atributos para componentes UI
 non terminal Map<String, Object> listaAtributos;
 non terminal Map<String, Object> atributo;
-non terminal Object valorAtributo;
 
-//* Declaraciones
+// Declaraciones
 non terminal NodoInstruccion declaracion;
 
-//* Sentencias de control
+// Sentencias de control
 non terminal NodoInstruccion sentenciaIf;
 non terminal NodoInstruccion sentenciaWhile;
 non terminal NodoInstruccion sentenciaDoWhile;
 non terminal NodoInstruccion sentenciaFor;
 
-//* Componentes de UI
+// Componentes UI
 non terminal ComponenteUI componenteSeccion;
-non terminal ComponenteUI componenteTabla;
 non terminal ComponenteUI componenteTexto;
+non terminal ComponenteUI componenteTabla;
+non terminal ComponenteUI preguntaAbierta;
 non terminal ComponenteUI preguntaDesplegable;
 non terminal ComponenteUI preguntaSeleccionUnica;
-non terminal ComponenteUI preguntaSeleccionadaMultiple;
-non terminal ComponenteUI preguntaAbierta;
+non terminal ComponenteUI preguntaMultiple;
 
-//* Instrucciones especiales
+// Instrucciones especiales
 non terminal NodoInstruccion instruccionDraw;
-non terminal NodoExpresion llamadaApi;
+non terminal NodoExpresion llamadaAPI;
 
-//* Valores especiales
+// Para tablas (filas y celdas)
+non terminal List<List<NodoExpresion>> listaFilas;
+non terminal List<NodoExpresion> fila;
+
+// Valores especiales
 non terminal NodoExpresion valorColor;
 non terminal NodoExpresion valorOrientacion;
 non terminal List<String> listaOpciones;
-non terminal String opcion;
 
 //================================
 // Precedencia de Operadores
 //================================
+
 precedence left OR;
 precedence left AND;
 precedence right NOT;
@@ -142,7 +153,6 @@ precedence left MAYOR, MENOR, MAYOR_IGUAL, MENOR_IGUAL;
 precedence left MAS, MENOS;
 precedence left POR, DIV, MODULO;
 precedence right POTENCIA;
-precedence left PUNTO;
 
 //================================
 // Reglas Gramaticales
@@ -150,218 +160,204 @@ precedence left PUNTO;
 
 start with inicio;
 
-//* Inicio del programa
+//--- Inicio ---
 inicio ::=
-         listaInstrucciones:lista
-         {: RESULT = lista; :}
+    listaInstrucciones:lista
+    {: RESULT = lista; :}
+    | /* vacío */
+    {: RESULT = new ArrayList<NodoInstruccion>(); :}
+    ;
 
-         | /* vacio */
-         {: RESULT = new ArrayList<NodoInstruccion>(); :}
-         ;
+//--- Lista de Instrucciones ---
+listaInstrucciones ::=
+    listaInstrucciones:lista instruccion:inst
+    {:
+        if (inst != null) {
+            lista.add(inst);
+        }
+        RESULT = lista;
+    :}
+    | instruccion:inst
+    {:
+        List<NodoInstruccion> lista = new ArrayList<NodoInstruccion>();
+        if (inst != null) {
+            lista.add(inst);
+        }
+        RESULT = lista;
+    :}
+    ;
 
-//* Lista de instrucciones
-            listaInstrucciones ::=
-                     listaInstrucciones:lista instruccion:inst
-                        {:
-                        if(inst != null){
-                            lista.add(inst);
-                        }
-                            RESULT = lista;
-                        :}
-
-                        | instruccion:inst
-                        {:
-                            List<NodoInstruccion> lista = new ArrayList<NodoInstruccion>();
-                           if(inst != null){
-                               lista.add(inst);
-                           }
-                            RESULT = lista;
-                        :}
-                        ;
-
-//* Instrucciones
+//--- Instrucciones ---
 instruccion ::=
+    // Declaración
+    declaracion:d
+    {: RESULT = d; :}
 
-    //* Declaracion
-        declaracion:d
-        {: RESULT = d; :}
+    // Asignación
+    | ID:id ASIGNACION expresion:exp
+    {: RESULT = new NodoAsignacion(id, exp); :}
 
-    //* Asignacion
-        | ID:id ASIGNACION expresion:exp
-        {: RESULT = new NodoAsignacion(id, exp); :}
+    // Sentencia IF
+    | sentenciaIf:s
+    {: RESULT = s; :}
 
-    //* Sentencia IF
-        | sentenciaIf:s
-        {: RESULT = s; :}
+    // Ciclo WHILE
+    | sentenciaWhile:w
+    {: RESULT = w; :}
 
-    //* Ciclo WHILE
-        | sentenciaWhile:w
-        {: RESULT = w; :}
+    // Ciclo DO-WHILE
+    | sentenciaDoWhile:dw
+    {: RESULT = dw; :}
 
-    //* Ciclo DO WHILE
-        | sentenciaDoWhile:dw
-        {: RESULT = dw; :}
+    // Ciclo FOR
+    | sentenciaFor:f
+    {: RESULT = f; :}
 
-    //* Ciclo FOR
-        | sentenciaFor:f
-        {: RESULT = f; :}
+    // Instrucción DRAW
+    | instruccionDraw:d
+    {: RESULT = d; :}
 
-    //* Instruccion Draw
-        | instruccionDraw:d
-        {: RESULT = d; :}
+    // Componentes UI
+    | componenteSeccion:c
+    {: RESULT = c; :}
 
-    //* Componentes UI
-        | componenteSeccion:c
-        {: RESULT = c; :}
+    | componenteTexto:c
+    {: RESULT = c; :}
 
-        | componenteTexto:c
-        {: RESULT = c; :}
+    | componenteTabla:t
+    {: RESULT = t; :}
 
-        | componenteTabla:t
-        {: RESULT = t; :}
+    | preguntaAbierta:p
+    {: RESULT = p; :}
 
-        | preguntaAbierta:p
-        {: RESULT = p; :}
+    | preguntaDesplegable:p
+    {: RESULT = p; :}
 
-        | preguntaDesplegable:p
-        {: RESULT = p; :}
+    | preguntaSeleccionUnica:p
+    {: RESULT = p; :}
 
-        | preguntaSeleccionUnica:p
-        {: RESULT = p; :}
+    | preguntaMultiple:p
+    {: RESULT = p; :}
+    ;
 
-        | preguntaMultiple:p
-        {: RESULT = p; :}
-        ;
-
-//* Declaraciones
-
+//--- Declaraciones ---
 declaracion ::=
+    // Declaración sin inicialización
+    ID:nombre DOS_PUNTOS TYPE_NUMBER
+    {: RESULT = new NodoDeclaracion(nombre, "number", null); :}
 
-    //* Declaracion sin inicializacion
-        ID:nombre DOS_PUNTOS TYPE_NUMBER
-        {: RESULT = new NodoDeclaracion(nombre,"number", null); :}
+    | ID:nombre DOS_PUNTOS TYPE_STRING
+    {: RESULT = new NodoDeclaracion(nombre, "string", null); :}
 
-        | ID:nombre DOS_PUNTOS TYPE_STRING
-        {: RESULT = new NodoDeclaracion(nombre,"string", null); :}
+    | ID:nombre DOS_PUNTOS TYPE_SPECIAL
+    {: RESULT = new NodoDeclaracion(nombre, "special", null); :}
 
-        | ID:nombre DOS_PUNTOS TYPE_SPECIAL
-        {: RESULT = new NodoDeclaracion(nombre,"special", null); :}
+    // Declaración con inicialización
+    | ID:nombre DOS_PUNTOS TYPE_NUMBER ASIGNACION expresion:val
+    {: RESULT = new NodoDeclaracion(nombre, "number", val); :}
 
-        //* Declaracion e inicializacion
-        | ID:nombre DOS_PUNTOS TYPE_NUMBER ASIGNACION expresion:val
-        {: RESULT = new NodoDeclaracion(nombre,"number", val); :}
+    | ID:nombre DOS_PUNTOS TYPE_STRING ASIGNACION expresion:val
+    {: RESULT = new NodoDeclaracion(nombre, "string", val); :}
 
-        | ID:nombre DOS_PUNTOS TYPE_STRING ASIGNACION expresion:val
-        {: RESULT = new NodoDeclaracion(nombre,"string", val); :}
+    | ID:nombre DOS_PUNTOS TYPE_SPECIAL ASIGNACION expresion:val
+    {: RESULT = new NodoDeclaracion(nombre, "special", val); :}
+    ;
 
-        | ID:nombre DOS_PUNTOS TYPE_SPECIAL ASIGNACION expresion:val
-        {: RESULT = new NodoDeclaracion(nombre,"special", val); :}
-        ;
-
-//* Sentencia IF
-
+//--- Sentencia IF ---
 sentenciaIf ::=
+    // IF sin ELSE
+    IF PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:ifBody LLAVE_DER
+    {: RESULT = new NodoSentenciaIf(cond, ifBody, null); :}
 
-    //* Sentencia IF sin ELSE
-        IF PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:ifBODY LLAVE_DER
-        {: RESULT = new NodoSentenciaIf(cond, ifBODY, null); :}
+    // IF con ELSE
+    | IF PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:ifBody LLAVE_DER
+      ELSE LLAVE_IZQ listaInstrucciones:elseBody LLAVE_DER
+    {: RESULT = new NodoSentenciaIf(cond, ifBody, elseBody); :}
+    ;
 
-    //* Sentencia IF con ELSE
-        | IF PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:ifBODY LLAVE_DER
-        ELSE LLAVE_IZQ listaInstrucciones:elseBODY LLAVE_DER
-        {: RESULT = new NodoSentenciaIf(cond, ifBODY, elseBODY); :}
-        ;
-
-//* Ciclo WHILE
-
+//--- Ciclo WHILE ---
 sentenciaWhile ::=
-        WHILE PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:body LLAVE_DER
-        {: RESULT = new NodoCicloWhile(cond, body); :}
-        ;
+    WHILE PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:body LLAVE_DER
+    {: RESULT = new NodoCicloWhile(cond, body); :}
+    ;
 
-//* Ciclo DO WHILE
-
+//--- Ciclo DO-WHILE ---
 sentenciaDoWhile ::=
-        DO LLAVE_IZQ listaInstrucciones:body LLAVE_DER
-        WHILE PAREN_IZQ expresion:cond PAREN_DER
-        {: RESULT = new NodoCicloDoWhile(cond, body); :}
-        ;
+    DO LLAVE_IZQ listaInstrucciones:body LLAVE_DER WHILE PAREN_IZQ expresion:cond PAREN_DER
+    {: RESULT = new NodoCicloDoWhile(body, cond); :}
+    ;
 
-//* Ciclo FOR
-
+//--- Ciclo FOR ---
 sentenciaFor ::=
-    FOR ID:variable IN expresion:inicio RANGO expresion:fin
-    LLAVE_IZQ listaInstrucciones:body LLAVE_DER
+    FOR ID:variable IN expresion:inicio RANGO expresion:fin LLAVE_IZQ listaInstrucciones:body LLAVE_DER
     {: RESULT = new NodoCicloFor(variable, inicio, fin, body); :}
     ;
 
-//* Instruccion DRAW
+//--- Instrucción DRAW ---
 instruccionDraw ::=
-        DRAW PAREN_IZQ ID:varEspecial COMA listaExpresionesOpcional:params PAREN_DER
-        {: RESULT = new NodoDraw(varEspecial, params); :}
-        ;
+    DRAW PAREN_IZQ ID:varEspecial COMA listaExpresionesOpcional:params PAREN_DER
+    {: RESULT = new NodoDraw(varEspecial, params); :}
+    ;
 
-//* Componente SECTION
+//--- Componente SECTION ---
 componenteSeccion ::=
-        SECTION LLAVE_IZQ listaAtributos:attrs LLAVE_DER
-        {:
-           List<NodoInstruccion> elementos = new ArrayList<>();
-           if (attrs.containsKey("elements")) {
+    SECTION LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {:
+        List<NodoInstruccion> elementos = new ArrayList<>();
+        if (attrs.containsKey("elements")) {
             elementos = (List<NodoInstruccion>) attrs.get("elements");
             attrs.remove("elements");
-         }
-            RESULT = new ComponenteSeccion(attrs, elementos);
-         :}
-        ;
+        }
+        RESULT = new ComponenteSeccion(attrs, elementos);
+    :}
+    ;
 
-//* Componente TEXT
+//--- Componente TEXT ---
 componenteTexto ::=
-        TEXT LLAVE_IZQ listaAtributos:attrs LLAVE_DER
-        {: RESULT = new ComponenteTexto(attrs); :}
-        ;
+    TEXT LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {: RESULT = new ComponenteTexto(attrs); :}
+    ;
 
-//* Componente TABLE
+//--- Componente TABLE ---
 componenteTabla ::=
-        TABLE LLAVE_IZQ listaAtributos:attrs LLAVE_DER
-        {:
-            List<List<NodoExpresion>> filas = new ArrayList<>();
-            if (attrs.containsKey("content")) {
-                filas = (List<List<NodoExpresion>>) attrs.get("content");
-                attrs.remove("content");
-            }
-            RESULT = new ComponenteTabla(attrs, filas);
-            }
-        :}
-        ;
+    TABLE LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {:
+        List<List<NodoExpresion>> filas = new ArrayList<>();
+        if (attrs.containsKey("content")) {
+            filas = (List<List<NodoExpresion>>) attrs.get("content");
+            attrs.remove("content");
+        }
+        RESULT = new ComponenteTabla(attrs, filas);
+    :}
+    ;
 
-//* Pregunta Abierta
+//--- Pregunta Abierta ---
 preguntaAbierta ::=
-        OPEN_QUESTION LLAVE_IZQ listaAtributos:attrs LLAVE_DER
-        {: RESULT = new PreguntaAbierta(attrs); :}
-        ;
+    OPEN_QUESTION LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {: RESULT = new PreguntaAbierta(attrs); :}
+    ;
 
-//* Pregunta Desplegable
+//--- Pregunta Desplegable ---
 preguntaDesplegable ::=
-        DROP_QUESTION LLAVE_IZQ listaAtributos:attrs LLAVE_DER
-        {: RESULT = new PreguntaDesplegable(attrs); :}
-        ;
+    DROP_QUESTION LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {: RESULT = new PreguntaDesplegable(attrs); :}
+    ;
 
-//* Pregunta Seleccion Unica
+//--- Pregunta Selección Única ---
 preguntaSeleccionUnica ::=
-        SELECT_QUESTION LLAVE_IZQ listaAtributos:attrs LLAVE_DER
-        {: RESULT = new PreguntaSeleccionUnica(attrs); :}
-        ;
+    SELECT_QUESTION LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {: RESULT = new PreguntaSeleccionUnica(attrs); :}
+    ;
 
-//* Pregunta Seleccion Multiple
+//--- Pregunta Selección Múltiple ---
 preguntaMultiple ::=
-        MULTIPLE_QUESTION LLAVE_IZQ listaAtributos:attrs LLAVE_DER
-        {: RESULT = new PreguntaSeleccionadaMultiple(attrs); :}
-        ;
+    MULTIPLE_QUESTION LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {: RESULT = new PreguntaSeleccionadaMultiple(attrs); :}
+    ;
 
-//* Expresiones
+//--- Expresiones ---
 expresion ::=
-
-    //* Operacione Aritmeticas
+    // Operaciones aritméticas
     expresion:izq MAS expresion:der
     {: RESULT = new NodoOperacionBinaria(izq, "+", der); :}
 
@@ -380,7 +376,7 @@ expresion ::=
     | expresion:izq MODULO expresion:der
     {: RESULT = new NodoOperacionBinaria(izq, "%", der); :}
 
-    //* Operaciones relaciones
+    // Operaciones relacionales
     | expresion:izq MAYOR expresion:der
     {: RESULT = new NodoOperacionBinaria(izq, ">", der); :}
 
@@ -397,103 +393,94 @@ expresion ::=
     {: RESULT = new NodoOperacionBinaria(izq, "==", der); :}
 
     | expresion:izq DIFERENTE expresion:der
-    {: RESULT = new NodoOperacionBinaria(izq, "!=", der); :}
+    {: RESULT = new NodoOperacionBinaria(izq, "!!", der); :}
 
-    //* Operaciones logicas
-
+    // Operaciones lógicas
     | expresion:izq OR expresion:der
     {: RESULT = new NodoOperacionBinaria(izq, "||", der); :}
 
     | expresion:izq AND expresion:der
     {: RESULT = new NodoOperacionBinaria(izq, "&&", der); :}
 
-    | NOT expresion:der
-    {: RESULT = new NodoOperacionUnaria("!", der); :}
+    | NOT expresion:exp
+    {: RESULT = new NodoOperacionUnaria("!", exp); :}
 
-    //* Menos Unario
+    // Menos unario
     | MENOS expresion:exp
     {: RESULT = new NodoOperacionUnaria("-", exp); :}
 
-    //* Literales
+    // Literales
     | NUMBER_LITERAL:num
-        {: RESULT = new NodoLiteral(Double.parseDouble(num), "number"); :}
+    {: RESULT = new NodoLiteral(Double.parseDouble(num), "number"); :}
 
     | STRING_LITERAL:str
-        {: RESULT = new NodoLiteral(str.substring(1, str.length() - 1), "string"); :}
+    {: RESULT = new NodoLiteral(str.substring(1, str.length()-1), "string"); :}
 
-    //* Valores especiales
+    // Valores especiales
     | valorColor:c
-        {: RESULT = valorColor; :}
+    {: RESULT = c; :}
 
     | valorOrientacion:o
-        {: RESULT = valorOrientacion; :}
+    {: RESULT = o; :}
 
-    //* Acceso a Variables
+    // Acceso a variable
     | ID:id
-        {: RESULT = new NodoAccesoVariable(id); :}
+    {: RESULT = new NodoAccesoVariable(id); :}
 
-   //* Llamada a API
-    | llamadaApi:api
+    // Llamada a API
+    | llamadaAPI:api
     {: RESULT = api; :}
 
-    //* Agrupacion
+    // Agrupación
     | PAREN_IZQ expresion:exp PAREN_DER
-        {: RESULT = exp; :}
+    {: RESULT = exp; :}
 
-    //* Comodin
+    // Comodín
     | COMODIN
-        {: RESULT = new NodoLiteral("?", "comodin"); :}
+    {: RESULT = new NodoLiteral("?", "comodin"); :}
     ;
 
-//* Llamada a la API de Pokemon
-llamadaApi ::=
+//--- Llamada a API (who_is_that_pokemon) ---
+llamadaAPI ::=
     FUNC_POKEMON PAREN_IZQ expresion:inicio COMA expresion:fin PAREN_DER
     {: RESULT = new NodoLlamadaApi("pokemon", inicio, fin); :}
     ;
 
-//* Lista de Expresiones Opcionales
+//--- Lista de Expresiones (para draw y otros) ---
 listaExpresionesOpcional ::=
     listaExpresiones:lista
     {: RESULT = lista; :}
-    | /* vacio */
+    | /* vacío */
     {: RESULT = new ArrayList<NodoExpresion>(); :}
     ;
+
 listaExpresiones ::=
     listaExpresiones:lista COMA expresion:exp
     {:
         lista.add(exp);
         RESULT = lista;
     :}
-
     | expresion:exp
     {:
         List<NodoExpresion> lista = new ArrayList<NodoExpresion>();
         lista.add(exp);
         RESULT = lista;
     :}
-
-    | COMODIN
-    {:
-        List<NodoExpresion> lista = new ArrayList<NodoExpresion>();
-        lista.add(new NodoLiteral("?", "comodin"));
-        RESULT = lista;
-    :}
     ;
 
-//* Atributos para Componentes de la UI
+//--- Atributos para Componentes UI ---
 listaAtributos ::=
     listaAtributos:mapa atributo:attr
     {:
         mapa.putAll(attr);
         RESULT = mapa;
     :}
-
     | atributo:attr
-    {: Result = attr; :}
+    {: RESULT = attr; :}
     ;
 
 atributo ::=
-    //* Atributos simples
+    // Atributos simples
     WIDTH DOS_PUNTOS expresion:valor
     {:
         Map<String, Object> mapa = new HashMap<>();
@@ -536,6 +523,13 @@ atributo ::=
         RESULT = mapa;
     :}
 
+    | BACKGROUND_COLOR DOS_PUNTOS valorColor:valor
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("backgroundColor", valor);
+        RESULT = mapa;
+    :}
+
     | FONT_FAMILY DOS_PUNTOS expresion:valor
     {:
         Map<String, Object> mapa = new HashMap<>();
@@ -571,7 +565,7 @@ atributo ::=
         RESULT = mapa;
     :}
 
-    //* CONTENT para TEXT y TABLE
+    // CONTENT (para TEXT y TABLE)
     | CONTENT DOS_PUNTOS expresion:valor
     {:
         Map<String, Object> mapa = new HashMap<>();
@@ -586,7 +580,7 @@ atributo ::=
         RESULT = mapa;
     :}
 
-    //* Elementos para el SECTION
+    // ELEMENTS (para SECTION)
     | ELEMENTS DOS_PUNTOS CORCHETE_IZQ listaInstrucciones:elementos CORCHETE_DER
     {:
         Map<String, Object> mapa = new HashMap<>();
@@ -594,15 +588,15 @@ atributo ::=
         RESULT = mapa;
     :}
 
-    //* OPTIONS esto es para las preguntas
-    | OPTION DOS_PUNTOS CORCHETE_IZQ listaOpciones:opciones CORCHETE_DER
+    // OPTIONS (para preguntas)
+    | OPTIONS DOS_PUNTOS CORCHETE_IZQ listaOpciones:opciones CORCHETE_DER
     {:
         Map<String, Object> mapa = new HashMap<>();
         mapa.put("options", opciones);
         RESULT = mapa;
     :}
 
-    //* STYLES sirve para el bloque de estilos
+    // STYLES (bloque de estilos)
     | STYLES DOS_PUNTOS LLAVE_IZQ listaAtributos:estilos LLAVE_DER
     {:
         Map<String, Object> mapa = new HashMap<>();
@@ -611,21 +605,20 @@ atributo ::=
     :}
     ;
 
-//* Filas de la Tabla
-
+//--- Filas de Tabla ---
 listaFilas ::=
     listaFilas:lista COMA CORCHETE_IZQ fila:f CORCHETE_DER
     {:
         lista.add(f);
         RESULT = lista;
     :}
-
     | CORCHETE_IZQ fila:f CORCHETE_DER
     {:
         List<List<NodoExpresion>> lista = new ArrayList<>();
         lista.add(f);
         RESULT = lista;
     :}
+    ;
 
 fila ::=
     fila:lista COMA expresion:exp
@@ -633,44 +626,46 @@ fila ::=
         lista.add(exp);
         RESULT = lista;
     :}
-
     | expresion:exp
     {:
-        List<List<NodoExpresion> lista = new ArrayList<>();
+        List<NodoExpresion> lista = new ArrayList<>();
         lista.add(exp);
         RESULT = lista;
     :}
     ;
 
-//* Lista de Opcines para las preguntas
+//--- Lista de Opciones (para preguntas) ---
 listaOpciones ::=
     listaOpciones:lista COMA STRING_LITERAL:opcion
     {:
-        lista.add(opcion.substring(1, opcion.length() - 1));
+        lista.add(opcion.substring(1, opcion.length()-1));
         RESULT = lista;
     :}
-
     | STRING_LITERAL:opcion
     {:
         List<String> lista = new ArrayList<>();
-        lista.add(opcion.substring(1, opcion.length() - 1));
+        lista.add(opcion.substring(1, opcion.length()-1));
         RESULT = lista;
     :}
+    ;
 
-//* Valor de Color
+//--- Valor de Color ---
 valorColor ::=
     COLOR_NAME:nombre
     {: RESULT = new NodoLiteral(nombre, "color"); :}
+
     | COLOR_HEX:hex
     {: RESULT = new NodoLiteral(hex, "color"); :}
     ;
 
-//* Valor de Orientacion
+//--- Valor de Orientación ---
 valorOrientacion ::=
     VERTICAL
     {: RESULT = new NodoLiteral("VERTICAL", "orientation"); :}
+
     | HORIZONTAL
     {: RESULT = new NodoLiteral("HORIZONTAL", "orientation"); :}
+
     | MONO
     {: RESULT = new NodoLiteral("MONO", "orientation"); :}
     ;

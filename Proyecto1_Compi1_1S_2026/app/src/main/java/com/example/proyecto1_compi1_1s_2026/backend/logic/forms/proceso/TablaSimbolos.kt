@@ -32,5 +32,4 @@ class TablaSimbolos(val anterior: TablaSimbolos?) {
         }
         throw Exception("Error Semantico: Variable $id no declarada")
     }
-
 }

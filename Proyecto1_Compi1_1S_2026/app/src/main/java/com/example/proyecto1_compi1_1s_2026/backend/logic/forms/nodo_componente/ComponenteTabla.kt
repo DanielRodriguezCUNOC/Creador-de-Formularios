@@ -1,12 +1,12 @@
 package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente
 
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.Expresion
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoExpresion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.NodoInstruccion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_principal.Visitor
 
 class ComponenteTabla(
-    atributos: Map<String, Expresion>,
-    val filas: List<List<NodoInstruccion>>
+    atributos: Map<String, Object>,
+    val filas: List<List<NodoExpresion>>
 ): ComponenteUI(atributos) {
     override fun <T> accept(visitor: Visitor<T>): T{
         return visitor.visit(this)
