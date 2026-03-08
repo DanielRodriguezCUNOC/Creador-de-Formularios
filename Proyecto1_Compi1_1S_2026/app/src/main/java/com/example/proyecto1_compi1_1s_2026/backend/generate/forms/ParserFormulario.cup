@@ -37,7 +37,7 @@ parserFormulario code {:
             erroresSintacticos.add(error);
             System.err.println(error);
         }
-        
+
         public void agregarErrorSemantico(String error) {
             erroresSemanticos.add(error);
             System.err.println("Error Semántico: " + error);

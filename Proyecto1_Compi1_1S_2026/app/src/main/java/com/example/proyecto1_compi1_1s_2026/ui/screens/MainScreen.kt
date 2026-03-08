@@ -41,6 +41,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.LexerFormulario
 import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.ParserFormulario
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.NodoInstruccion
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TablaSimbolos
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ValidadorSemantico
 import java.io.StringReader
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,6 +53,11 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
     var erroresLexicos by remember { mutableStateOf(emptyList<String>()) }
     var erroresSintacticos by remember { mutableStateOf(emptyList<String>()) }
     var mostrarErrores by remember { mutableStateOf(false) }
+
+    var mensajeResultado by remember { mutableStateOf("") }
+    var astResultado by remember { mutableStateOf("") }
+    var tipoMensaje by remember { mutableStateOf("") }
+
 
     Scaffold(
         topBar = {
@@ -118,6 +126,7 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                         selection       = newValue.selection,
                         composition     = newValue.composition
                     )
+                    tipoMensaje = ""
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -141,12 +150,59 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                 ),
                 maxLines = Int.MAX_VALUE
             )
+            // ── Panel de Resultados ────────────────────────────────
+            if (tipoMensaje.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = 2.dp,
+                            color = if (tipoMensaje == "exito") Color(0xFF00AA00) else Color(0xFFFF6B6B),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .background(
+                            if (tipoMensaje == "exito") Color(0xFF001A00) else Color(0xFF1A0000),
+                            RoundedCornerShape(8.dp)
+                        )
+                        .padding(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = mensajeResultado,
+                            style = TextStyle(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 13.sp,
+                                color = if (tipoMensaje == "exito") Color(0xFF00FF00) else Color(0xFFFF6B6B)
+                            )
+                        )
+
+                        // Mostrar AST si fue exitoso
+                        if (tipoMensaje == "exito" && astResultado.isNotEmpty()) {
+                            Text(
+                                text = "AST:\n$astResultado",
+                                style = TextStyle(
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF88FF88)
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .verticalScroll(rememberScrollState())
+                                    .height(80.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
             // ── Panel de Errores (si hay) ────────────────────────────────
             if (mostrarErrores && (erroresLexicos.isNotEmpty() || erroresSintacticos.isNotEmpty())) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp)
                         .border(
                             width = 1.dp,
                             color = Color.Red,
@@ -164,7 +220,7 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                         // Errores Léxicos
                         if (erroresLexicos.isNotEmpty()) {
                             Text(
-                                text = " Errores Léxicos (${erroresLexicos.size}):",
+                                text = "Errores Léxicos (${erroresLexicos.size}):",
                                 style = TextStyle(
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 12.sp,
@@ -243,34 +299,44 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
 
                             erroresLexicos = lexer.lexicalErrors
                             erroresSintacticos = parser.erroresSintacticos
+                            var erroresSemanticos = emptyList<String>()
 
-
-                            if(parser.erroresSintacticos.isEmpty() && erroresSintacticos.isEmpty()){
-                                println("Sintaxis correcta")
-                                println("AST: ${resultado?.value}")
-                                mostrarErrores = false
-                            }else {
-                                println("Errores Encontrados:")
-                                mostrarErrores = true
-
-                                if (erroresLexicos.isNotEmpty()) {
-                                    println("Errores Léxicos:")
-                                    for (error in erroresLexicos) {
-                                        println(" - $error")
-                                    }
-                                }
-                                if (erroresSintacticos.isNotEmpty()) {
-                                    println("Errores Sintácticos:")
-                                    for (error in erroresSintacticos) {
-                                        println(" - $error")
-                                    }
+                            if (erroresLexicos.isEmpty() && erroresSintacticos.isEmpty()) {
+                                mensajeResultado = "Análisis exitoso"
+                                val validador = ValidadorSemantico(TablaSimbolos(null))
+                                if(resultado?.value is List<*>){
+                                    @Suppress("UNCHECKED_CAST")
+                                    erroresSemanticos = validador.validar(resultado.value as List<NodoInstruccion>)
                                 }
                             }
+                            if (erroresLexicos.isEmpty() && erroresSintacticos.isEmpty() && erroresSemanticos.isEmpty()) {
+                                tipoMensaje = "exito"
+                                mensajeResultado = "Sintaxis correcta - Sin errores"
+                                mostrarErrores = false
+                            } else {
+                                tipoMensaje = "error"
+                                mensajeResultado = "Se encontraron errores"
+                                mostrarErrores = true
+                            }
+                            //* Mostrar errores
+                            val errores = mutableListOf<String>()
+                            if (erroresLexicos.isNotEmpty()) {
+                                errores.add("Errores Léxicos (${erroresLexicos.size}):")
+                                errores.addAll(erroresLexicos)
+                            }
+                            if (erroresSintacticos.isNotEmpty()) {
+                                errores.add("Errores Sintácticos (${erroresSintacticos.size}):")
+                                errores.addAll(erroresSintacticos)
+                            }
+                            if (erroresSemanticos.isNotEmpty()) {
+                                errores.add("Errores Semánticos (${erroresSemanticos.size}):")
+                                errores.addAll(erroresSemanticos)
+                            }
                         }catch (e: Exception){
-                            println("Excepcion mientras se analizaba")
-                            e.printStackTrace()
+                            tipoMensaje = "error"
+                            mensajeResultado = "Excepción: ${e.message}"
                             mostrarErrores = true
-                            erroresLexicos = listOf("Excepcion: ${e.message}")
+                            e.printStackTrace()
                         }
                     },
                     modifier = Modifier.weight(1f)
