@@ -4,9 +4,9 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_principal.V
 
 class NodoLlamadaApi(
     val tipo: String,
-    val rangoInicio: Expresion,
-    val rangoFin: Expresion
-): Expresion{
+    val rangoInicio: NodoExpresion,
+    val rangoFin: NodoExpresion
+): NodoExpresion{
     override fun <T> accept(visitor: Visitor<T>): T{
         return visitor.visit(this)
     }

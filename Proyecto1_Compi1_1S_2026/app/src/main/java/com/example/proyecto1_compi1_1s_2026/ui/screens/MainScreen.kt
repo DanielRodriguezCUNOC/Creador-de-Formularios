@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.io.StringReader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -160,6 +161,33 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("Finalizar")
+                }
+
+                Button(
+                    onClick = {
+                        try {
+                            val lexer = LexerFormulario(StringReader(editorValue.text))
+                            val parser = ParserFormulario(lexer)
+                            val resultado = parser.parse()
+
+                            if(parser.erroresSintacticos.isEmpty()){
+                                println("Sintaxis correcta")
+                                println("AST: ${resultado?.value}")
+                                onFinalize(editorValue.text)
+                            }else{
+                                println("Sintaxis incorrecta")
+                                for (error in parser.erroresSintacticos) {
+                                    println(error)
+                                }
+                            }
+                        }catch (e: Exception){
+                            println("Errores de sintaxis:")
+                            e.printStackTrace()
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Analizar")
                 }
             }
         }

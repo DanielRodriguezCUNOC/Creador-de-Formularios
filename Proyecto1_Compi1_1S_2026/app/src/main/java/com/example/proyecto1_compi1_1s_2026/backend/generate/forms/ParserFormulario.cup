@@ -154,6 +154,7 @@ start with inicio;
 inicio ::=
          listaInstrucciones:lista
          {: RESULT = lista; :}
+
          | /* vacio */
          {: RESULT = new ArrayList<NodoInstruccion>(); :}
          ;
@@ -167,6 +168,7 @@ inicio ::=
                         }
                             RESULT = lista;
                         :}
+
                         | instruccion:inst
                         {:
                             List<NodoInstruccion> lista = new ArrayList<NodoInstruccion>();
@@ -324,7 +326,7 @@ componenteTabla ::=
         {:
             List<List<NodoExpresion>> filas = new ArrayList<>();
             if (attrs.containsKey("content")) {
-                filas = (List<List<NodoExpresion>>) attrs.get("content"))
+                filas = (List<List<NodoExpresion>>) attrs.get("content");
                 attrs.remove("content");
             }
             RESULT = new ComponenteTabla(attrs, filas);
@@ -340,7 +342,7 @@ preguntaAbierta ::=
 
 //* Pregunta Desplegable
 preguntaDesplegable ::=
-        DROP_QUESTION LLAVE_IZQ listaAtributos:attrs LLAVE
+        DROP_QUESTION LLAVE_IZQ listaAtributos:attrs LLAVE_DER
         {: RESULT = new PreguntaDesplegable(attrs); :}
         ;
 
@@ -415,6 +417,7 @@ expresion ::=
     //* Literales
     | NUMBER_LITERAL:num
         {: RESULT = new NodoLiteral(Double.parseDouble(num), "number"); :}
+
     | STRING_LITERAL:str
         {: RESULT = new NodoLiteral(str.substring(1, str.length() - 1), "string"); :}
 
@@ -459,16 +462,20 @@ listaExpresiones ::=
     listaExpresiones:lista COMA expresion:exp
     {:
         lista.add(exp);
-        RESULT = lista; :}
+        RESULT = lista;
+    :}
+
     | expresion:exp
     {:
         List<NodoExpresion> lista = new ArrayList<NodoExpresion>();
         lista.add(exp);
-        RESULT = lista; :}
+        RESULT = lista;
+    :}
+
     | COMODIN
     {:
         List<NodoExpresion> lista = new ArrayList<NodoExpresion>();
-        lista.add(exp);
+        lista.add(new NodoLiteral("?", "comodin"));
         RESULT = lista;
     :}
     ;
@@ -480,9 +487,11 @@ listaAtributos ::=
         mapa.putAll(attr);
         RESULT = mapa;
     :}
+
     | atributo:attr
     {: Result = attr; :}
     ;
+
 atributo ::=
     //* Atributos simples
     WIDTH DOS_PUNTOS expresion:valor
@@ -569,6 +578,7 @@ atributo ::=
         mapa.put("content", valor);
         RESULT = mapa;
     :}
+
     | CONTENT DOS_PUNTOS CORCHETE_IZQ listaFilas:filas CORCHETE_DER
     {:
         Map<String, Object> mapa = new HashMap<>();
@@ -597,7 +607,7 @@ atributo ::=
     {:
         Map<String, Object> mapa = new HashMap<>();
         mapa.put("styles", estilos);
-        RESULT = mapa
+        RESULT = mapa;
     :}
     ;
 
@@ -623,9 +633,10 @@ fila ::=
         lista.add(exp);
         RESULT = lista;
     :}
+
     | expresion:exp
     {:
-        List<List<NodoExpresion>> lista = new ArrayList<>();
+        List<List<NodoExpresion> lista = new ArrayList<>();
         lista.add(exp);
         RESULT = lista;
     :}
@@ -638,6 +649,7 @@ listaOpciones ::=
         lista.add(opcion.substring(1, opcion.length() - 1));
         RESULT = lista;
     :}
+
     | STRING_LITERAL:opcion
     {:
         List<String> lista = new ArrayList<>();
