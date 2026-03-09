@@ -5,11 +5,11 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.*
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.*
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_principal.Visitor
 
-class ValidadorSemantico(var entornoActual: TablaSimbolos) : Visitor<List<String>> {
+class ValidadorSemantico(var entornoActual: TablaSimbolos) : Visitor<List<ErrorInfo>> {
 
-    private val errores = mutableListOf<String>()
+    private val errores = mutableListOf<ErrorInfo>()
 
-    fun validar(instrucciones: List<NodoInstruccion>): List<String> {
+    fun validar(instrucciones: List<NodoInstruccion>): List<ErrorInfo> {
         errores.clear()
         for (instruccion in instrucciones) {
             instruccion.accept(this)
@@ -17,11 +17,12 @@ class ValidadorSemantico(var entornoActual: TablaSimbolos) : Visitor<List<String
         return errores
     }
 
-    override fun visit(node: NodoLiteral): List<String> = emptyList()
+    override fun visit(node: NodoLiteral): List<ErrorInfo> = emptyList()
 
-    override fun visit(node: NodoOperacionBinaria): List<String> {
-        val erroresIzq = node.izq.accept(this)
-        val erroresDer = node.der.accept(this)
+    override fun visit(node: NodoOperacionBinaria): List<ErrorInfo> {
+        // Visitar expresiones hijas primero
+        node.izq.accept(this)
+        node.der.accept(this)
 
         val izq = obtenerTipo(node.izq)
         val der = obtenerTipo(node.der)
@@ -30,45 +31,48 @@ class ValidadorSemantico(var entornoActual: TablaSimbolos) : Visitor<List<String
         when (node.operador) {
             in listOf("+", "-", "*", "/", "%", "^") -> {
                 if (izq != "number" || der != "number") {
-                    errores.add("Error: Operación aritmética requiere números, pero obtuvo $izq y $der")
+                    errores.add(ErrorInfo(TipoError.SEMANTICO, "Operación aritmética requiere números, pero obtuvo $izq y $der", node.linea, node.columna))
                 }
             }
             in listOf("&&", "||") -> {
                 if (izq != "boolean" || der != "boolean") {
-                    errores.add("Error: Operación lógica requiere booleanos, pero obtuvo $izq y $der")
+                    errores.add(ErrorInfo(TipoError.SEMANTICO, "Operación lógica requiere booleanos, pero obtuvo $izq y $der", node.linea, node.columna))
                 }
             }
             in listOf("==", "!!") -> {
                 if (izq != der) {
-                    errores.add("Error: Comparación entre tipos incompatibles: $izq != $der")
+                    errores.add(ErrorInfo(TipoError.SEMANTICO, "Comparación entre tipos incompatibles: $izq != $der", node.linea, node.columna))
                 }
             }
         }
 
-        return erroresIzq + erroresDer + errores
+        return errores
     }
 
-    override fun visit(node: NodoAccesoVariable): List<String> {
+    override fun visit(node: NodoAccesoVariable): List<ErrorInfo> {
         return try {
             entornoActual.obtenerVariable(node.id)
             emptyList()
         } catch (e: Exception) {
-            listOf("Error: Variable '${node.id}' no fue declarada")
+            listOf(ErrorInfo(TipoError.SEMANTICO, "Variable '${node.id}' no fue declarada", node.linea, node.columna))
         }
     }
 
-    override fun visit(node: NodoLlamadaApi): List<String> = emptyList()
+    override fun visit(node: NodoLlamadaApi): List<ErrorInfo> = emptyList()
 
-    override fun visit(node: NodoOperacionUnaria): List<String> {
+    override fun visit(node: NodoOperacionUnaria): List<ErrorInfo> {
         val errores = node.expresion.accept(this).toMutableList()
         return errores
     }
 
-    override fun visit(node: NodoDeclaracion): List<String> {
+    override fun visit(node: NodoDeclaracion): List<ErrorInfo> {
         if (node.valorInicio != null) {
+            // Primero visitar la expresión para detectar errores internos
+            node.valorInicio.accept(this)
+            
             val tipoValor = obtenerTipo(node.valorInicio)
             if (tipoValor != node.tipo && !(node.tipo == "number" && tipoValor == "double")) {
-                errores.add("Error: Tipo incompatible en declaración '${node.id}': se esperaba ${node.tipo}, pero obtuvo $tipoValor")
+                errores.add(ErrorInfo(TipoError.SEMANTICO, "Tipo incompatible en declaración '${node.id}': se esperaba ${node.tipo}, pero obtuvo $tipoValor", node.linea, node.columna))
             }
         }
         entornoActual.almacenarVariable(node.id, when (node.tipo) {
@@ -79,67 +83,70 @@ class ValidadorSemantico(var entornoActual: TablaSimbolos) : Visitor<List<String
         return errores
     }
 
-    override fun visit(node: NodoAsignacion): List<String> {
+    override fun visit(node: NodoAsignacion): List<ErrorInfo> {
+        // Primero visitar la expresión para detectar errores internos
+        node.nuevoValor.accept(this)
+        
         val tipoActual = entornoActual.obtenerTipo(node.id)
         val tipoNuevo = obtenerTipo(node.nuevoValor)
 
         if (tipoActual != null && tipoNuevo != tipoActual) {
-            errores.add("Error: No puedes asignar $tipoNuevo a variable de tipo $tipoActual en '${node.id}'")
+            errores.add(ErrorInfo(TipoError.SEMANTICO, "No puedes asignar $tipoNuevo a variable de tipo $tipoActual en '${node.id}'", node.linea, node.columna))
         }
         return errores
     }
 
-    override fun visit(node: NodoSentenciaIf): List<String> {
+    override fun visit(node: NodoSentenciaIf): List<ErrorInfo> {
         val tipoCondicion = obtenerTipo(node.condicion)
         if (tipoCondicion != "boolean") {
-            errores.add("Error: La condición del IF debe ser booleana, pero obtuvo $tipoCondicion")
+            errores.add(ErrorInfo(TipoError.SEMANTICO, "La condición del IF debe ser booleana, pero obtuvo $tipoCondicion", node.linea, node.columna))
         }
         node.instruccionesIf.forEach { it.accept(this) }
         node.instruccionesElse?.forEach { it.accept(this) }
         return errores
     }
 
-    override fun visit(node: NodoCicloWhile): List<String> {
+    override fun visit(node: NodoCicloWhile): List<ErrorInfo> {
         val tipoCondicion = obtenerTipo(node.condicion)
         if (tipoCondicion != "boolean") {
-            errores.add("Error: La condición del WHILE debe ser booleana")
+            errores.add(ErrorInfo(TipoError.SEMANTICO, "La condición del WHILE debe ser booleana", node.linea, node.columna))
         }
         node.instruccionesWhile.forEach { it.accept(this) }
         return errores
     }
 
-    override fun visit(node: NodoCicloDoWhile): List<String> {
+    override fun visit(node: NodoCicloDoWhile): List<ErrorInfo> {
         val tipoCondicion = obtenerTipo(node.condicion)
         if (tipoCondicion != "boolean") {
-            errores.add("Error: La condición del DO-WHILE debe ser booleana")
+            errores.add(ErrorInfo(TipoError.SEMANTICO, "La condición del DO-WHILE debe ser booleana", node.linea, node.columna))
         }
         node.instrucciones.forEach { it.accept(this) }
         return errores
     }
 
-    override fun visit(node: NodoCicloFor): List<String> {
+    override fun visit(node: NodoCicloFor): List<ErrorInfo> {
         val tipoInicio = obtenerTipo(node.rangoInicio)
         val tipoFin = obtenerTipo(node.rangoFin)
         if (tipoInicio != "number" || tipoFin != "number") {
-            errores.add("Error: Los rangos del FOR deben ser números")
+            errores.add(ErrorInfo(TipoError.SEMANTICO, "Los rangos del FOR deben ser números", node.linea, node.columna))
         }
         node.instruccionesFor.forEach { it.accept(this) }
         return errores
     }
 
-    override fun visit(node: NodoDraw): List<String> = emptyList()
+    override fun visit(node: NodoDraw): List<ErrorInfo> = emptyList()
 
-    override fun visit(node: ComponenteSeccion): List<String> {
+    override fun visit(node: ComponenteSeccion): List<ErrorInfo> {
         node.elementosInternos.forEach { it.accept(this) }
         return errores
     }
 
-    override fun visit(node: ComponenteTabla): List<String> = emptyList()
-    override fun visit(node: ComponenteTexto): List<String> = emptyList()
-    override fun visit(node: PreguntaDesplegable): List<String> = emptyList()
-    override fun visit(node: PreguntaSeleccionUnica): List<String> = emptyList()
-    override fun visit(node: PreguntaSeleccionadaMultiple): List<String> = emptyList()
-    override fun visit(node: PreguntaAbierta): List<String> = emptyList()
+    override fun visit(node: ComponenteTabla): List<ErrorInfo> = emptyList()
+    override fun visit(node: ComponenteTexto): List<ErrorInfo> = emptyList()
+    override fun visit(node: PreguntaDesplegable): List<ErrorInfo> = emptyList()
+    override fun visit(node: PreguntaSeleccionUnica): List<ErrorInfo> = emptyList()
+    override fun visit(node: PreguntaSeleccionadaMultiple): List<ErrorInfo> = emptyList()
+    override fun visit(node: PreguntaAbierta): List<ErrorInfo> = emptyList()
 
     private fun obtenerTipo(expresion: NodoExpresion): String {
         return when (expresion) {

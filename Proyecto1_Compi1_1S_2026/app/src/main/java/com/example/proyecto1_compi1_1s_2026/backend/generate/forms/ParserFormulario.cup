@@ -9,38 +9,40 @@ import java.util.Map;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.*;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.*;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.*;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError;
 
 //================================
 // Código del Parser
 //================================
 
-parserFormulario code {:
-     private List<String> erroresSintacticos = new ArrayList<>();
-        private List<String> erroresSemanticos = new ArrayList<>();
+parser code {:
+     private List<ErrorInfo> erroresSintacticos = new ArrayList<>();
 
-        public List<String> getErroresSintacticos() {
+        public List<ErrorInfo> getErroresSintacticos() {
             return erroresSintacticos;
-        }
-
-        public List<String> getErroresSemanticos() {
-            return erroresSemanticos;
         }
 
         public void syntax_error(Symbol s) {
             String nombreToken = "desconocido";
+            int linea = 0;
+            int columna = 0;
+            
             if (s != null) {
                 nombreToken = s.value != null ? s.value.toString() : "Token desconocido";
+                linea = s.left + 1;
+                columna = s.right + 1;
             }
-            String error = "Error Sintáctico en línea " + (s.left + 1) +
-                           ", columna " + (s.right + 1) +
-                           ": Se encontró '" + nombreToken + "'";
+            
+            String mensaje = "Token inesperado '" + nombreToken + "'";
+            ErrorInfo error = new ErrorInfo(TipoError.SINTACTICO, mensaje, linea, columna);
+            
             erroresSintacticos.add(error);
-            System.err.println(error);
+            System.err.println(error.toDetailedString());
         }
-
-        public void agregarErrorSemantico(String error) {
-            erroresSemanticos.add(error);
-            System.err.println("Error Semántico: " + error);
+        
+        public void report_error(String message, Object info) {
+            // Evitar mensajes duplicados
         }
 :};
 
@@ -87,7 +89,13 @@ terminal MAYOR, MAYOR_IGUAL, MENOR, MENOR_IGUAL, IGUALDAD, DIFERENTE;
 terminal OR, AND, NOT;
 
 // Literales e identificadores
-terminal String ID, NUMBER_LITERAL, STRING_LITERAL;
+terminal String ID, NUMBER_LITERAL;
+
+// Cadenas de texto (manejadas por estado STRING en el lexer)
+terminal String INICIO_CADENA, FIN_CADENA, CONTENIDO_CADENA;
+
+// Emojis dentro de cadenas
+terminal String EMOJI_SMILE, EMOJI_SAD, EMOJI_SERIOUS, EMOJI_HEART;
 
 // Error léxico
 //terminal ERROR;
@@ -140,6 +148,11 @@ non terminal List<NodoExpresion> fila;
 non terminal NodoExpresion valorColor;
 non terminal NodoExpresion valorOrientacion;
 non terminal List<String> listaOpciones;
+
+// Cadenas de texto con soporte de emojis
+non terminal String cadenaTexto;
+non terminal String partesCadena;
+non terminal String parteCadena;
 
 //================================
 // Precedencia de Operadores
@@ -195,7 +208,7 @@ instruccion ::=
 
     // Asignación
     | ID:id ASIGNACION expresion:exp
-    {: RESULT = new NodoAsignacion(id, exp); :}
+    {: RESULT = new NodoAsignacion(id, exp, idleft, idright); :}
 
     // Sentencia IF
     | sentenciaIf:s
@@ -244,177 +257,177 @@ instruccion ::=
 declaracion ::=
     // Declaración sin inicialización
     ID:nombre DOS_PUNTOS TYPE_NUMBER
-    {: RESULT = new NodoDeclaracion(nombre, "number", null); :}
+    {: RESULT = new NodoDeclaracion(nombre, "number", null, nombreleft, nombreright); :}
 
     | ID:nombre DOS_PUNTOS TYPE_STRING
-    {: RESULT = new NodoDeclaracion(nombre, "string", null); :}
+    {: RESULT = new NodoDeclaracion(nombre, "string", null, nombreleft, nombreright); :}
 
     | ID:nombre DOS_PUNTOS TYPE_SPECIAL
-    {: RESULT = new NodoDeclaracion(nombre, "special", null); :}
+    {: RESULT = new NodoDeclaracion(nombre, "special", null, nombreleft, nombreright); :}
 
     // Declaración con inicialización
     | ID:nombre DOS_PUNTOS TYPE_NUMBER ASIGNACION expresion:val
-    {: RESULT = new NodoDeclaracion(nombre, "number", val); :}
+    {: RESULT = new NodoDeclaracion(nombre, "number", val, nombreleft, nombreright); :}
 
     | ID:nombre DOS_PUNTOS TYPE_STRING ASIGNACION expresion:val
-    {: RESULT = new NodoDeclaracion(nombre, "string", val); :}
+    {: RESULT = new NodoDeclaracion(nombre, "string", val, nombreleft, nombreright); :}
 
     | ID:nombre DOS_PUNTOS TYPE_SPECIAL ASIGNACION expresion:val
-    {: RESULT = new NodoDeclaracion(nombre, "special", val); :}
+    {: RESULT = new NodoDeclaracion(nombre, "special", val, nombreleft, nombreright); :}
     ;
 
 //--- Sentencia IF ---
 sentenciaIf ::=
     // IF sin ELSE
-    IF PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:ifBody LLAVE_DER
-    {: RESULT = new NodoSentenciaIf(cond, ifBody, null); :}
+    IF:t PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:ifBody LLAVE_DER
+    {: RESULT = new NodoSentenciaIf(cond, ifBody, null, tleft, tright); :}
 
     // IF con ELSE
-    | IF PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:ifBody LLAVE_DER
+    | IF:t PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:ifBody LLAVE_DER
       ELSE LLAVE_IZQ listaInstrucciones:elseBody LLAVE_DER
-    {: RESULT = new NodoSentenciaIf(cond, ifBody, elseBody); :}
+    {: RESULT = new NodoSentenciaIf(cond, ifBody, elseBody, tleft, tright); :}
     ;
 
 //--- Ciclo WHILE ---
 sentenciaWhile ::=
-    WHILE PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:body LLAVE_DER
-    {: RESULT = new NodoCicloWhile(cond, body); :}
+    WHILE:t PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:body LLAVE_DER
+    {: RESULT = new NodoCicloWhile(cond, body, tleft, tright); :}
     ;
 
 //--- Ciclo DO-WHILE ---
 sentenciaDoWhile ::=
-    DO LLAVE_IZQ listaInstrucciones:body LLAVE_DER WHILE PAREN_IZQ expresion:cond PAREN_DER
-    {: RESULT = new NodoCicloDoWhile(body, cond); :}
+    DO:t LLAVE_IZQ listaInstrucciones:body LLAVE_DER WHILE PAREN_IZQ expresion:cond PAREN_DER
+    {: RESULT = new NodoCicloDoWhile(body, cond, tleft, tright); :}
     ;
 
 //--- Ciclo FOR ---
 sentenciaFor ::=
-    FOR ID:variable IN expresion:inicio RANGO expresion:fin LLAVE_IZQ listaInstrucciones:body LLAVE_DER
-    {: RESULT = new NodoCicloFor(variable, inicio, fin, body); :}
+    FOR:t ID:variable IN expresion:inicio RANGO expresion:fin LLAVE_IZQ listaInstrucciones:body LLAVE_DER
+    {: RESULT = new NodoCicloFor(variable, inicio, fin, body, tleft, tright); :}
     ;
 
 //--- Instrucción DRAW ---
 instruccionDraw ::=
-    DRAW PAREN_IZQ ID:varEspecial COMA listaExpresionesOpcional:params PAREN_DER
-    {: RESULT = new NodoDraw(varEspecial, params); :}
+    DRAW:t PAREN_IZQ ID:varEspecial COMA listaExpresionesOpcional:params PAREN_DER
+    {: RESULT = new NodoDraw(varEspecial, params, tleft, tright); :}
     ;
 
 //--- Componente SECTION ---
 componenteSeccion ::=
-    SECTION LLAVE_IZQ listaAtributos:attrs LLAVE_DER
-    {:
+    SECTION:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {:  
         List<NodoInstruccion> elementos = new ArrayList<>();
         if (attrs.containsKey("elements")) {
             elementos = (List<NodoInstruccion>) attrs.get("elements");
             attrs.remove("elements");
         }
-        RESULT = new ComponenteSeccion(attrs, elementos);
+        RESULT = new ComponenteSeccion(attrs, elementos, tleft, tright);
     :}
     ;
 
 //--- Componente TEXT ---
 componenteTexto ::=
-    TEXT LLAVE_IZQ listaAtributos:attrs LLAVE_DER
-    {: RESULT = new ComponenteTexto(attrs); :}
+    TEXT:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {: RESULT = new ComponenteTexto(attrs, tleft, tright); :}
     ;
 
 //--- Componente TABLE ---
 componenteTabla ::=
-    TABLE LLAVE_IZQ listaAtributos:attrs LLAVE_DER
-    {:
+    TABLE:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {:  
         List<List<NodoExpresion>> filas = new ArrayList<>();
         if (attrs.containsKey("content")) {
             filas = (List<List<NodoExpresion>>) attrs.get("content");
             attrs.remove("content");
         }
-        RESULT = new ComponenteTabla(attrs, filas);
+        RESULT = new ComponenteTabla(attrs, filas, tleft, tright);
     :}
     ;
 
 //--- Pregunta Abierta ---
 preguntaAbierta ::=
-    OPEN_QUESTION LLAVE_IZQ listaAtributos:attrs LLAVE_DER
-    {: RESULT = new PreguntaAbierta(attrs); :}
+    OPEN_QUESTION:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {: RESULT = new PreguntaAbierta(attrs, tleft, tright); :}
     ;
 
 //--- Pregunta Desplegable ---
 preguntaDesplegable ::=
-    DROP_QUESTION LLAVE_IZQ listaAtributos:attrs LLAVE_DER
-    {: RESULT = new PreguntaDesplegable(attrs); :}
+    DROP_QUESTION:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {: RESULT = new PreguntaDesplegable(attrs, tleft, tright); :}
     ;
 
 //--- Pregunta Selección Única ---
 preguntaSeleccionUnica ::=
-    SELECT_QUESTION LLAVE_IZQ listaAtributos:attrs LLAVE_DER
-    {: RESULT = new PreguntaSeleccionUnica(attrs); :}
+    SELECT_QUESTION:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {: RESULT = new PreguntaSeleccionUnica(attrs, tleft, tright); :}
     ;
 
 //--- Pregunta Selección Múltiple ---
 preguntaMultiple ::=
-    MULTIPLE_QUESTION LLAVE_IZQ listaAtributos:attrs LLAVE_DER
-    {: RESULT = new PreguntaSeleccionadaMultiple(attrs); :}
+    MULTIPLE_QUESTION:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {: RESULT = new PreguntaSeleccionadaMultiple(attrs, tleft, tright); :}
     ;
 
 //--- Expresiones ---
 expresion ::=
     // Operaciones aritméticas
-    expresion:izq MAS expresion:der
-    {: RESULT = new NodoOperacionBinaria(izq, "+", der); :}
+    expresion:izq MAS:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "+", der, opleft, opright); :}
 
-    | expresion:izq MENOS expresion:der
-    {: RESULT = new NodoOperacionBinaria(izq, "-", der); :}
+    | expresion:izq MENOS:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "-", der, opleft, opright); :}
 
-    | expresion:izq POR expresion:der
-    {: RESULT = new NodoOperacionBinaria(izq, "*", der); :}
+    | expresion:izq POR:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "*", der, opleft, opright); :}
 
-    | expresion:izq DIV expresion:der
-    {: RESULT = new NodoOperacionBinaria(izq, "/", der); :}
+    | expresion:izq DIV:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "/", der, opleft, opright); :}
 
-    | expresion:izq POTENCIA expresion:der
-    {: RESULT = new NodoOperacionBinaria(izq, "^", der); :}
+    | expresion:izq POTENCIA:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "^", der, opleft, opright); :}
 
-    | expresion:izq MODULO expresion:der
-    {: RESULT = new NodoOperacionBinaria(izq, "%", der); :}
+    | expresion:izq MODULO:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "%", der, opleft, opright); :}
 
     // Operaciones relacionales
-    | expresion:izq MAYOR expresion:der
-    {: RESULT = new NodoOperacionBinaria(izq, ">", der); :}
+    | expresion:izq MAYOR:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, ">", der, opleft, opright); :}
 
-    | expresion:izq MENOR expresion:der
-    {: RESULT = new NodoOperacionBinaria(izq, "<", der); :}
+    | expresion:izq MENOR:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "<", der, opleft, opright); :}
 
-    | expresion:izq MAYOR_IGUAL expresion:der
-    {: RESULT = new NodoOperacionBinaria(izq, ">=", der); :}
+    | expresion:izq MAYOR_IGUAL:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, ">=", der, opleft, opright); :}
 
-    | expresion:izq MENOR_IGUAL expresion:der
-    {: RESULT = new NodoOperacionBinaria(izq, "<=", der); :}
+    | expresion:izq MENOR_IGUAL:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "<=", der, opleft, opright); :}
 
-    | expresion:izq IGUALDAD expresion:der
-    {: RESULT = new NodoOperacionBinaria(izq, "==", der); :}
+    | expresion:izq IGUALDAD:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "==", der, opleft, opright); :}
 
-    | expresion:izq DIFERENTE expresion:der
-    {: RESULT = new NodoOperacionBinaria(izq, "!!", der); :}
+    | expresion:izq DIFERENTE:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "!!", der, opleft, opright); :}
 
     // Operaciones lógicas
-    | expresion:izq OR expresion:der
-    {: RESULT = new NodoOperacionBinaria(izq, "||", der); :}
+    | expresion:izq OR:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "||", der, opleft, opright); :}
 
-    | expresion:izq AND expresion:der
-    {: RESULT = new NodoOperacionBinaria(izq, "&&", der); :}
+    | expresion:izq AND:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "&&", der, opleft, opright); :}
 
-    | NOT expresion:exp
-    {: RESULT = new NodoOperacionUnaria("!", exp); :}
+    | NOT:op expresion:exp
+    {: RESULT = new NodoOperacionUnaria("!", exp, opleft, opright); :}
 
     // Menos unario
-    | MENOS expresion:exp
-    {: RESULT = new NodoOperacionUnaria("-", exp); :}
+    | MENOS:op expresion:exp
+    {: RESULT = new NodoOperacionUnaria("-", exp, opleft, opright); :}
 
     // Literales
     | NUMBER_LITERAL:num
-    {: RESULT = new NodoLiteral(Double.parseDouble(num), "number"); :}
+    {: RESULT = new NodoLiteral(Double.parseDouble(num), "number", numleft, numright); :}
 
-    | STRING_LITERAL:str
-    {: RESULT = new NodoLiteral(str.substring(1, str.length()-1), "string"); :}
+    | cadenaTexto:str
+    {: RESULT = new NodoLiteral(str, "string", strleft, strright); :}
 
     // Valores especiales
     | valorColor:c
@@ -425,7 +438,7 @@ expresion ::=
 
     // Acceso a variable
     | ID:id
-    {: RESULT = new NodoAccesoVariable(id); :}
+    {: RESULT = new NodoAccesoVariable(id, idleft, idright); :}
 
     // Llamada a API
     | llamadaAPI:api
@@ -436,14 +449,14 @@ expresion ::=
     {: RESULT = exp; :}
 
     // Comodín
-    | COMODIN
-    {: RESULT = new NodoLiteral("?", "comodin"); :}
+    | COMODIN:t
+    {: RESULT = new NodoLiteral("?", "comodin", tleft, tright); :}
     ;
 
 //--- Llamada a API (who_is_that_pokemon) ---
 llamadaAPI ::=
-    FUNC_POKEMON PAREN_IZQ expresion:inicio COMA expresion:fin PAREN_DER
-    {: RESULT = new NodoLlamadaApi("pokemon", inicio, fin); :}
+    FUNC_POKEMON:t PAREN_IZQ expresion:inicio COMA expresion:fin PAREN_DER
+    {: RESULT = new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright); :}
     ;
 
 //--- Lista de Expresiones (para draw y otros) ---
@@ -636,15 +649,15 @@ fila ::=
 
 //--- Lista de Opciones (para preguntas) ---
 listaOpciones ::=
-    listaOpciones:lista COMA STRING_LITERAL:opcion
-    {:
-        lista.add(opcion.substring(1, opcion.length()-1));
+    listaOpciones:lista COMA cadenaTexto:opcion
+    {:  
+        lista.add(opcion);
         RESULT = lista;
     :}
-    | STRING_LITERAL:opcion
-    {:
+    | cadenaTexto:opcion
+    {:  
         List<String> lista = new ArrayList<>();
-        lista.add(opcion.substring(1, opcion.length()-1));
+        lista.add(opcion);
         RESULT = lista;
     :}
     ;
@@ -652,20 +665,51 @@ listaOpciones ::=
 //--- Valor de Color ---
 valorColor ::=
     COLOR_NAME:nombre
-    {: RESULT = new NodoLiteral(nombre, "color"); :}
+    {: RESULT = new NodoLiteral(nombre, "color", nombreleft, nombreright); :}
 
     | COLOR_HEX:hex
-    {: RESULT = new NodoLiteral(hex, "color"); :}
+    {: RESULT = new NodoLiteral(hex, "color", hexleft, hexright); :}
     ;
 
 //--- Valor de Orientación ---
 valorOrientacion ::=
-    VERTICAL
-    {: RESULT = new NodoLiteral("VERTICAL", "orientation"); :}
+    VERTICAL:t
+    {: RESULT = new NodoLiteral("VERTICAL", "orientation", tleft, tright); :}
 
-    | HORIZONTAL
-    {: RESULT = new NodoLiteral("HORIZONTAL", "orientation"); :}
+    | HORIZONTAL:t
+    {: RESULT = new NodoLiteral("HORIZONTAL", "orientation", tleft, tright); :}
 
-    | MONO
-    {: RESULT = new NodoLiteral("MONO", "orientation"); :}
+    | MONO:t
+    {: RESULT = new NodoLiteral("MONO", "orientation", tleft, tright); :}
+    ;
+
+//--- Cadena de texto con soporte de emojis ---
+// Una cadena puede estar vacía o tener una o más partes
+cadenaTexto ::=
+    INICIO_CADENA partesCadena:partes FIN_CADENA
+    {: RESULT = partes; :}
+    | INICIO_CADENA FIN_CADENA
+    {: RESULT = ""; :}
+    ;
+
+// Acumulación de partes (texto normal + emojis)
+partesCadena ::=
+    partesCadena:acum parteCadena:parte
+    {: RESULT = acum + parte; :}
+    | parteCadena:parte
+    {: RESULT = parte; :}
+    ;
+
+// Cada parte puede ser contenido normal o un emoji
+parteCadena ::=
+    CONTENIDO_CADENA:c
+    {: RESULT = c; :}
+    | EMOJI_SMILE:e
+    {: RESULT = e; :}
+    | EMOJI_SAD:e
+    {: RESULT = e; :}
+    | EMOJI_SERIOUS:e
+    {: RESULT = e; :}
+    | EMOJI_HEART:e
+    {: RESULT = e; :}
     ;

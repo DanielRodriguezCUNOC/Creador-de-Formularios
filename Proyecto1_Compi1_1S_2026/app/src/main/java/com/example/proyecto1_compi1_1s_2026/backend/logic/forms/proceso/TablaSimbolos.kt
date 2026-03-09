@@ -35,12 +35,11 @@ class TablaSimbolos(val anterior: TablaSimbolos?) {
         }
         throw Exception("Error Semantico: Variable $id no declarada")
     }
-
-    fun obtenerTipo(id: String):String?{
-        if (tipos.containsKey(id)){
+    fun obtenerTipo(id: String): String? {
+        if (tipos.containsKey(id)) {
             return tipos[id]
         }
-        if (anterior != null){
+        if (anterior != null) {
             return anterior.obtenerTipo(id)
         }
         return null

@@ -10,4 +10,4 @@ CUP_PATH="/home/luluwalilith/Documentos/1S 2026 CUNOC/COMPI 1/Recursos/java-cup-
 # Compile the jflex specification file
 echo "Compilando el archivo flex"
 java -jar "$JFLEX_PATH" LexerFormulario.jflex
-java -jar "$CUP_PATH" -parser Parser ParserFormulario.cup
+java -jar "$CUP_PATH" -parser ParserFormulario ParserFormulario.cup

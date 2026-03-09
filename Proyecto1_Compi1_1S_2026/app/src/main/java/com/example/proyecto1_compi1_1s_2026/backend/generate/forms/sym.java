@@ -8,76 +8,82 @@ package com.example.proyecto1_compi1_1s_2026.backend.generate.forms;
 /** CUP generated class containing symbol constants. */
 public class sym {
   /* terminals */
-  public static final int STRING_LITERAL = 69;
-  public static final int POR = 54;
-  public static final int WIDTH = 9;
-  public static final int ELEMENTS = 14;
-  public static final int NUMBER_LITERAL = 68;
-  public static final int DIFERENTE = 63;
-  public static final int OPEN_QUESTION = 5;
-  public static final int MONO = 30;
-  public static final int DOS_PUNTOS = 48;
-  public static final int CORCHETE_DER = 42;
-  public static final int STYLES = 15;
-  public static final int RANGO = 51;
-  public static final int TYPE_SPECIAL = 27;
-  public static final int ORIENTATION = 13;
-  public static final int FUNC_POKEMON = 39;
-  public static final int FOR = 37;
-  public static final int BACKGROUND_COLOR = 17;
-  public static final int MULTIPLE_QUESTION = 8;
-  public static final int TEXT_SIZE = 19;
-  public static final int DRAW = 40;
-  public static final int NOT = 66;
-  public static final int AND = 65;
-  public static final int LLAVE_IZQ = 43;
   public static final int HORIZONTAL = 29;
-  public static final int DROP_QUESTION = 6;
-  public static final int OR = 64;
-  public static final int IGUALDAD = 62;
-  public static final int IN = 38;
-  public static final int POINT_Y = 12;
-  public static final int POINT_X = 11;
-  public static final int PAREN_DER = 46;
-  public static final int DIV = 55;
-  public static final int CORRECT = 24;
-  public static final int VERTICAL = 28;
-  public static final int IF = 33;
-  public static final int ID = 67;
-  public static final int TYPE_NUMBER = 25;
-  public static final int COLOR_HEX = 32;
-  public static final int EOF = 0;
+  public static final int SELECT_QUESTION = 7;
+  public static final int TEXT_SIZE = 19;
+  public static final int MENOR_IGUAL = 61;
+  public static final int INICIO_CADENA = 69;
+  public static final int CORCHETE_DER = 42;
   public static final int TABLE = 3;
-  public static final int error = 1;
+  public static final int LLAVE_IZQ = 43;
+  public static final int POTENCIA = 56;
+  public static final int COLOR_HEX = 32;
+  public static final int MAYOR = 58;
+  public static final int DROP_QUESTION = 6;
+  public static final int DIFERENTE = 63;
+  public static final int ELEMENTS = 14;
+  public static final int DRAW = 40;
+  public static final int OPEN_QUESTION = 5;
+  public static final int POR = 54;
+  public static final int BACKGROUND_COLOR = 17;
+  public static final int NOT = 66;
+  public static final int TEXT = 4;
+  public static final int DOS_PUNTOS = 48;
+  public static final int WIDTH = 9;
+  public static final int NUMBER_LITERAL = 68;
+  public static final int IGUALDAD = 62;
+  public static final int STYLES = 15;
+  public static final int FUNC_POKEMON = 39;
+  public static final int PAREN_IZQ = 45;
+  public static final int TYPE_SPECIAL = 27;
   public static final int COMA = 47;
   public static final int MODULO = 57;
-  public static final int MENOS = 53;
-  public static final int MENOR = 60;
-  public static final int SELECT_QUESTION = 7;
-  public static final int HEIGHT = 10;
-  public static final int ASIGNACION = 49;
-  public static final int MAYOR = 58;
-  public static final int COLOR_NAME = 31;
-  public static final int POTENCIA = 56;
-  public static final int COLOR_ATTR = 16;
-  public static final int ELSE = 34;
-  public static final int LLAVE_DER = 44;
-  public static final int CONTENT = 21;
-  public static final int TYPE_STRING = 26;
-  public static final int FONT_FAMILY = 18;
-  public static final int COMODIN = 50;
+  public static final int TYPE_NUMBER = 25;
+  public static final int MONO = 30;
   public static final int WHILE = 35;
   public static final int CORCHETE_IZQ = 41;
-  public static final int MAYOR_IGUAL = 59;
-  public static final int BORDER = 20;
-  public static final int TEXT = 4;
-  public static final int MENOR_IGUAL = 61;
-  public static final int SECTION = 2;
-  public static final int LABEL = 22;
-  public static final int PAREN_IZQ = 45;
+  public static final int EMOJI_SERIOUS = 74;
+  public static final int FIN_CADENA = 70;
   public static final int DO = 36;
-  public static final int OPTIONS = 23;
+  public static final int FOR = 37;
+  public static final int DIV = 55;
+  public static final int COMODIN = 50;
+  public static final int ORIENTATION = 13;
+  public static final int ELSE = 34;
+  public static final int MENOS = 53;
+  public static final int MULTIPLE_QUESTION = 8;
+  public static final int MENOR = 60;
   public static final int MAS = 52;
+  public static final int CORRECT = 24;
+  public static final int CONTENT = 21;
+  public static final int EOF = 0;
+  public static final int VERTICAL = 28;
+  public static final int LLAVE_DER = 44;
+  public static final int EMOJI_SMILE = 72;
+  public static final int LABEL = 22;
+  public static final int CONTENIDO_CADENA = 71;
+  public static final int EMOJI_HEART = 75;
+  public static final int IN = 38;
+  public static final int OR = 64;
+  public static final int error = 1;
+  public static final int COLOR_ATTR = 16;
+  public static final int POINT_Y = 12;
+  public static final int IF = 33;
+  public static final int POINT_X = 11;
+  public static final int ID = 67;
+  public static final int BORDER = 20;
+  public static final int HEIGHT = 10;
+  public static final int RANGO = 51;
+  public static final int ASIGNACION = 49;
+  public static final int FONT_FAMILY = 18;
+  public static final int EMOJI_SAD = 73;
+  public static final int COLOR_NAME = 31;
+  public static final int OPTIONS = 23;
+  public static final int TYPE_STRING = 26;
+  public static final int AND = 65;
+  public static final int PAREN_DER = 46;
+  public static final int MAYOR_IGUAL = 59;
+  public static final int SECTION = 2;
   public static final String[] terminalNames = new String[] {
   "EOF",
   "error",
@@ -148,7 +154,13 @@ public class sym {
   "NOT",
   "ID",
   "NUMBER_LITERAL",
-  "STRING_LITERAL"
+  "INICIO_CADENA",
+  "FIN_CADENA",
+  "CONTENIDO_CADENA",
+  "EMOJI_SMILE",
+  "EMOJI_SAD",
+  "EMOJI_SERIOUS",
+  "EMOJI_HEART"
   };
 }
 
