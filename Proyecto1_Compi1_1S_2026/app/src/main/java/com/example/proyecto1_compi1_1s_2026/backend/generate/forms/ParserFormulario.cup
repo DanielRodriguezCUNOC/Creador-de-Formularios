@@ -1,0 +1,715 @@
+package com.example.proyecto1_compi1_1s_2026.backend.generate.forms;
+
+import java_cup.runtime.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.*;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.*;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.*;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError;
+
+//================================
+// Código del Parser
+//================================
+
+parser code {:
+     private List<ErrorInfo> erroresSintacticos = new ArrayList<>();
+
+        public List<ErrorInfo> getErroresSintacticos() {
+            return erroresSintacticos;
+        }
+
+        public void syntax_error(Symbol s) {
+            String nombreToken = "desconocido";
+            int linea = 0;
+            int columna = 0;
+            
+            if (s != null) {
+                nombreToken = s.value != null ? s.value.toString() : "Token desconocido";
+                linea = s.left + 1;
+                columna = s.right + 1;
+            }
+            
+            String mensaje = "Token inesperado '" + nombreToken + "'";
+            ErrorInfo error = new ErrorInfo(TipoError.SINTACTICO, mensaje, linea, columna);
+            
+            erroresSintacticos.add(error);
+            System.err.println(error.toDetailedString());
+        }
+        
+        public void report_error(String message, Object info) {
+            // Evitar mensajes duplicados
+        }
+:};
+
+//================================
+// Declarar Terminales (Tokens)
+//================================
+
+// Palabras reservadas - Componentes UI
+terminal SECTION, TABLE, TEXT, OPEN_QUESTION, DROP_QUESTION;
+terminal SELECT_QUESTION, MULTIPLE_QUESTION;
+
+// Atributos de Formulario
+terminal WIDTH, HEIGHT, POINT_X, POINT_Y, ORIENTATION, ELEMENTS, STYLES;
+terminal COLOR_ATTR, BACKGROUND_COLOR, FONT_FAMILY, TEXT_SIZE, BORDER;
+terminal CONTENT, LABEL, OPTIONS, CORRECT;
+
+// Tipos de datos
+terminal TYPE_NUMBER, TYPE_STRING, TYPE_SPECIAL;
+
+// Valores de orientación
+terminal VERTICAL, HORIZONTAL, MONO;
+
+// Colores
+terminal String COLOR_NAME, COLOR_HEX;
+
+// Estructuras de control
+terminal IF, ELSE, WHILE, DO, FOR, IN;
+
+// Funciones especiales
+terminal FUNC_POKEMON, DRAW;
+
+// Símbolos estructurales
+terminal CORCHETE_IZQ, CORCHETE_DER, LLAVE_IZQ, LLAVE_DER;
+terminal PAREN_IZQ, PAREN_DER, COMA, DOS_PUNTOS, ASIGNACION;
+terminal COMODIN, RANGO;
+
+// Operadores aritméticos
+terminal MAS, MENOS, POR, DIV, POTENCIA, MODULO;
+
+// Operadores relacionales
+terminal MAYOR, MAYOR_IGUAL, MENOR, MENOR_IGUAL, IGUALDAD, DIFERENTE;
+
+// Operadores lógicos
+terminal OR, AND, NOT;
+
+// Literales e identificadores
+terminal String ID, NUMBER_LITERAL;
+
+// Cadenas de texto (manejadas por estado STRING en el lexer)
+terminal String INICIO_CADENA, FIN_CADENA, CONTENIDO_CADENA;
+
+// Emojis dentro de cadenas
+terminal String EMOJI_SMILE, EMOJI_SAD, EMOJI_SERIOUS, EMOJI_HEART;
+
+// Error léxico
+//terminal ERROR;
+
+//================================
+// Declarar No Terminales (Nodos del AST)
+//================================
+
+// Inicio y lista de instrucciones
+non terminal List<NodoInstruccion> inicio;
+non terminal List<NodoInstruccion> listaInstrucciones;
+non terminal NodoInstruccion instruccion;
+
+// Expresiones
+non terminal NodoExpresion expresion;
+non terminal List<NodoExpresion> listaExpresiones;
+non terminal List<NodoExpresion> listaExpresionesOpcional;
+
+// Atributos para componentes UI
+non terminal Map<String, Object> listaAtributos;
+non terminal Map<String, Object> atributo;
+
+// Declaraciones
+non terminal NodoInstruccion declaracion;
+
+// Sentencias de control
+non terminal NodoInstruccion sentenciaIf;
+non terminal NodoInstruccion sentenciaWhile;
+non terminal NodoInstruccion sentenciaDoWhile;
+non terminal NodoInstruccion sentenciaFor;
+
+// Componentes UI
+non terminal ComponenteUI componenteSeccion;
+non terminal ComponenteUI componenteTexto;
+non terminal ComponenteUI componenteTabla;
+non terminal ComponenteUI preguntaAbierta;
+non terminal ComponenteUI preguntaDesplegable;
+non terminal ComponenteUI preguntaSeleccionUnica;
+non terminal ComponenteUI preguntaMultiple;
+
+// Instrucciones especiales
+non terminal NodoInstruccion instruccionDraw;
+non terminal NodoExpresion llamadaAPI;
+
+// Para tablas (filas y celdas)
+non terminal List<List<NodoExpresion>> listaFilas;
+non terminal List<NodoExpresion> fila;
+
+// Valores especiales
+non terminal NodoExpresion valorColor;
+non terminal NodoExpresion valorOrientacion;
+non terminal List<String> listaOpciones;
+
+// Cadenas de texto con soporte de emojis
+non terminal String cadenaTexto;
+non terminal String partesCadena;
+non terminal String parteCadena;
+
+//================================
+// Precedencia de Operadores
+//================================
+
+precedence left OR;
+precedence left AND;
+precedence right NOT;
+precedence left IGUALDAD, DIFERENTE;
+precedence left MAYOR, MENOR, MAYOR_IGUAL, MENOR_IGUAL;
+precedence left MAS, MENOS;
+precedence left POR, DIV, MODULO;
+precedence right POTENCIA;
+
+//================================
+// Reglas Gramaticales
+//================================
+
+start with inicio;
+
+//--- Inicio ---
+inicio ::=
+    listaInstrucciones:lista
+    {: RESULT = lista; :}
+    | /* vacío */
+    {: RESULT = new ArrayList<NodoInstruccion>(); :}
+    ;
+
+//--- Lista de Instrucciones ---
+listaInstrucciones ::=
+    listaInstrucciones:lista instruccion:inst
+    {:
+        if (inst != null) {
+            lista.add(inst);
+        }
+        RESULT = lista;
+    :}
+    | instruccion:inst
+    {:
+        List<NodoInstruccion> lista = new ArrayList<NodoInstruccion>();
+        if (inst != null) {
+            lista.add(inst);
+        }
+        RESULT = lista;
+    :}
+    ;
+
+//--- Instrucciones ---
+instruccion ::=
+    // Declaración
+    declaracion:d
+    {: RESULT = d; :}
+
+    // Asignación
+    | ID:id ASIGNACION expresion:exp
+    {: RESULT = new NodoAsignacion(id, exp, idleft, idright); :}
+
+    // Sentencia IF
+    | sentenciaIf:s
+    {: RESULT = s; :}
+
+    // Ciclo WHILE
+    | sentenciaWhile:w
+    {: RESULT = w; :}
+
+    // Ciclo DO-WHILE
+    | sentenciaDoWhile:dw
+    {: RESULT = dw; :}
+
+    // Ciclo FOR
+    | sentenciaFor:f
+    {: RESULT = f; :}
+
+    // Instrucción DRAW
+    | instruccionDraw:d
+    {: RESULT = d; :}
+
+    // Componentes UI
+    | componenteSeccion:c
+    {: RESULT = c; :}
+
+    | componenteTexto:c
+    {: RESULT = c; :}
+
+    | componenteTabla:t
+    {: RESULT = t; :}
+
+    | preguntaAbierta:p
+    {: RESULT = p; :}
+
+    | preguntaDesplegable:p
+    {: RESULT = p; :}
+
+    | preguntaSeleccionUnica:p
+    {: RESULT = p; :}
+
+    | preguntaMultiple:p
+    {: RESULT = p; :}
+    ;
+
+//--- Declaraciones ---
+declaracion ::=
+    // Declaración sin inicialización
+    ID:nombre DOS_PUNTOS TYPE_NUMBER
+    {: RESULT = new NodoDeclaracion(nombre, "number", null, nombreleft, nombreright); :}
+
+    | ID:nombre DOS_PUNTOS TYPE_STRING
+    {: RESULT = new NodoDeclaracion(nombre, "string", null, nombreleft, nombreright); :}
+
+    | ID:nombre DOS_PUNTOS TYPE_SPECIAL
+    {: RESULT = new NodoDeclaracion(nombre, "special", null, nombreleft, nombreright); :}
+
+    // Declaración con inicialización
+    | ID:nombre DOS_PUNTOS TYPE_NUMBER ASIGNACION expresion:val
+    {: RESULT = new NodoDeclaracion(nombre, "number", val, nombreleft, nombreright); :}
+
+    | ID:nombre DOS_PUNTOS TYPE_STRING ASIGNACION expresion:val
+    {: RESULT = new NodoDeclaracion(nombre, "string", val, nombreleft, nombreright); :}
+
+    | ID:nombre DOS_PUNTOS TYPE_SPECIAL ASIGNACION expresion:val
+    {: RESULT = new NodoDeclaracion(nombre, "special", val, nombreleft, nombreright); :}
+    ;
+
+//--- Sentencia IF ---
+sentenciaIf ::=
+    // IF sin ELSE
+    IF:t PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:ifBody LLAVE_DER
+    {: RESULT = new NodoSentenciaIf(cond, ifBody, null, tleft, tright); :}
+
+    // IF con ELSE
+    | IF:t PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:ifBody LLAVE_DER
+      ELSE LLAVE_IZQ listaInstrucciones:elseBody LLAVE_DER
+    {: RESULT = new NodoSentenciaIf(cond, ifBody, elseBody, tleft, tright); :}
+    ;
+
+//--- Ciclo WHILE ---
+sentenciaWhile ::=
+    WHILE:t PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:body LLAVE_DER
+    {: RESULT = new NodoCicloWhile(cond, body, tleft, tright); :}
+    ;
+
+//--- Ciclo DO-WHILE ---
+sentenciaDoWhile ::=
+    DO:t LLAVE_IZQ listaInstrucciones:body LLAVE_DER WHILE PAREN_IZQ expresion:cond PAREN_DER
+    {: RESULT = new NodoCicloDoWhile(body, cond, tleft, tright); :}
+    ;
+
+//--- Ciclo FOR ---
+sentenciaFor ::=
+    FOR:t ID:variable IN expresion:inicio RANGO expresion:fin LLAVE_IZQ listaInstrucciones:body LLAVE_DER
+    {: RESULT = new NodoCicloFor(variable, inicio, fin, body, tleft, tright); :}
+    ;
+
+//--- Instrucción DRAW ---
+instruccionDraw ::=
+    DRAW:t PAREN_IZQ ID:varEspecial COMA listaExpresionesOpcional:params PAREN_DER
+    {: RESULT = new NodoDraw(varEspecial, params, tleft, tright); :}
+    ;
+
+//--- Componente SECTION ---
+componenteSeccion ::=
+    SECTION:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {:  
+        List<NodoInstruccion> elementos = new ArrayList<>();
+        if (attrs.containsKey("elements")) {
+            elementos = (List<NodoInstruccion>) attrs.get("elements");
+            attrs.remove("elements");
+        }
+        RESULT = new ComponenteSeccion(attrs, elementos, tleft, tright);
+    :}
+    ;
+
+//--- Componente TEXT ---
+componenteTexto ::=
+    TEXT:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {: RESULT = new ComponenteTexto(attrs, tleft, tright); :}
+    ;
+
+//--- Componente TABLE ---
+componenteTabla ::=
+    TABLE:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {:  
+        List<List<NodoExpresion>> filas = new ArrayList<>();
+        if (attrs.containsKey("content")) {
+            filas = (List<List<NodoExpresion>>) attrs.get("content");
+            attrs.remove("content");
+        }
+        RESULT = new ComponenteTabla(attrs, filas, tleft, tright);
+    :}
+    ;
+
+//--- Pregunta Abierta ---
+preguntaAbierta ::=
+    OPEN_QUESTION:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {: RESULT = new PreguntaAbierta(attrs, tleft, tright); :}
+    ;
+
+//--- Pregunta Desplegable ---
+preguntaDesplegable ::=
+    DROP_QUESTION:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {: RESULT = new PreguntaDesplegable(attrs, tleft, tright); :}
+    ;
+
+//--- Pregunta Selección Única ---
+preguntaSeleccionUnica ::=
+    SELECT_QUESTION:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {: RESULT = new PreguntaSeleccionUnica(attrs, tleft, tright); :}
+    ;
+
+//--- Pregunta Selección Múltiple ---
+preguntaMultiple ::=
+    MULTIPLE_QUESTION:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    {: RESULT = new PreguntaSeleccionadaMultiple(attrs, tleft, tright); :}
+    ;
+
+//--- Expresiones ---
+expresion ::=
+    // Operaciones aritméticas
+    expresion:izq MAS:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "+", der, opleft, opright); :}
+
+    | expresion:izq MENOS:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "-", der, opleft, opright); :}
+
+    | expresion:izq POR:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "*", der, opleft, opright); :}
+
+    | expresion:izq DIV:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "/", der, opleft, opright); :}
+
+    | expresion:izq POTENCIA:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "^", der, opleft, opright); :}
+
+    | expresion:izq MODULO:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "%", der, opleft, opright); :}
+
+    // Operaciones relacionales
+    | expresion:izq MAYOR:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, ">", der, opleft, opright); :}
+
+    | expresion:izq MENOR:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "<", der, opleft, opright); :}
+
+    | expresion:izq MAYOR_IGUAL:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, ">=", der, opleft, opright); :}
+
+    | expresion:izq MENOR_IGUAL:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "<=", der, opleft, opright); :}
+
+    | expresion:izq IGUALDAD:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "==", der, opleft, opright); :}
+
+    | expresion:izq DIFERENTE:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "!!", der, opleft, opright); :}
+
+    // Operaciones lógicas
+    | expresion:izq OR:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "||", der, opleft, opright); :}
+
+    | expresion:izq AND:op expresion:der
+    {: RESULT = new NodoOperacionBinaria(izq, "&&", der, opleft, opright); :}
+
+    | NOT:op expresion:exp
+    {: RESULT = new NodoOperacionUnaria("!", exp, opleft, opright); :}
+
+    // Menos unario
+    | MENOS:op expresion:exp
+    {: RESULT = new NodoOperacionUnaria("-", exp, opleft, opright); :}
+
+    // Literales
+    | NUMBER_LITERAL:num
+    {: RESULT = new NodoLiteral(Double.parseDouble(num), "number", numleft, numright); :}
+
+    | cadenaTexto:str
+    {: RESULT = new NodoLiteral(str, "string", strleft, strright); :}
+
+    // Valores especiales
+    | valorColor:c
+    {: RESULT = c; :}
+
+    | valorOrientacion:o
+    {: RESULT = o; :}
+
+    // Acceso a variable
+    | ID:id
+    {: RESULT = new NodoAccesoVariable(id, idleft, idright); :}
+
+    // Llamada a API
+    | llamadaAPI:api
+    {: RESULT = api; :}
+
+    // Agrupación
+    | PAREN_IZQ expresion:exp PAREN_DER
+    {: RESULT = exp; :}
+
+    // Comodín
+    | COMODIN:t
+    {: RESULT = new NodoLiteral("?", "comodin", tleft, tright); :}
+    ;
+
+//--- Llamada a API (who_is_that_pokemon) ---
+llamadaAPI ::=
+    FUNC_POKEMON:t PAREN_IZQ expresion:inicio COMA expresion:fin PAREN_DER
+    {: RESULT = new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright); :}
+    ;
+
+//--- Lista de Expresiones (para draw y otros) ---
+listaExpresionesOpcional ::=
+    listaExpresiones:lista
+    {: RESULT = lista; :}
+    | /* vacío */
+    {: RESULT = new ArrayList<NodoExpresion>(); :}
+    ;
+
+listaExpresiones ::=
+    listaExpresiones:lista COMA expresion:exp
+    {:
+        lista.add(exp);
+        RESULT = lista;
+    :}
+    | expresion:exp
+    {:
+        List<NodoExpresion> lista = new ArrayList<NodoExpresion>();
+        lista.add(exp);
+        RESULT = lista;
+    :}
+    ;
+
+//--- Atributos para Componentes UI ---
+listaAtributos ::=
+    listaAtributos:mapa atributo:attr
+    {:
+        mapa.putAll(attr);
+        RESULT = mapa;
+    :}
+    | atributo:attr
+    {: RESULT = attr; :}
+    ;
+
+atributo ::=
+    // Atributos simples
+    WIDTH DOS_PUNTOS expresion:valor
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("width", valor);
+        RESULT = mapa;
+    :}
+
+    | HEIGHT DOS_PUNTOS expresion:valor
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("height", valor);
+        RESULT = mapa;
+    :}
+
+    | POINT_X DOS_PUNTOS expresion:valor
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("pointX", valor);
+        RESULT = mapa;
+    :}
+
+    | POINT_Y DOS_PUNTOS expresion:valor
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("pointY", valor);
+        RESULT = mapa;
+    :}
+
+    | ORIENTATION DOS_PUNTOS valorOrientacion:valor
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("orientation", valor);
+        RESULT = mapa;
+    :}
+
+    | COLOR_ATTR DOS_PUNTOS valorColor:valor
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("color", valor);
+        RESULT = mapa;
+    :}
+
+    | BACKGROUND_COLOR DOS_PUNTOS valorColor:valor
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("backgroundColor", valor);
+        RESULT = mapa;
+    :}
+
+    | FONT_FAMILY DOS_PUNTOS expresion:valor
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("fontFamily", valor);
+        RESULT = mapa;
+    :}
+
+    | TEXT_SIZE DOS_PUNTOS expresion:valor
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("textSize", valor);
+        RESULT = mapa;
+    :}
+
+    | BORDER DOS_PUNTOS expresion:valor
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("border", valor);
+        RESULT = mapa;
+    :}
+
+    | LABEL DOS_PUNTOS expresion:valor
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("label", valor);
+        RESULT = mapa;
+    :}
+
+    | CORRECT DOS_PUNTOS expresion:valor
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("correct", valor);
+        RESULT = mapa;
+    :}
+
+    // CONTENT (para TEXT y TABLE)
+    | CONTENT DOS_PUNTOS expresion:valor
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("content", valor);
+        RESULT = mapa;
+    :}
+
+    | CONTENT DOS_PUNTOS CORCHETE_IZQ listaFilas:filas CORCHETE_DER
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("content", filas);
+        RESULT = mapa;
+    :}
+
+    // ELEMENTS (para SECTION)
+    | ELEMENTS DOS_PUNTOS CORCHETE_IZQ listaInstrucciones:elementos CORCHETE_DER
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("elements", elementos);
+        RESULT = mapa;
+    :}
+
+    // OPTIONS (para preguntas)
+    | OPTIONS DOS_PUNTOS CORCHETE_IZQ listaOpciones:opciones CORCHETE_DER
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("options", opciones);
+        RESULT = mapa;
+    :}
+
+    // STYLES (bloque de estilos)
+    | STYLES DOS_PUNTOS LLAVE_IZQ listaAtributos:estilos LLAVE_DER
+    {:
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("styles", estilos);
+        RESULT = mapa;
+    :}
+    ;
+
+//--- Filas de Tabla ---
+listaFilas ::=
+    listaFilas:lista COMA CORCHETE_IZQ fila:f CORCHETE_DER
+    {:
+        lista.add(f);
+        RESULT = lista;
+    :}
+    | CORCHETE_IZQ fila:f CORCHETE_DER
+    {:
+        List<List<NodoExpresion>> lista = new ArrayList<>();
+        lista.add(f);
+        RESULT = lista;
+    :}
+    ;
+
+fila ::=
+    fila:lista COMA expresion:exp
+    {:
+        lista.add(exp);
+        RESULT = lista;
+    :}
+    | expresion:exp
+    {:
+        List<NodoExpresion> lista = new ArrayList<>();
+        lista.add(exp);
+        RESULT = lista;
+    :}
+    ;
+
+//--- Lista de Opciones (para preguntas) ---
+listaOpciones ::=
+    listaOpciones:lista COMA cadenaTexto:opcion
+    {:  
+        lista.add(opcion);
+        RESULT = lista;
+    :}
+    | cadenaTexto:opcion
+    {:  
+        List<String> lista = new ArrayList<>();
+        lista.add(opcion);
+        RESULT = lista;
+    :}
+    ;
+
+//--- Valor de Color ---
+valorColor ::=
+    COLOR_NAME:nombre
+    {: RESULT = new NodoLiteral(nombre, "color", nombreleft, nombreright); :}
+
+    | COLOR_HEX:hex
+    {: RESULT = new NodoLiteral(hex, "color", hexleft, hexright); :}
+    ;
+
+//--- Valor de Orientación ---
+valorOrientacion ::=
+    VERTICAL:t
+    {: RESULT = new NodoLiteral("VERTICAL", "orientation", tleft, tright); :}
+
+    | HORIZONTAL:t
+    {: RESULT = new NodoLiteral("HORIZONTAL", "orientation", tleft, tright); :}
+
+    | MONO:t
+    {: RESULT = new NodoLiteral("MONO", "orientation", tleft, tright); :}
+    ;
+
+//--- Cadena de texto con soporte de emojis ---
+// Una cadena puede estar vacía o tener una o más partes
+cadenaTexto ::=
+    INICIO_CADENA partesCadena:partes FIN_CADENA
+    {: RESULT = partes; :}
+    | INICIO_CADENA FIN_CADENA
+    {: RESULT = ""; :}
+    ;
+
+// Acumulación de partes (texto normal + emojis)
+partesCadena ::=
+    partesCadena:acum parteCadena:parte
+    {: RESULT = acum + parte; :}
+    | parteCadena:parte
+    {: RESULT = parte; :}
+    ;
+
+// Cada parte puede ser contenido normal o un emoji
+parteCadena ::=
+    CONTENIDO_CADENA:c
+    {: RESULT = c; :}
+    | EMOJI_SMILE:e
+    {: RESULT = e; :}
+    | EMOJI_SAD:e
+    {: RESULT = e; :}
+    | EMOJI_SERIOUS:e
+    {: RESULT = e; :}
+    | EMOJI_HEART:e
+    {: RESULT = e; :}
+    ;

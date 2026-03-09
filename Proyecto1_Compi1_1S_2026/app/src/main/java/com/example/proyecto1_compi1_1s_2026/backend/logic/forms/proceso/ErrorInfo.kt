@@ -1,0 +1,27 @@
+package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso
+
+data class ErrorInfo(
+    val tipo: TipoError,
+    val mensaje: String,
+    val linea: Int,
+    val columna: Int = 0
+) {
+    override fun toString(): String {
+        return if (linea > 0) "Línea $linea, Col $columna: $mensaje"
+        else mensaje
+    }
+
+    fun toDetailedString(): String {
+        val icono = when (tipo) {
+            TipoError.LEXICO -> "❌\u274C"
+            TipoError.SINTACTICO -> "⚠\uFE0F️"
+            TipoError.SEMANTICO -> "\uD83D\uDD34"
+        }
+        return if (linea > 0)
+            "$icono Error ${tipo.nombre} en línea $linea, columna $columna: $mensaje"
+        else
+            "$icono ${tipo.nombre}: $mensaje"
+    }
+}
+
+
