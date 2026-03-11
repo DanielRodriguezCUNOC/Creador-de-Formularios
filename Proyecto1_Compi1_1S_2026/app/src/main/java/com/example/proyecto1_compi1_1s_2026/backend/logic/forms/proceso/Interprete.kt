@@ -147,17 +147,24 @@ class Interprete(var entornoActual: TablaSimbolos) : Visitor<Any?> {
     private fun evaluarAtributo(valor: Any?): Any? {
         return when (valor) {
             is NodoExpresion -> valor.accept(this)
-            is List<*> -> valor.map { evaluarAtributo(it) }
-            is Map<*, *> -> valor.mapValues { (_, v) -> evaluarAtributo(v) }
+            is List<*>       -> valor.map { item ->
+                // sub-listas pueden contener NodoAtributo (estilos) u otros valores
+                if (item is NodoAtributo) NodoAtributo(item.nombre, evaluarAtributo(item.valor) ?: "")
+                else evaluarAtributo(item)
+            }
             else -> valor
         }
     }
 
-
-    private fun evaluarAtributos(atributos: Map<String, Object>): Map<String, Any> {
+    /**
+     * Evalúa cada atributo de la lista y devuelve un Map<String, Any> listo para
+     * ser consumido por la capa de renderizado.
+     * Usa búsqueda lineal sobre la lista — eficiente para n <= 7 atributos.
+     */
+    private fun evaluarAtributos(atributos: List<NodoAtributo>): Map<String, Any> {
         val result = mutableMapOf<String, Any>()
-        for ((clave, valor) in atributos) {
-            result[clave] = evaluarAtributo(valor) ?: ""
+        for (attr in atributos) {
+            result[attr.nombre] = evaluarAtributo(attr.valor) ?: ""
         }
         return result
     }

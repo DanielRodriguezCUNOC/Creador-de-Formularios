@@ -35,6 +35,17 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoErro
         private Symbol symbol(int type, Object value){
             return new Symbol(type, yyline+1, yycolumn+1, value);
         }
+
+        
+        private void addLexicalError(String mensaje) {
+            ErrorInfo error = new ErrorInfo(
+                TipoError.LEXICO,
+                mensaje,
+                yyline + 1,
+                yycolumn + 1
+            );
+            errorList.add(error);
+        }
 %}
 
 // --- Expresiones Regulares Básicas ---
@@ -59,6 +70,12 @@ ESPACIO = [ \t\r\n\f]+
 
 %%
 <YYINITIAL> {
+
+    [\u200B\u200C\u200D\uFEFF]        { /* ignorar / }
+
+    / Ignorar caracteres invisibles o de control no útiles /
+
+    [\p{C}&&[^\n\r\t]]      { / ignorar */ }
 
     // --- COMENTARIOS (ignorar) ---
 
@@ -134,7 +151,7 @@ ESPACIO = [ \t\r\n\f]+
     ":"                 { return symbol(sym.DOS_PUNTOS); }
     "="                 { return symbol(sym.ASIGNACION); }
     "?"                 { return symbol(sym.COMODIN); }
-    ".."                { return symbol(sym.RANGO); }
+    "."                { return symbol(sym.PUNTO); }
 
     // --- OPERADORES ARITMÉTICOS ---
 
@@ -182,14 +199,7 @@ ESPACIO = [ \t\r\n\f]+
 
     [^]  {
         String mensaje = "Carácter no reconocido '" + yytext() + "'";
-        ErrorInfo error = new ErrorInfo(
-            TipoError.LEXICO,
-            mensaje,
-            yyline + 1,
-            yycolumn + 1
-        );
-        errorList.add(error);
-        System.err.println(error.toDetailedString());
+        addLexicalError(mensaje);
     }
 }
 
@@ -231,13 +241,8 @@ ESPACIO = [ \t\r\n\f]+
     \n                  {
         yybegin(YYINITIAL);
         String mensaje = "Cadena de texto sin cerrar en línea " + (yyline + 1);
-        ErrorInfo error = new ErrorInfo(
-            TipoError.LEXICO,
-            mensaje,
-            yyline + 1,
-            yycolumn + 1
-        );
-        errorList.add(error);
-        System.err.println(error.toDetailedString());
+        addLexicalError(mensaje);
+        //* Evita que el parser se bloquee
+        return symbol(sym.FIN_CADENA, "");
     }
 }

@@ -4,8 +4,10 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_principal.Visitor
 
 abstract class ComponenteUI(
-    /** Almacena pares clave-valor de atributos, p.ej. width -> Literal(100) */
-    val atributos: Map<String, Object>,
+    /** Lista de atributos del componente. Se usa List en lugar de Map porque
+     *  el número de atributos es pequeño (≤7) y la búsqueda lineal O(n)
+     *  es más eficiente que el overhead del hashing de un HashMap. */
+    val atributos: List<NodoAtributo>,
     override val linea: Int = 0,
     override val columna: Int = 0
 ) : NodoInstruccion {

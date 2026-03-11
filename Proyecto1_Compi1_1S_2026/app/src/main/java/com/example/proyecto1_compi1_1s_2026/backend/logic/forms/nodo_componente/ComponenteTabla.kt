@@ -4,7 +4,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.N
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_principal.Visitor
 
 class ComponenteTabla(
-    atributos: Map<String, Object>,
+    atributos: List<NodoAtributo>,
     val filas: List<List<NodoExpresion>>,
     linea: Int = 0,
     columna: Int = 0

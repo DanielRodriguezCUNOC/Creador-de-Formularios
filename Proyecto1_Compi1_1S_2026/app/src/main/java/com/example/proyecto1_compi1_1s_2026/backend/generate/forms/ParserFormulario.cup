@@ -3,8 +3,6 @@ package com.example.proyecto1_compi1_1s_2026.backend.generate.forms;
 import java_cup.runtime.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.HashMap;
-import java.util.Map;
 
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.*;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.*;
@@ -30,8 +28,8 @@ parser code {:
             
             if (s != null) {
                 nombreToken = s.value != null ? s.value.toString() : "Token desconocido";
-                linea = s.left + 1;
-                columna = s.right + 1;
+                linea = s.left;
+                columna = s.right;
             }
             
             String mensaje = "Token inesperado '" + nombreToken + "'";
@@ -39,10 +37,6 @@ parser code {:
             
             erroresSintacticos.add(error);
             System.err.println(error.toDetailedString());
-        }
-        
-        public void report_error(String message, Object info) {
-            // Evitar mensajes duplicados
         }
 :};
 
@@ -76,8 +70,8 @@ terminal FUNC_POKEMON, DRAW;
 
 // Símbolos estructurales
 terminal CORCHETE_IZQ, CORCHETE_DER, LLAVE_IZQ, LLAVE_DER;
-terminal PAREN_IZQ, PAREN_DER, COMA, DOS_PUNTOS, ASIGNACION;
-terminal COMODIN, RANGO;
+terminal PAREN_IZQ, PAREN_DER, COMA, PUNTO, DOS_PUNTOS, ASIGNACION;
+terminal COMODIN;
 
 // Operadores aritméticos
 terminal MAS, MENOS, POR, DIV, POTENCIA, MODULO;
@@ -114,9 +108,27 @@ non terminal NodoExpresion expresion;
 non terminal List<NodoExpresion> listaExpresiones;
 non terminal List<NodoExpresion> listaExpresionesOpcional;
 
-// Atributos para componentes UI
-non terminal Map<String, Object> listaAtributos;
-non terminal Map<String, Object> atributo;
+// Atributos específicos por componente
+non terminal List<NodoAtributo> atributosSeccion;
+non terminal NodoAtributo atributoSeccion;
+non terminal List<NodoAtributo> atributosTabla;
+non terminal NodoAtributo atributoTabla;
+non terminal List<NodoAtributo> atributosTexto;
+non terminal NodoAtributo atributoTexto;
+non terminal List<NodoAtributo> atributosPreguntaAbierta;
+non terminal NodoAtributo atributoPreguntaAbierta;
+non terminal List<NodoAtributo> atributosPreguntaDesplegable;
+non terminal NodoAtributo atributoPreguntaDesplegable;
+non terminal List<NodoAtributo> atributosSeleccionUnica;
+non terminal NodoAtributo atributoSeleccionUnica;
+non terminal List<NodoAtributo> atributosMultiple;
+non terminal NodoAtributo atributoMultiple;
+
+// Estilos compartidos
+non terminal List<NodoAtributo> estilosConBorde;
+non terminal NodoAtributo estiloConBorde;
+non terminal List<NodoAtributo> estilosSinBorde;
+non terminal NodoAtributo estiloSinBorde;
 
 // Declaraciones
 non terminal NodoInstruccion declaracion;
@@ -302,7 +314,7 @@ sentenciaDoWhile ::=
 
 //--- Ciclo FOR ---
 sentenciaFor ::=
-    FOR:t ID:variable IN expresion:inicio RANGO expresion:fin LLAVE_IZQ listaInstrucciones:body LLAVE_DER
+    FOR:t ID:variable IN expresion:inicio PUNTO PUNTO expresion:fin LLAVE_IZQ listaInstrucciones:body LLAVE_DER
     {: RESULT = new NodoCicloFor(variable, inicio, fin, body, tleft, tright); :}
     ;
 
@@ -314,57 +326,65 @@ instruccionDraw ::=
 
 //--- Componente SECTION ---
 componenteSeccion ::=
-    SECTION:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    SECTION:t CORCHETE_IZQ atributosSeccion:attrs CORCHETE_DER
     {:  
         List<NodoInstruccion> elementos = new ArrayList<>();
-        if (attrs.containsKey("elements")) {
-            elementos = (List<NodoInstruccion>) attrs.get("elements");
-            attrs.remove("elements");
+        List<NodoAtributo> attrsFiltrados = new ArrayList<>();
+        for (NodoAtributo attr : attrs) {
+            if (attr.getNombre().equals("elements")) {
+                elementos = (List<NodoInstruccion>) attr.getValor();
+            } else {
+                attrsFiltrados.add(attr);
+            }
         }
-        RESULT = new ComponenteSeccion(attrs, elementos, tleft, tright);
+        RESULT = new ComponenteSeccion(attrsFiltrados, elementos, tleft, tright);
     :}
     ;
 
 //--- Componente TEXT ---
 componenteTexto ::=
-    TEXT:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    TEXT:t CORCHETE_IZQ atributosTexto:attrs CORCHETE_DER
     {: RESULT = new ComponenteTexto(attrs, tleft, tright); :}
     ;
 
 //--- Componente TABLE ---
 componenteTabla ::=
-    TABLE:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    TABLE:t CORCHETE_IZQ atributosTabla:attrs CORCHETE_DER
     {:  
         List<List<NodoExpresion>> filas = new ArrayList<>();
-        if (attrs.containsKey("content")) {
-            filas = (List<List<NodoExpresion>>) attrs.get("content");
-            attrs.remove("content");
+        List<NodoAtributo> attrsFiltrados = new ArrayList<>();
+        for (NodoAtributo attr : attrs) {
+            if (attr.getNombre().equals("elements")) {
+                filas = (List<List<NodoExpresion>>) attr.getValor();
+            } else {
+                attrsFiltrados.add(attr);
+            }
         }
-        RESULT = new ComponenteTabla(attrs, filas, tleft, tright);
+        RESULT = new ComponenteTabla(attrsFiltrados, filas, tleft, tright);
     :}
     ;
 
 //--- Pregunta Abierta ---
 preguntaAbierta ::=
-    OPEN_QUESTION:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    OPEN_QUESTION:t CORCHETE_IZQ atributosPreguntaAbierta:attrs CORCHETE_DER
     {: RESULT = new PreguntaAbierta(attrs, tleft, tright); :}
     ;
 
 //--- Pregunta Desplegable ---
 preguntaDesplegable ::=
-    DROP_QUESTION:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    DROP_QUESTION:t CORCHETE_IZQ atributosPreguntaDesplegable:attrs CORCHETE_DER
     {: RESULT = new PreguntaDesplegable(attrs, tleft, tright); :}
     ;
 
 //--- Pregunta Selección Única ---
 preguntaSeleccionUnica ::=
-    SELECT_QUESTION:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    SELECT_QUESTION:t CORCHETE_IZQ atributosSeleccionUnica:attrs CORCHETE_DER
     {: RESULT = new PreguntaSeleccionUnica(attrs, tleft, tright); :}
     ;
 
 //--- Pregunta Selección Múltiple ---
 preguntaMultiple ::=
-    MULTIPLE_QUESTION:t LLAVE_IZQ listaAtributos:attrs LLAVE_DER
+    MULTIPLE_QUESTION:t CORCHETE_IZQ atributosMultiple:attrs CORCHETE_DER
     {: RESULT = new PreguntaSeleccionadaMultiple(attrs, tleft, tright); :}
     ;
 
@@ -481,141 +501,240 @@ listaExpresiones ::=
     :}
     ;
 
-//--- Atributos para Componentes UI ---
-listaAtributos ::=
-    listaAtributos:mapa atributo:attr
-    {:
-        mapa.putAll(attr);
-        RESULT = mapa;
-    :}
-    | atributo:attr
-    {: RESULT = attr; :}
+//--- Atributos para SECTION ---
+// SECTION admite: width, height, pointX, pointY, orientation(opt), elements(opt), styles(opt)
+atributosSeccion ::=
+    atributosSeccion:list COMA atributoSeccion:a
+    {: list.add(a); RESULT = list; :}
+    | atributoSeccion:a
+    {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(a); RESULT = l; :}
     ;
 
-atributo ::=
-    // Atributos simples
-    WIDTH DOS_PUNTOS expresion:valor
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("width", valor);
-        RESULT = mapa;
-    :}
+atributoSeccion ::=
+    WIDTH DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("width", v); :}
 
-    | HEIGHT DOS_PUNTOS expresion:valor
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("height", valor);
-        RESULT = mapa;
-    :}
+    | HEIGHT DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("height", v); :}
 
-    | POINT_X DOS_PUNTOS expresion:valor
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("pointX", valor);
-        RESULT = mapa;
-    :}
+    | POINT_X DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("pointX", v); :}
 
-    | POINT_Y DOS_PUNTOS expresion:valor
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("pointY", valor);
-        RESULT = mapa;
-    :}
+    | POINT_Y DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("pointY", v); :}
 
-    | ORIENTATION DOS_PUNTOS valorOrientacion:valor
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("orientation", valor);
-        RESULT = mapa;
-    :}
+    | ORIENTATION DOS_PUNTOS valorOrientacion:v
+    {: RESULT = new NodoAtributo("orientation", v); :}
 
-    | COLOR_ATTR DOS_PUNTOS valorColor:valor
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("color", valor);
-        RESULT = mapa;
-    :}
+    | ELEMENTS DOS_PUNTOS LLAVE_IZQ listaInstrucciones:elems LLAVE_DER
+    {: RESULT = new NodoAtributo("elements", elems); :}
 
-    | BACKGROUND_COLOR DOS_PUNTOS valorColor:valor
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("backgroundColor", valor);
-        RESULT = mapa;
-    :}
+    | STYLES CORCHETE_IZQ estilosConBorde:ests CORCHETE_DER
+    {: RESULT = new NodoAtributo("styles", ests); :}
+    ;
 
-    | FONT_FAMILY DOS_PUNTOS expresion:valor
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("fontFamily", valor);
-        RESULT = mapa;
-    :}
+//--- Atributos para TABLE ---
+// TABLE admite: width, height, pointX, pointY, elements(filas), styles(opt)
+atributosTabla ::=
+    atributosTabla:list COMA atributoTabla:a
+    {: list.add(a); RESULT = list; :}
+    | atributoTabla:a
+    {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(a); RESULT = l; :}
+    ;
 
-    | TEXT_SIZE DOS_PUNTOS expresion:valor
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("textSize", valor);
-        RESULT = mapa;
-    :}
+atributoTabla ::=
+    WIDTH DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("width", v); :}
 
-    | BORDER DOS_PUNTOS expresion:valor
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("border", valor);
-        RESULT = mapa;
-    :}
+    | HEIGHT DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("height", v); :}
 
-    | LABEL DOS_PUNTOS expresion:valor
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("label", valor);
-        RESULT = mapa;
-    :}
+    | POINT_X DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("pointX", v); :}
 
-    | CORRECT DOS_PUNTOS expresion:valor
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("correct", valor);
-        RESULT = mapa;
-    :}
+    | POINT_Y DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("pointY", v); :}
 
-    // CONTENT (para TEXT y TABLE)
-    | CONTENT DOS_PUNTOS expresion:valor
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("content", valor);
-        RESULT = mapa;
-    :}
+    | ELEMENTS DOS_PUNTOS LLAVE_IZQ listaFilas:filas LLAVE_DER
+    {: RESULT = new NodoAtributo("elements", filas); :}
 
-    | CONTENT DOS_PUNTOS CORCHETE_IZQ listaFilas:filas CORCHETE_DER
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("content", filas);
-        RESULT = mapa;
-    :}
+    | STYLES CORCHETE_IZQ estilosConBorde:ests CORCHETE_DER
+    {: RESULT = new NodoAtributo("styles", ests); :}
+    ;
 
-    // ELEMENTS (para SECTION)
-    | ELEMENTS DOS_PUNTOS CORCHETE_IZQ listaInstrucciones:elementos CORCHETE_DER
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("elements", elementos);
-        RESULT = mapa;
-    :}
+//--- Atributos para TEXT ---
+// TEXT admite: width(opt), height(opt), content, styles(opt) — sin pointX/pointY/border
+atributosTexto ::=
+    atributosTexto:list COMA atributoTexto:a
+    {: list.add(a); RESULT = list; :}
+    | atributoTexto:a
+    {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(a); RESULT = l; :}
+    ;
 
-    // OPTIONS (para preguntas)
-    | OPTIONS DOS_PUNTOS CORCHETE_IZQ listaOpciones:opciones CORCHETE_DER
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("options", opciones);
-        RESULT = mapa;
-    :}
+atributoTexto ::=
+    WIDTH DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("width", v); :}
 
-    // STYLES (bloque de estilos)
-    | STYLES DOS_PUNTOS LLAVE_IZQ listaAtributos:estilos LLAVE_DER
-    {:
-        Map<String, Object> mapa = new HashMap<>();
-        mapa.put("styles", estilos);
-        RESULT = mapa;
-    :}
+    | HEIGHT DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("height", v); :}
+
+    | CONTENT DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("content", v); :}
+
+    | STYLES CORCHETE_IZQ estilosSinBorde:ests CORCHETE_DER
+    {: RESULT = new NodoAtributo("styles", ests); :}
+    ;
+
+//--- Atributos para OPEN_QUESTION ---
+// OPEN_QUESTION admite: width(opt), height(opt), label — sin pointX/pointY/options/correct/border
+atributosPreguntaAbierta ::=
+    atributosPreguntaAbierta:list COMA atributoPreguntaAbierta:a
+    {: list.add(a); RESULT = list; :}
+    | atributoPreguntaAbierta:a
+    {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(a); RESULT = l; :}
+    ;
+
+atributoPreguntaAbierta ::=
+    WIDTH DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("width", v); :}
+
+    | HEIGHT DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("height", v); :}
+
+    | LABEL DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("label", v); :}
+
+    | STYLES CORCHETE_IZQ estilosSinBorde:ests CORCHETE_DER
+    {: RESULT = new NodoAtributo("styles", ests); :}
+    ;
+
+//--- Atributos para DROP_QUESTION ---
+// DROP_QUESTION admite: width(opt), height(opt), label, options, correct(opt), styles(opt)
+atributosPreguntaDesplegable ::=
+    atributosPreguntaDesplegable:list COMA atributoPreguntaDesplegable:a
+    {: list.add(a); RESULT = list; :}
+    | atributoPreguntaDesplegable:a
+    {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(a); RESULT = l; :}
+    ;
+
+atributoPreguntaDesplegable ::=
+    WIDTH DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("width", v); :}
+
+    | HEIGHT DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("height", v); :}
+
+    | LABEL DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("label", v); :}
+
+    | OPTIONS DOS_PUNTOS LLAVE_IZQ listaOpciones:opts LLAVE_DER
+    {: RESULT = new NodoAtributo("options", opts); :}
+
+    | CORRECT DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("correct", v); :}
+
+    | STYLES CORCHETE_IZQ estilosSinBorde:ests CORCHETE_DER
+    {: RESULT = new NodoAtributo("styles", ests); :}
+    ;
+
+//--- Atributos para SELECT_QUESTION ---
+// SELECT_QUESTION admite: width(opt), height(opt), options, correct(opt), styles(opt) — sin label
+atributosSeleccionUnica ::=
+    atributosSeleccionUnica:list COMA atributoSeleccionUnica:a
+    {: list.add(a); RESULT = list; :}
+    | atributoSeleccionUnica:a
+    {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(a); RESULT = l; :}
+    ;
+
+atributoSeleccionUnica ::=
+    WIDTH DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("width", v); :}
+
+    | HEIGHT DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("height", v); :}
+
+    | OPTIONS DOS_PUNTOS LLAVE_IZQ listaOpciones:opts LLAVE_DER
+    {: RESULT = new NodoAtributo("options", opts); :}
+
+    | CORRECT DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("correct", v); :}
+
+    | STYLES CORCHETE_IZQ estilosSinBorde:ests CORCHETE_DER
+    {: RESULT = new NodoAtributo("styles", ests); :}
+    ;
+
+//--- Atributos para MULTIPLE_QUESTION ---
+// MULTIPLE_QUESTION admite: width(opt), height(opt), options, correct:{n,n}(opt), styles(opt)
+atributosMultiple ::=
+    atributosMultiple:list COMA atributoMultiple:a
+    {: list.add(a); RESULT = list; :}
+    | atributoMultiple:a
+    {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(a); RESULT = l; :}
+    ;
+
+atributoMultiple ::=
+    WIDTH DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("width", v); :}
+
+    | HEIGHT DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("height", v); :}
+
+    | OPTIONS DOS_PUNTOS LLAVE_IZQ listaOpciones:opts LLAVE_DER
+    {: RESULT = new NodoAtributo("options", opts); :}
+
+    // correct en MULTIPLE_QUESTION es una lista de índices: correct: {1, 3}
+    | CORRECT DOS_PUNTOS LLAVE_IZQ listaExpresiones:corrs LLAVE_DER
+    {: RESULT = new NodoAtributo("correct", corrs); :}
+
+    | STYLES CORCHETE_IZQ estilosSinBorde:ests CORCHETE_DER
+    {: RESULT = new NodoAtributo("styles", ests); :}
+    ;
+
+//--- Estilos con borde (para SECTION y TABLE) ---
+estilosConBorde ::=
+    estilosConBorde:list COMA estiloConBorde:e
+    {: list.add(e); RESULT = list; :}
+    | estiloConBorde:e
+    {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(e); RESULT = l; :}
+    ;
+
+estiloConBorde ::=
+    COLOR_ATTR DOS_PUNTOS valorColor:v
+    {: RESULT = new NodoAtributo("color", v); :}
+
+    | BACKGROUND_COLOR DOS_PUNTOS valorColor:v
+    {: RESULT = new NodoAtributo("backgroundColor", v); :}
+
+    | FONT_FAMILY DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("fontFamily", v); :}
+
+    | TEXT_SIZE DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("textSize", v); :}
+
+    | BORDER DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("border", v); :}
+    ;
+
+//--- Estilos sin borde (para TEXT y preguntas) ---
+estilosSinBorde ::=
+    estilosSinBorde:list COMA estiloSinBorde:e
+    {: list.add(e); RESULT = list; :}
+    | estiloSinBorde:e
+    {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(e); RESULT = l; :}
+    ;
+
+estiloSinBorde ::=
+    COLOR_ATTR DOS_PUNTOS valorColor:v
+    {: RESULT = new NodoAtributo("color", v); :}
+
+    | BACKGROUND_COLOR DOS_PUNTOS valorColor:v
+    {: RESULT = new NodoAtributo("backgroundColor", v); :}
+
+    | FONT_FAMILY DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("fontFamily", v); :}
+
+    | TEXT_SIZE DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("textSize", v); :}
     ;
 
 //--- Filas de Tabla ---

@@ -28,7 +28,7 @@ public class sym {
   public static final int BACKGROUND_COLOR = 17;
   public static final int NOT = 66;
   public static final int TEXT = 4;
-  public static final int DOS_PUNTOS = 48;
+  public static final int DOS_PUNTOS = 49;
   public static final int WIDTH = 9;
   public static final int NUMBER_LITERAL = 68;
   public static final int IGUALDAD = 62;
@@ -47,7 +47,7 @@ public class sym {
   public static final int DO = 36;
   public static final int FOR = 37;
   public static final int DIV = 55;
-  public static final int COMODIN = 50;
+  public static final int COMODIN = 51;
   public static final int ORIENTATION = 13;
   public static final int ELSE = 34;
   public static final int MENOS = 53;
@@ -57,6 +57,7 @@ public class sym {
   public static final int CORRECT = 24;
   public static final int CONTENT = 21;
   public static final int EOF = 0;
+  public static final int PUNTO = 48;
   public static final int VERTICAL = 28;
   public static final int LLAVE_DER = 44;
   public static final int EMOJI_SMILE = 72;
@@ -73,8 +74,7 @@ public class sym {
   public static final int ID = 67;
   public static final int BORDER = 20;
   public static final int HEIGHT = 10;
-  public static final int RANGO = 51;
-  public static final int ASIGNACION = 49;
+  public static final int ASIGNACION = 50;
   public static final int FONT_FAMILY = 18;
   public static final int EMOJI_SAD = 73;
   public static final int COLOR_NAME = 31;
@@ -133,10 +133,10 @@ public class sym {
   "PAREN_IZQ",
   "PAREN_DER",
   "COMA",
+  "PUNTO",
   "DOS_PUNTOS",
   "ASIGNACION",
   "COMODIN",
-  "RANGO",
   "MAS",
   "MENOS",
   "POR",

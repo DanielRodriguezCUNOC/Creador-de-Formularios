@@ -136,17 +136,135 @@ class ValidadorSemantico(var entornoActual: TablaSimbolos) : Visitor<List<ErrorI
 
     override fun visit(node: NodoDraw): List<ErrorInfo> = emptyList()
 
+    // ─── Componentes UI ───────────────────────────────────────────────────────
+
     override fun visit(node: ComponenteSeccion): List<ErrorInfo> {
+        validarAtributosObligatorios(
+            atributos  = node.atributos,
+            requeridos = listOf("width", "height", "pointX", "pointY"),
+            componente = "SECTION",
+            linea      = node.linea,
+            columna    = node.columna
+        )
         node.elementosInternos.forEach { it.accept(this) }
         return errores
     }
 
-    override fun visit(node: ComponenteTabla): List<ErrorInfo> = emptyList()
-    override fun visit(node: ComponenteTexto): List<ErrorInfo> = emptyList()
-    override fun visit(node: PreguntaDesplegable): List<ErrorInfo> = emptyList()
-    override fun visit(node: PreguntaSeleccionUnica): List<ErrorInfo> = emptyList()
-    override fun visit(node: PreguntaSeleccionadaMultiple): List<ErrorInfo> = emptyList()
-    override fun visit(node: PreguntaAbierta): List<ErrorInfo> = emptyList()
+    override fun visit(node: ComponenteTabla): List<ErrorInfo> {
+        validarAtributosObligatorios(
+            atributos  = node.atributos,
+            requeridos = listOf("width", "height", "pointX", "pointY"),
+            componente = "TABLE",
+            linea      = node.linea,
+            columna    = node.columna
+        )
+        return errores
+    }
+
+    override fun visit(node: ComponenteTexto): List<ErrorInfo> {
+        validarAtributosObligatorios(
+            atributos  = node.atributos,
+            requeridos = listOf("content"),
+            componente = "TEXT",
+            linea      = node.linea,
+            columna    = node.columna
+        )
+        return errores
+    }
+
+    override fun visit(node: PreguntaAbierta): List<ErrorInfo> {
+        validarAtributosObligatorios(
+            atributos  = node.atributos,
+            requeridos = listOf("label"),
+            componente = "OPEN_QUESTION",
+            linea      = node.linea,
+            columna    = node.columna
+        )
+        return errores
+    }
+
+    override fun visit(node: PreguntaDesplegable): List<ErrorInfo> {
+        validarAtributosObligatorios(
+            atributos  = node.atributos,
+            requeridos = listOf("label", "options"),
+            componente = "DROP_QUESTION",
+            linea      = node.linea,
+            columna    = node.columna
+        )
+        validarIndiceCorrect(node.atributos, "DROP_QUESTION", node.linea, node.columna)
+        return errores
+    }
+
+    override fun visit(node: PreguntaSeleccionUnica): List<ErrorInfo> {
+        validarAtributosObligatorios(
+            atributos  = node.atributos,
+            requeridos = listOf("options"),
+            componente = "SELECT_QUESTION",
+            linea      = node.linea,
+            columna    = node.columna
+        )
+        validarIndiceCorrect(node.atributos, "SELECT_QUESTION", node.linea, node.columna)
+        return errores
+    }
+
+    override fun visit(node: PreguntaSeleccionadaMultiple): List<ErrorInfo> {
+        validarAtributosObligatorios(
+            atributos  = node.atributos,
+            requeridos = listOf("options"),
+            componente = "MULTIPLE_QUESTION",
+            linea      = node.linea,
+            columna    = node.columna
+        )
+        return errores
+    }
+
+    // ─── Helpers de validación ────────────────────────────────────────────────
+
+    /**
+     * Verifica que todos los atributos obligatorios estén presentes en la lista.
+     * Usa búsqueda lineal O(n) — eficiente para n <= 7 atributos.
+     */
+    private fun validarAtributosObligatorios(
+        atributos: List<NodoAtributo>,
+        requeridos: List<String>,
+        componente: String,
+        linea: Int,
+        columna: Int
+    ) {
+        for (nombre in requeridos) {
+            if (!NodoAtributo.contiene(atributos, nombre)) {
+                errores.add(ErrorInfo(
+                    TipoError.SEMANTICO,
+                    "$componente requiere el atributo '$nombre' pero no fue encontrado",
+                    linea,
+                    columna
+                ))
+            }
+        }
+    }
+
+    /**
+     * Verifica que, si existe 'correct', también exista 'options'.
+     * La validación del rango exacto (índice fuera de rango) se realiza en el
+     * Interprete una vez que los valores estén evaluados.
+     */
+    private fun validarIndiceCorrect(
+        atributos: List<NodoAtributo>,
+        componente: String,
+        linea: Int,
+        columna: Int
+    ) {
+        val tieneCorrect = NodoAtributo.contiene(atributos, "correct")
+        val tieneOptions = NodoAtributo.contiene(atributos, "options")
+        if (tieneCorrect && !tieneOptions) {
+            errores.add(ErrorInfo(
+                TipoError.SEMANTICO,
+                "$componente tiene 'correct' pero le falta 'options'",
+                linea,
+                columna
+            ))
+        }
+    }
 
     private fun obtenerTipo(expresion: NodoExpresion): String {
         return when (expresion) {
