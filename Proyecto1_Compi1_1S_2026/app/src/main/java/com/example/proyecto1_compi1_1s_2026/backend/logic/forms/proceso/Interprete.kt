@@ -75,6 +75,13 @@ class Interprete(var entornoActual: TablaSimbolos) : Visitor<Any?> {
         return null
     }
 
+    override fun visit(node: NodoDeclaracionSpecial): Any? {
+        // Almacena el componente de pregunta directamente en la tabla de símbolos.
+        // No se evalúa como expresión; se guarda el nodo para que draw() pueda referenciarlo.
+        entornoActual.almacenarVariable(node.id, node.pregunta)
+        return null
+    }
+
     override fun visit(node: NodoAsignacion): Any? {
         val valor = node.nuevoValor.accept(this)
         entornoActual.reasignarVariable(node.id, valor!!)

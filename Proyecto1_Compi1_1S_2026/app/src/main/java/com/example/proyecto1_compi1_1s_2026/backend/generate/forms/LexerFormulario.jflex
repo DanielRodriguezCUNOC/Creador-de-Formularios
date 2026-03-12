@@ -101,11 +101,11 @@ ESPACIO = [ \t\r\n\f]+
     "orientation"       { return symbol(sym.ORIENTATION); }
     "elements"          { return symbol(sym.ELEMENTS); }
     "styles"            { return symbol(sym.STYLES); }
-    "color"             { return symbol(sym.COLOR_ATTR); }
-    "background color"  { return symbol(sym.BACKGROUND_COLOR); }
-    "font family"       { return symbol(sym.FONT_FAMILY); }
-    "text size"         { return symbol(sym.TEXT_SIZE); }
-    "border"            { return symbol(sym.BORDER); }
+    "\"color\""             { return symbol(sym.COLOR_ATTR); }
+    "\"background color\""  { return symbol(sym.BACKGROUND_COLOR); }
+    "\"font family\""       { return symbol(sym.FONT_FAMILY); }
+    "\"text size\""         { return symbol(sym.TEXT_SIZE); }
+    "\"border\""            { return symbol(sym.BORDER); }
     "content"           { return symbol(sym.CONTENT); }
     "label"             { return symbol(sym.LABEL); }
     "options"           { return symbol(sym.OPTIONS); }

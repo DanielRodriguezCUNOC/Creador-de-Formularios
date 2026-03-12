@@ -83,6 +83,14 @@ class ValidadorSemantico(var entornoActual: TablaSimbolos) : Visitor<List<ErrorI
         return errores
     }
 
+    override fun visit(node: NodoDeclaracionSpecial): List<ErrorInfo> {
+        // Registrar la variable en la tabla de símbolos como tipo "special"
+        entornoActual.almacenarVariable(node.id, node.pregunta, "special")
+        // Delegar la validación semántica a la pregunta interna
+        node.pregunta.accept(this)
+        return errores
+    }
+
     override fun visit(node: NodoAsignacion): List<ErrorInfo> {
         // Primero visitar la expresión para detectar errores internos
         node.nuevoValor.accept(this)
@@ -220,10 +228,6 @@ class ValidadorSemantico(var entornoActual: TablaSimbolos) : Visitor<List<ErrorI
 
     // ─── Helpers de validación ────────────────────────────────────────────────
 
-    /**
-     * Verifica que todos los atributos obligatorios estén presentes en la lista.
-     * Usa búsqueda lineal O(n) — eficiente para n <= 7 atributos.
-     */
     private fun validarAtributosObligatorios(
         atributos: List<NodoAtributo>,
         requeridos: List<String>,
@@ -243,11 +247,6 @@ class ValidadorSemantico(var entornoActual: TablaSimbolos) : Visitor<List<ErrorI
         }
     }
 
-    /**
-     * Verifica que, si existe 'correct', también exista 'options'.
-     * La validación del rango exacto (índice fuera de rango) se realiza en el
-     * Interprete una vez que los valores estén evaluados.
-     */
     private fun validarIndiceCorrect(
         atributos: List<NodoAtributo>,
         componente: String,

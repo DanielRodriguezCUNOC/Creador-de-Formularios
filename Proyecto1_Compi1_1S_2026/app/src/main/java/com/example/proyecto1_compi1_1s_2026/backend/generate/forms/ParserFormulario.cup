@@ -7,6 +7,7 @@ import java.util.List;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.*;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.*;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.*;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.NodoDeclaracionSpecial;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError;
 
@@ -15,29 +16,135 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoErro
 //================================
 
 parser code {:
-     private List<ErrorInfo> erroresSintacticos = new ArrayList<>();
+    private List<ErrorInfo> erroresSintacticos = new ArrayList<>();
 
-        public List<ErrorInfo> getErroresSintacticos() {
-            return erroresSintacticos;
+    public List<ErrorInfo> getErroresSintacticos() {
+        return erroresSintacticos;
+    }
+
+    public void syntax_error(Symbol s) {
+        // Construir lista de tokens esperados traducidos al español
+        List<Integer> ids = expected_token_ids();
+        List<String> esperados = new ArrayList<>();
+        for (Integer id : ids) {
+            esperados.add(traductor(symbl_name_from_id(id)));
         }
 
-        public void syntax_error(Symbol s) {
-            String nombreToken = "desconocido";
-            int linea = 0;
-            int columna = 0;
-            
-            if (s != null) {
-                nombreToken = s.value != null ? s.value.toString() : "Token desconocido";
-                linea = s.left;
-                columna = s.right;
-            }
-            
-            String mensaje = "Token inesperado '" + nombreToken + "'";
-            ErrorInfo error = new ErrorInfo(TipoError.SINTACTICO, mensaje, linea, columna);
-            
-            erroresSintacticos.add(error);
-            System.err.println(error.toDetailedString());
+        String encontrado = (s != null && s.value != null)
+            ? s.value.toString()
+            : traductor(symbl_name_from_id(s != null ? s.sym : 0));
+
+        int linea   = s != null ? s.left  : 0;
+        int columna = s != null ? s.right : 0;
+
+        String mensaje = esperados.isEmpty()
+            ? "Token inesperado '" + encontrado + "'"
+            : "Se esperaba: " + String.join(", ", esperados)
+              + ". Pero se encontró: '" + encontrado + "'";
+
+        erroresSintacticos.add(new ErrorInfo(TipoError.SINTACTICO, mensaje, linea, columna));
+    }
+
+    public void report_error(String message, Object info) {
+        // Los errores ya se gestionan en syntax_error; evitar mensajes duplicados
+    }
+
+    /** Traduce el nombre interno del token a una descripción legible en español. */
+    private String traductor(String token) {
+        if (token == null) return "desconocido";
+        switch (token) {
+            // --- Componentes UI ---
+            case "SECTION":           return "SECTION";
+            case "TABLE":             return "TABLE";
+            case "TEXT":              return "TEXT";
+            case "OPEN_QUESTION":     return "OPEN_QUESTION";
+            case "DROP_QUESTION":     return "DROP_QUESTION";
+            case "SELECT_QUESTION":   return "SELECT_QUESTION";
+            case "MULTIPLE_QUESTION": return "MULTIPLE_QUESTION";
+            // --- Atributos ---
+            case "WIDTH":             return "width";
+            case "HEIGHT":            return "height";
+            case "POINT_X":           return "pointX";
+            case "POINT_Y":           return "pointY";
+            case "ORIENTATION":       return "orientation";
+            case "ELEMENTS":          return "elements";
+            case "STYLES":            return "styles";
+            case "COLOR_ATTR":        return "color";
+            case "BACKGROUND_COLOR":  return "background color";
+            case "FONT_FAMILY":       return "font family";
+            case "TEXT_SIZE":         return "text size";
+            case "BORDER":            return "border";
+            case "CONTENT":           return "content";
+            case "LABEL":             return "label";
+            case "OPTIONS":           return "options";
+            case "CORRECT":           return "correct";
+            // --- Tipos ---
+            case "TYPE_NUMBER":       return "number";
+            case "TYPE_STRING":       return "string";
+            case "TYPE_SPECIAL":      return "special";
+            // --- Orientación ---
+            case "VERTICAL":          return "VERTICAL";
+            case "HORIZONTAL":        return "HORIZONTAL";
+            case "MONO":              return "MONO";
+            // --- Control ---
+            case "IF":                return "IF";
+            case "ELSE":              return "ELSE";
+            case "WHILE":             return "WHILE";
+            case "DO":                return "DO";
+            case "FOR":               return "FOR";
+            case "IN":                return "in";
+            // --- Funciones especiales ---
+            case "FUNC_POKEMON":      return "who_is_that_pokemon";
+            case "DRAW":              return "draw";
+            // --- Símbolos estructurales ---
+            case "CORCHETE_IZQ":      return "'['";
+            case "CORCHETE_DER":      return "']'";
+            case "LLAVE_IZQ":         return "'{'";
+            case "LLAVE_DER":         return "'}'";
+            case "PAREN_IZQ":         return "'('";
+            case "PAREN_DER":         return "')'";
+            case "COMA":              return "','";
+            case "DOS_PUNTOS":        return "':'";
+            case "ASIGNACION":        return "'='";
+            case "PUNTO":             return "'.'";
+            case "COMODIN":           return "'?'";
+            // --- Operadores aritméticos ---
+            case "MAS":               return "'+'";
+            case "MENOS":             return "'-'";
+            case "POR":               return "'*'";
+            case "DIV":               return "'/'";
+            case "POTENCIA":          return "'^'";
+            case "MODULO":            return "'%'";
+            // --- Operadores relacionales ---
+            case "MAYOR":             return "'>'";
+            case "MENOR":             return "'<'";
+            case "MAYOR_IGUAL":       return "'>='";
+            case "MENOR_IGUAL":       return "'<='";
+            case "IGUALDAD":          return "'=='";
+            case "DIFERENTE":         return "'!!'";
+            // --- Operadores lógicos ---
+            case "OR":                return "'||'";
+            case "AND":               return "'&&'";
+            case "NOT":               return "'!'";
+            // --- Literales e identificadores ---
+            case "ID":                return "identificador";
+            case "NUMBER_LITERAL":    return "número";
+            case "INICIO_CADENA":     return "'\"' (inicio de cadena)";
+            case "FIN_CADENA":        return "'\"' (fin de cadena)";
+            case "CONTENIDO_CADENA":  return "contenido de cadena";
+            // --- Emojis ---
+            case "EMOJI_SMILE":       return "emoji @[:)]";
+            case "EMOJI_SAD":         return "emoji @[:(]";
+            case "EMOJI_SERIOUS":     return "emoji @[:|]";
+            case "EMOJI_HEART":       return "emoji @[<3]";
+            // --- Colores ---
+            case "COLOR_NAME":        return "color (RED, BLUE, GREEN...)";
+            case "COLOR_HEX":         return "color hexadecimal (#RRGGBB)";
+            // --- Fin de archivo ---
+            case "EOF":               return "fin de archivo";
+            default:                  return token;
         }
+    }
 :};
 
 //================================
@@ -132,6 +239,7 @@ non terminal NodoAtributo estiloSinBorde;
 
 // Declaraciones
 non terminal NodoInstruccion declaracion;
+non terminal ComponenteUI valorSpecial;
 
 // Sentencias de control
 non terminal NodoInstruccion sentenciaIf;
@@ -210,6 +318,11 @@ listaInstrucciones ::=
         }
         RESULT = lista;
     :}
+    // Recuperación de error: omite la instrucción errónea y continúa el análisis
+    | listaInstrucciones:lista error
+    {: RESULT = lista; :}
+    | error
+    {: RESULT = new ArrayList<NodoInstruccion>(); :}
     ;
 
 //--- Instrucciones ---
@@ -266,26 +379,40 @@ instruccion ::=
     ;
 
 //--- Declaraciones ---
+// Sintaxis según gramática: TYPE ID [= valor]   →   number myVar = 10
 declaracion ::=
     // Declaración sin inicialización
-    ID:nombre DOS_PUNTOS TYPE_NUMBER
-    {: RESULT = new NodoDeclaracion(nombre, "number", null, nombreleft, nombreright); :}
+    TYPE_NUMBER:t ID:nombre
+    {: RESULT = new NodoDeclaracion(nombre, "number", null, tleft, tright); :}
 
-    | ID:nombre DOS_PUNTOS TYPE_STRING
-    {: RESULT = new NodoDeclaracion(nombre, "string", null, nombreleft, nombreright); :}
-
-    | ID:nombre DOS_PUNTOS TYPE_SPECIAL
-    {: RESULT = new NodoDeclaracion(nombre, "special", null, nombreleft, nombreright); :}
+    | TYPE_STRING:t ID:nombre
+    {: RESULT = new NodoDeclaracion(nombre, "string", null, tleft, tright); :}
 
     // Declaración con inicialización
-    | ID:nombre DOS_PUNTOS TYPE_NUMBER ASIGNACION expresion:val
-    {: RESULT = new NodoDeclaracion(nombre, "number", val, nombreleft, nombreright); :}
+    | TYPE_NUMBER:t ID:nombre ASIGNACION expresion:val
+    {: RESULT = new NodoDeclaracion(nombre, "number", val, tleft, tright); :}
 
-    | ID:nombre DOS_PUNTOS TYPE_STRING ASIGNACION expresion:val
-    {: RESULT = new NodoDeclaracion(nombre, "string", val, nombreleft, nombreright); :}
+    | TYPE_STRING:t ID:nombre ASIGNACION expresion:val
+    {: RESULT = new NodoDeclaracion(nombre, "string", val, tleft, tright); :}
 
-    | ID:nombre DOS_PUNTOS TYPE_SPECIAL ASIGNACION expresion:val
-    {: RESULT = new NodoDeclaracion(nombre, "special", val, nombreleft, nombreright); :}
+    // special SIEMPRE debe inicializarse con una pregunta (gramática lo exige)
+    | TYPE_SPECIAL:t ID:nombre ASIGNACION valorSpecial:preg
+    {: RESULT = new NodoDeclaracionSpecial(nombre, preg, tleft, tright); :}
+    ;
+
+//--- Valor Special (tipos de pregunta que se asignan a variables special) ---
+valorSpecial ::=
+    preguntaAbierta:p
+    {: RESULT = p; :}
+
+    | preguntaDesplegable:p
+    {: RESULT = p; :}
+
+    | preguntaSeleccionUnica:p
+    {: RESULT = p; :}
+
+    | preguntaMultiple:p
+    {: RESULT = p; :}
     ;
 
 //--- Sentencia IF ---
@@ -319,8 +446,9 @@ sentenciaFor ::=
     ;
 
 //--- Instrucción DRAW ---
+// Sintaxis: miPregunta.draw(10, 4)   →   ID PUNTO DRAW PAREN_IZQ params PAREN_DER
 instruccionDraw ::=
-    DRAW:t PAREN_IZQ ID:varEspecial COMA listaExpresionesOpcional:params PAREN_DER
+    ID:varEspecial PUNTO DRAW:t PAREN_IZQ listaExpresionesOpcional:params PAREN_DER
     {: RESULT = new NodoDraw(varEspecial, params, tleft, tright); :}
     ;
 
@@ -485,6 +613,8 @@ listaExpresionesOpcional ::=
     {: RESULT = lista; :}
     | /* vacío */
     {: RESULT = new ArrayList<NodoExpresion>(); :}
+    | error
+    {: RESULT = new ArrayList<NodoExpresion>(); :}
     ;
 
 listaExpresiones ::=
@@ -508,6 +638,10 @@ atributosSeccion ::=
     {: list.add(a); RESULT = list; :}
     | atributoSeccion:a
     {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(a); RESULT = l; :}
+    | atributosSeccion:list COMA error
+    {: RESULT = list; :}
+    | error
+    {: RESULT = new ArrayList<NodoAtributo>(); :}
     ;
 
 atributoSeccion ::=
@@ -540,6 +674,10 @@ atributosTabla ::=
     {: list.add(a); RESULT = list; :}
     | atributoTabla:a
     {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(a); RESULT = l; :}
+    | atributosTabla:list COMA error
+    {: RESULT = list; :}
+    | error
+    {: RESULT = new ArrayList<NodoAtributo>(); :}
     ;
 
 atributoTabla ::=
@@ -569,6 +707,10 @@ atributosTexto ::=
     {: list.add(a); RESULT = list; :}
     | atributoTexto:a
     {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(a); RESULT = l; :}
+    | atributosTexto:list COMA error
+    {: RESULT = list; :}
+    | error
+    {: RESULT = new ArrayList<NodoAtributo>(); :}
     ;
 
 atributoTexto ::=
@@ -592,6 +734,10 @@ atributosPreguntaAbierta ::=
     {: list.add(a); RESULT = list; :}
     | atributoPreguntaAbierta:a
     {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(a); RESULT = l; :}
+    | atributosPreguntaAbierta:list COMA error
+    {: RESULT = list; :}
+    | error
+    {: RESULT = new ArrayList<NodoAtributo>(); :}
     ;
 
 atributoPreguntaAbierta ::=
@@ -615,6 +761,10 @@ atributosPreguntaDesplegable ::=
     {: list.add(a); RESULT = list; :}
     | atributoPreguntaDesplegable:a
     {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(a); RESULT = l; :}
+    | atributosPreguntaDesplegable:list COMA error
+    {: RESULT = list; :}
+    | error
+    {: RESULT = new ArrayList<NodoAtributo>(); :}
     ;
 
 atributoPreguntaDesplegable ::=
@@ -644,6 +794,10 @@ atributosSeleccionUnica ::=
     {: list.add(a); RESULT = list; :}
     | atributoSeleccionUnica:a
     {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(a); RESULT = l; :}
+    | atributosSeleccionUnica:list COMA error
+    {: RESULT = list; :}
+    | error
+    {: RESULT = new ArrayList<NodoAtributo>(); :}
     ;
 
 atributoSeleccionUnica ::=
@@ -670,6 +824,10 @@ atributosMultiple ::=
     {: list.add(a); RESULT = list; :}
     | atributoMultiple:a
     {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(a); RESULT = l; :}
+    | atributosMultiple:list COMA error
+    {: RESULT = list; :}
+    | error
+    {: RESULT = new ArrayList<NodoAtributo>(); :}
     ;
 
 atributoMultiple ::=
@@ -696,6 +854,10 @@ estilosConBorde ::=
     {: list.add(e); RESULT = list; :}
     | estiloConBorde:e
     {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(e); RESULT = l; :}
+    | estilosConBorde:list COMA error
+    {: RESULT = list; :}
+    | error
+    {: RESULT = new ArrayList<NodoAtributo>(); :}
     ;
 
 estiloConBorde ::=
@@ -721,6 +883,10 @@ estilosSinBorde ::=
     {: list.add(e); RESULT = list; :}
     | estiloSinBorde:e
     {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(e); RESULT = l; :}
+    | estilosSinBorde:list COMA error
+    {: RESULT = list; :}
+    | error
+    {: RESULT = new ArrayList<NodoAtributo>(); :}
     ;
 
 estiloSinBorde ::=
@@ -779,6 +945,10 @@ listaOpciones ::=
         lista.add(opcion);
         RESULT = lista;
     :}
+    | listaOpciones:lista COMA error
+    {: RESULT = lista; :}
+    | error
+    {: RESULT = new ArrayList<String>(); :}
     ;
 
 //--- Valor de Color ---
