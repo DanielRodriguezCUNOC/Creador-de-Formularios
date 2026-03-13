@@ -136,19 +136,87 @@ class UiNodeBuilder(
 
     private fun evaluarOpciones(attrs: List<NodoAtributo>, nombre: String): List<String> {
         val valor = NodoAtributo.valor(attrs, nombre) ?: return emptyList()
+        val resultado = mutableListOf<String>()
 
         if (valor is NodoExpresion) {
-            return listOf(evaluarExpresion(valor)?.toString() ?: "")
+            // Caso 1: options viene como expresión (ej: llamada API)
+            val evaluado = evaluarExpresion(valor)
+
+            if (evaluado is List<*>) {
+                for (item in evaluado) {
+                    if (item != null) {
+                        resultado.add(item.toString())
+                    }
+                }
+                return resultado
+            }
+
+            if (evaluado != null) {
+                resultado.add(evaluado.toString())
+            }
+            return resultado
         }
 
         if (valor is List<*>) {
-            val resultado = mutableListOf<String>()
+            // Caso 2: options viene como lista literal {"a", "b"}
             for (item in valor) {
                 if (item is NodoExpresion) {
-                    resultado.add(evaluarExpresion(item)?.toString() ?: "")
+                    val evaluado = evaluarExpresion(item)
+                    if (evaluado is List<*>) {
+                        for (sub in evaluado) {
+                            if (sub != null) {
+                                resultado.add(sub.toString())
+                            }
+                        }
+                    } else if (evaluado != null) {
+                        resultado.add(evaluado.toString())
+                    }
+                } else if (item is String) {
+                    // Caso 3: soporte sencillo de comando textual:
+                    // "who_is_that_pokemon(NUMBER, 1, 10)" o "who_is_that_pokemon(1, 10)"
+                    val expandido = expandirComandoPokemon(item)
+                    if (expandido.isNotEmpty()) {
+                        for (nombrePokemon in expandido) {
+                            resultado.add(nombrePokemon)
+                        }
+                    } else {
+                        resultado.add(item)
+                    }
+                } else if (item != null) {
+                    resultado.add(item.toString())
                 }
             }
             return resultado
+        }
+
+        return emptyList()
+    }
+
+    /**
+     * Expande un comando textual de pokémon a una lista de nombres.
+     * Si no coincide con el formato esperado, retorna lista vacía.
+     */
+    private fun expandirComandoPokemon(texto: String): List<String> {
+        val limpio = texto.trim()
+
+        // Formato con prefijo NUMBER:
+        // who_is_that_pokemon(NUMBER, 1, 10)
+        val r1 = Regex("""^who_is_that_pokemon\(\s*NUMBER\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$""", RegexOption.IGNORE_CASE)
+        val m1 = r1.find(limpio)
+        if (m1 != null) {
+            val inicio = m1.groupValues[1].toIntOrNull() ?: return emptyList()
+            val fin = m1.groupValues[2].toIntOrNull() ?: return emptyList()
+            return PokemonApiService.obtenerNombresEnRango(inicio, fin)
+        }
+
+        // Formato corto:
+        // who_is_that_pokemon(1, 10)
+        val r2 = Regex("""^who_is_that_pokemon\(\s*(\d+)\s*,\s*(\d+)\s*\)$""", RegexOption.IGNORE_CASE)
+        val m2 = r2.find(limpio)
+        if (m2 != null) {
+            val inicio = m2.groupValues[1].toIntOrNull() ?: return emptyList()
+            val fin = m2.groupValues[2].toIntOrNull() ?: return emptyList()
+            return PokemonApiService.obtenerNombresEnRango(inicio, fin)
         }
 
         return emptyList()

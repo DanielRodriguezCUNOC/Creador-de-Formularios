@@ -50,6 +50,11 @@ dependencies {
     implementation(libs.androidx.emoji2)
     implementation(libs.androidx.emoji2.views)
     implementation(libs.androidx.emoji2.bundled)
+    //Dependencias para conectar a api
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     // https://mvnrepository.com/artifact/de.jflex/cup_runtime
     implementation("de.jflex:cup_runtime:11b-20160615")
     // https://mvnrepository.com/artifact/com.itextpdf/itextpdf

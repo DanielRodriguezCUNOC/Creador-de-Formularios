@@ -135,6 +135,8 @@ parser code {:
             case "VERTICAL":          return "VERTICAL";
             case "HORIZONTAL":        return "HORIZONTAL";
             case "MONO":              return "MONO";
+            // --- POKEAPI ---
+            case "NUMBER":            return "NUMBER";
             // --- Control ---
             case "IF":                return "IF";
             case "ELSE":              return "ELSE";
@@ -248,7 +250,7 @@ terminal FUNC_POKEMON, DRAW;
 // Símbolos estructurales
 terminal CORCHETE_IZQ, CORCHETE_DER, LLAVE_IZQ, LLAVE_DER;
 terminal PAREN_IZQ, PAREN_DER, COMA, PUNTO, PUNTO_COMA, DOS_PUNTOS, ASIGNACION;
-terminal COMODIN;
+terminal COMODIN, NUMBER;
 
 // Operadores aritméticos
 terminal MAS, MENOS, POR, DIV, POTENCIA, MODULO;
@@ -524,9 +526,6 @@ sentenciaFor ::=
 
     | FOR:t PAREN_IZQ IDENTIFICADOR:var ASIGNACION expresion:init PUNTO_COMA expresion:cond PUNTO_COMA IDENTIFICADOR:var2 ASIGNACION expresion:inc PAREN_DER LLAVE_IZQ listaInstrucciones:body LLAVE_DER
     {: 
-        if (!var.equals(var2)) {
-            parser.report_error("La variable de control en FOR imperativo debe ser la misma", null);
-        }
         RESULT = new NodoCicloFor(var, init, cond, body, inc, tleft, tright); 
     :}
     ;
@@ -865,6 +864,16 @@ atributoPreguntaDesplegable ::=
 
     | OPTIONS DOS_PUNTOS LLAVE_IZQ listaOpciones:opts LLAVE_DER
     {: RESULT = new NodoAtributo("options", opts); :}
+
+    // Forma obligada para API sin comillas:
+    // options: { who_is_that_pokemon(NUMBER, 1, 10) }
+    // Se guarda internamente como NodoLlamadaApi (sin convertir a String).
+    | OPTIONS DOS_PUNTOS LLAVE_IZQ FUNC_POKEMON:t PAREN_IZQ NUMBER COMA NUMBER_LITERAL:inicio COMA NUMBER_LITERAL:fin PAREN_DER LLAVE_DER
+    {:
+        NodoExpresion ini = new NodoLiteral(Double.parseDouble(inicio), "NUMBER", inicioleft, inicioright);
+        NodoExpresion fn  = new NodoLiteral(Double.parseDouble(fin), "NUMBER", finleft, finright);
+        RESULT = new NodoAtributo("options", new NodoLlamadaApi("pokemon", ini, fn, tleft, tright));
+    :}
 
     | CORRECT DOS_PUNTOS expresion:v
     {: RESULT = new NodoAtributo("correct", v); :}

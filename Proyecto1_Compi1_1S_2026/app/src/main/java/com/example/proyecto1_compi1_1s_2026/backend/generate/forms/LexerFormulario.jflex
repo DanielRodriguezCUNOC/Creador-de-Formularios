@@ -121,6 +121,8 @@ ESPACIO = [ \t\r\n\f]+
     "HORIZONTAL"        { return symbol(sym.HORIZONTAL); }
     "MONO"              { return symbol(sym.MONO); }
 
+    // --- PALABRA RESERVADA UTILIZADA PARA LA POKEAPI ---
+    "NUMBER"            {return symbol(sym.NUMBER)}
     // --- COLORES POR DEFECTO ---
 
     "RED" | "BLUE" | "GREEN" | "PURPLE" | "SKY" | "YELLOW" | "BLACK" | "WHITE"
