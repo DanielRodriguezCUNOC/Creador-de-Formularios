@@ -56,8 +56,9 @@ ENTERO = {DIGITO}+
 DECIMAL = {DIGITO}+\.{DIGITO}+
 NUMERO = {ENTERO}|{DECIMAL}
 
+// Comentarios
 COMENTARIO_MULTILINEA = \/\*([^*]|\*[^\/])*\*\/
-COMENTARIO_LINEA = \$.*
+COMENTARIO_LINEA = \$[^\n\r]*
 
 // Colores hexadecimales (#RRGGBB o #RGB)
 COLOR_HEX = #[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{3}
@@ -71,11 +72,11 @@ ESPACIO = [ \t\r\n\f]+
 %%
 <YYINITIAL> {
 
-    [\u200B\u200C\u200D\uFEFF]        { /* ignorar / }
+    [\u200B\u200C\u200D\uFEFF]        { /* Ignorar caracteres invisibles */ }
 
-    / Ignorar caracteres invisibles o de control no útiles /
+    /* Ignorar caracteres de control no útiles */
 
-    [\p{C}&&[^\n\r\t]]      { / ignorar */ }
+    [\p{C}&&[^\n\r\t]]      { /* Ignorar */ }
 
     // --- COMENTARIOS (ignorar) ---
 
@@ -149,6 +150,7 @@ ESPACIO = [ \t\r\n\f]+
     ")"                 { return symbol(sym.PAREN_DER); }
     ","                 { return symbol(sym.COMA); }
     ":"                 { return symbol(sym.DOS_PUNTOS); }
+    ";"                 {return symbol(sym.PUNTO_COMA)}
     "="                 { return symbol(sym.ASIGNACION); }
     "?"                 { return symbol(sym.COMODIN); }
     "."                { return symbol(sym.PUNTO); }
@@ -184,7 +186,7 @@ ESPACIO = [ \t\r\n\f]+
     // --- LITERALES NUMÉRICOS E IDENTIFICADORES ---
 
     {NUMERO}            { return symbol(sym.NUMBER_LITERAL, yytext()); }
-    {IDENTIFICADOR}     { return symbol(sym.ID, yytext()); }
+    {IDENTIFICADOR}     { return symbol(sym.IDENTIFICADOR, yytext()); }
 
     // --- INICIO DE CADENA DE TEXTO ---
 
@@ -215,16 +217,16 @@ ESPACIO = [ \t\r\n\f]+
 
     // ----- EMOJIS DINÁMICOS -----
     // @[:)] / @[:smile:]  — uno o más ')' para la boca
-    "@[:" ")"+  "]"     { return symbol(sym.EMOJI_SMILE,   yytext()); }
+    @\[:\)+\]           { return symbol(sym.EMOJI_SMILE,   yytext()); }
 
     // @[:(] / @[:sad:]   — uno o más '(' para la boca
-    "@[:" "("+ "]"      { return symbol(sym.EMOJI_SAD,     yytext()); }
+    @\[:\(+\]           { return symbol(sym.EMOJI_SAD,     yytext()); }
 
     // @[:|] / @[:serious:] — uno o más '|' para la boca
-    "@[:" "|"+ "]"      { return symbol(sym.EMOJI_SERIOUS, yytext()); }
+    @\[:\|+\]           { return symbol(sym.EMOJI_SERIOUS, yytext()); }
 
     // @[<3] / @[:heart:]  — una o más repeticiones de '<' seguidas de uno o más '3'
-    "@[" "<"+ "3"+ "]"  { return symbol(sym.EMOJI_HEART,   yytext()); }
+    @\[<+3+\]           { return symbol(sym.EMOJI_HEART,   yytext()); }
 
     // --- SECUENCIAS DE ESCAPE DENTRO DE CADENA ---
 

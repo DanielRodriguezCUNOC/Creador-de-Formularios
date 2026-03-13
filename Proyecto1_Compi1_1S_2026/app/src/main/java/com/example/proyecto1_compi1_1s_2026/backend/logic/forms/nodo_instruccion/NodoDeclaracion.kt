@@ -2,6 +2,7 @@ package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccio
 
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoExpresion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_principal.Visitor
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ContextoSemantico
 
 class NodoDeclaracion(
     val id: String,
@@ -11,4 +12,29 @@ class NodoDeclaracion(
     override val columna: Int = 0
 ) : NodoInstruccion {
     override fun <T> accept(visitor: Visitor<T>): T = visitor.visit(this)
+
+    override fun validarSemantica(contexto: ContextoSemantico) {
+        valorInicio?.validarSemantica(contexto)
+
+        if (valorInicio != null) {
+            val tipoValor = valorInicio.inferirTipo(contexto)
+            if (tipoValor != tipo && !(tipo == "number" && tipoValor == "double")) {
+                contexto.reportarError(
+                    "Tipo incompatible en declaración '$id': se esperaba $tipo, pero obtuvo $tipoValor",
+                    linea,
+                    columna
+                )
+            }
+        }
+
+        contexto.entornoActual.almacenarVariable(
+            id,
+            when (tipo) {
+                "number" -> 0.0
+                "string" -> ""
+                else -> ""
+            },
+            tipo
+        )
+    }
 }

@@ -193,7 +193,7 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                         // Mostrar todos los errores juntos con formato detallado
                         (erroresLexicos + erroresSintacticos + erroresSemanticos).forEach { error ->
                             Text(
-                                text = "Error ${error.toDetailedString()}",
+                                text = "${error.toDetailedString()}",
                                 style = TextStyle(
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 11.sp,

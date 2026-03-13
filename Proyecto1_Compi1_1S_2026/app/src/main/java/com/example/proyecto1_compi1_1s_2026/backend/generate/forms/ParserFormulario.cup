@@ -105,6 +105,7 @@ parser code {:
             case "PAREN_DER":         return "')'";
             case "COMA":              return "','";
             case "DOS_PUNTOS":        return "':'";
+            case "PUNTO_COMA":        return "';'";
             case "ASIGNACION":        return "'='";
             case "PUNTO":             return "'.'";
             case "COMODIN":           return "'?'";
@@ -127,7 +128,7 @@ parser code {:
             case "AND":               return "'&&'";
             case "NOT":               return "'!'";
             // --- Literales e identificadores ---
-            case "ID":                return "identificador";
+            case "IDENTIFICADOR":     return "identificador";
             case "NUMBER_LITERAL":    return "número";
             case "INICIO_CADENA":     return "'\"' (inicio de cadena)";
             case "FIN_CADENA":        return "'\"' (fin de cadena)";
@@ -177,7 +178,7 @@ terminal FUNC_POKEMON, DRAW;
 
 // Símbolos estructurales
 terminal CORCHETE_IZQ, CORCHETE_DER, LLAVE_IZQ, LLAVE_DER;
-terminal PAREN_IZQ, PAREN_DER, COMA, PUNTO, DOS_PUNTOS, ASIGNACION;
+terminal PAREN_IZQ, PAREN_DER, COMA, PUNTO, PUNTO_COMA, DOS_PUNTOS, ASIGNACION;
 terminal COMODIN;
 
 // Operadores aritméticos
@@ -190,7 +191,7 @@ terminal MAYOR, MAYOR_IGUAL, MENOR, MENOR_IGUAL, IGUALDAD, DIFERENTE;
 terminal OR, AND, NOT;
 
 // Literales e identificadores
-terminal String ID, NUMBER_LITERAL;
+terminal String IDENTIFICADOR, NUMBER_LITERAL;
 
 // Cadenas de texto (manejadas por estado STRING en el lexer)
 terminal String INICIO_CADENA, FIN_CADENA, CONTENIDO_CADENA;
@@ -297,8 +298,6 @@ start with inicio;
 inicio ::=
     listaInstrucciones:lista
     {: RESULT = lista; :}
-    | /* vacío */
-    {: RESULT = new ArrayList<NodoInstruccion>(); :}
     ;
 
 //--- Lista de Instrucciones ---
@@ -332,7 +331,7 @@ instruccion ::=
     {: RESULT = d; :}
 
     // Asignación
-    | ID:id ASIGNACION expresion:exp
+    | IDENTIFICADOR:id ASIGNACION expresion:exp
     {: RESULT = new NodoAsignacion(id, exp, idleft, idright); :}
 
     // Sentencia IF
@@ -379,24 +378,24 @@ instruccion ::=
     ;
 
 //--- Declaraciones ---
-// Sintaxis según gramática: TYPE ID [= valor]   →   number myVar = 10
+// Sintaxis según gramática: TYPE IDENTIFICADOR [= valor]   →   number myVar = 10
 declaracion ::=
     // Declaración sin inicialización
-    TYPE_NUMBER:t ID:nombre
+    TYPE_NUMBER:t IDENTIFICADOR:nombre
     {: RESULT = new NodoDeclaracion(nombre, "number", null, tleft, tright); :}
 
-    | TYPE_STRING:t ID:nombre
+    | TYPE_STRING:t IDENTIFICADOR:nombre
     {: RESULT = new NodoDeclaracion(nombre, "string", null, tleft, tright); :}
 
     // Declaración con inicialización
-    | TYPE_NUMBER:t ID:nombre ASIGNACION expresion:val
+    | TYPE_NUMBER:t IDENTIFICADOR:nombre ASIGNACION expresion:val
     {: RESULT = new NodoDeclaracion(nombre, "number", val, tleft, tright); :}
 
-    | TYPE_STRING:t ID:nombre ASIGNACION expresion:val
+    | TYPE_STRING:t IDENTIFICADOR:nombre ASIGNACION expresion:val
     {: RESULT = new NodoDeclaracion(nombre, "string", val, tleft, tright); :}
 
     // special SIEMPRE debe inicializarse con una pregunta (gramática lo exige)
-    | TYPE_SPECIAL:t ID:nombre ASIGNACION valorSpecial:preg
+    | TYPE_SPECIAL:t IDENTIFICADOR:nombre ASIGNACION valorSpecial:preg
     {: RESULT = new NodoDeclaracionSpecial(nombre, preg, tleft, tright); :}
     ;
 
@@ -421,10 +420,20 @@ sentenciaIf ::=
     IF:t PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:ifBody LLAVE_DER
     {: RESULT = new NodoSentenciaIf(cond, ifBody, null, tleft, tright); :}
 
-    // IF con ELSE
+    // IF con ELSE (bloque)
     | IF:t PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:ifBody LLAVE_DER
       ELSE LLAVE_IZQ listaInstrucciones:elseBody LLAVE_DER
     {: RESULT = new NodoSentenciaIf(cond, ifBody, elseBody, tleft, tright); :}
+
+    // IF con ELSE IF (encadenado)
+    | IF:t PAREN_IZQ expresion:cond PAREN_DER LLAVE_IZQ listaInstrucciones:ifBody LLAVE_DER
+      ELSE sentenciaIf:elseIf
+    {: 
+        // Convertir el siguiente IF en una lista de instrucciones para el ELSE
+        List<NodoInstruccion> elseBody = new ArrayList<>();
+        elseBody.add(elseIf);
+        RESULT = new NodoSentenciaIf(cond, ifBody, elseBody, tleft, tright); 
+    :}
     ;
 
 //--- Ciclo WHILE ---
@@ -441,14 +450,22 @@ sentenciaDoWhile ::=
 
 //--- Ciclo FOR ---
 sentenciaFor ::=
-    FOR:t ID:variable IN expresion:inicio PUNTO PUNTO expresion:fin LLAVE_IZQ listaInstrucciones:body LLAVE_DER
-    {: RESULT = new NodoCicloFor(variable, inicio, fin, body, tleft, tright); :}
+    FOR:t IDENTIFICADOR:variable IN expresion:inicio PUNTO PUNTO expresion:fin LLAVE_IZQ listaInstrucciones:body LLAVE_DER
+    {: RESULT = new NodoCicloFor(variable, inicio, fin, body, null, tleft, tright); :}
+
+    | FOR:t PAREN_IZQ IDENTIFICADOR:var ASIGNACION expresion:init PUNTO_COMA expresion:cond PUNTO_COMA IDENTIFICADOR:var2 ASIGNACION expresion:inc PAREN_DER LLAVE_IZQ listaInstrucciones:body LLAVE_DER
+    {: 
+        if (!var.equals(var2)) {
+            parser.report_error("La variable de control en FOR imperativo debe ser la misma", null);
+        }
+        RESULT = new NodoCicloFor(var, init, cond, body, inc, tleft, tright); 
+    :}
     ;
 
 //--- Instrucción DRAW ---
-// Sintaxis: miPregunta.draw(10, 4)   →   ID PUNTO DRAW PAREN_IZQ params PAREN_DER
+// Sintaxis: miPregunta.draw(10, 4)   →   IDENTIFICADOR PUNTO DRAW PAREN_IZQ params PAREN_DER
 instruccionDraw ::=
-    ID:varEspecial PUNTO DRAW:t PAREN_IZQ listaExpresionesOpcional:params PAREN_DER
+    IDENTIFICADOR:varEspecial PUNTO DRAW:t PAREN_IZQ listaExpresionesOpcional:params PAREN_DER
     {: RESULT = new NodoDraw(varEspecial, params, tleft, tright); :}
     ;
 
@@ -585,7 +602,7 @@ expresion ::=
     {: RESULT = o; :}
 
     // Acceso a variable
-    | ID:id
+    | IDENTIFICADOR:id
     {: RESULT = new NodoAccesoVariable(id, idleft, idright); :}
 
     // Llamada a API
@@ -611,8 +628,6 @@ llamadaAPI ::=
 listaExpresionesOpcional ::=
     listaExpresiones:lista
     {: RESULT = lista; :}
-    | /* vacío */
-    {: RESULT = new ArrayList<NodoExpresion>(); :}
     | error
     {: RESULT = new ArrayList<NodoExpresion>(); :}
     ;
@@ -873,8 +888,15 @@ estiloConBorde ::=
     | TEXT_SIZE DOS_PUNTOS expresion:v
     {: RESULT = new NodoAtributo("textSize", v); :}
 
-    | BORDER DOS_PUNTOS expresion:v
-    {: RESULT = new NodoAtributo("border", v); :}
+    | BORDER DOS_PUNTOS PAREN_IZQ expresion:grosor COMA expresion:tipo COMA valorColor:color PAREN_DER
+    {: 
+        // Crear una lista de atributos del borde internamente
+        List<NodoAtributo> borderAttrs = new ArrayList<>();
+        borderAttrs.add(new NodoAtributo("grosor", grosor));
+        borderAttrs.add(new NodoAtributo("tipo", tipo));
+        borderAttrs.add(new NodoAtributo("color", color));
+        RESULT = new NodoAtributo("border", borderAttrs);
+    :}
     ;
 
 //--- Estilos sin borde (para TEXT y preguntas) ---
