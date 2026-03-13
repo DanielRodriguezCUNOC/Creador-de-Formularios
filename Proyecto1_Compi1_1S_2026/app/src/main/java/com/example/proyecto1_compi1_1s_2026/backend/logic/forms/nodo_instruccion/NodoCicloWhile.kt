@@ -2,6 +2,7 @@ package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccio
 
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoExpresion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_principal.Visitor
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ContextoSemantico
 
 class NodoCicloWhile(
     val condicion: NodoExpresion,
@@ -10,4 +11,19 @@ class NodoCicloWhile(
     override val columna: Int = 0
 ) : NodoInstruccion {
     override fun <T> accept(visitor: Visitor<T>): T = visitor.visit(this)
+
+    override fun validarSemantica(contexto: ContextoSemantico) {
+        condicion.validarSemantica(contexto)
+        val tipoCondicion = condicion.inferirTipo(contexto)
+
+        if (tipoCondicion != "boolean") {
+            contexto.reportarError(
+                "La condición del WHILE debe ser booleana",
+                linea,
+                columna
+            )
+        }
+
+        instruccionesWhile.forEach { it.validarSemantica(contexto) }
+    }
 }

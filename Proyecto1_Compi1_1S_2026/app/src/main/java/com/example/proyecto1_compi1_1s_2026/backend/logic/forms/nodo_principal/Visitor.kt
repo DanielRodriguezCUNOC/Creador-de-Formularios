@@ -14,6 +14,7 @@ interface Visitor<T>{
 
     //* NodoInstruccion
     fun visit(node: NodoDeclaracion):T
+    fun visit(node: NodoDeclaracionSpecial):T
     fun visit(node: NodoAsignacion):T
     fun visit(node: NodoSentenciaIf):T
     fun visit(node: NodoCicloWhile):T

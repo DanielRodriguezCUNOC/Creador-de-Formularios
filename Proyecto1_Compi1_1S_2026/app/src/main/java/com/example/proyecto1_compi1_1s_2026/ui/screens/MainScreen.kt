@@ -21,11 +21,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.LexerFormulario
 import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.ParserFormulario
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.NodoInstruccion
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TablaSimbolos
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ValidadorSemantico
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.Interprete
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TablaSimbolos
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ValidadorSemantico
+import com.example.proyecto1_compi1_1s_2026.ui.forms.FormularioRenderer
 import kotlinx.coroutines.launch
 import java.io.StringReader
 
@@ -40,6 +43,8 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
     var mensajeResultado by remember { mutableStateOf("") }
     var astResultado by remember { mutableStateOf("") }
     var tipoMensaje by remember { mutableStateOf("") }
+    var formularioActual by remember { mutableStateOf<Formulario?>(null) }
+    var mostrarFormulario by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -81,7 +86,7 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            // ── Vista previa con resaltado de sintaxis ──────────────────
+            // ── Vista previa: código con resaltado O formulario construido ──
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -91,25 +96,43 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                         color = Color(0xFF404040),
                         shape = RoundedCornerShape(8.dp)
                     )
-                    .background(SyntaxHighlighter.bgColor, RoundedCornerShape(8.dp))
+                    .background(
+                        if (mostrarFormulario) Color.White else SyntaxHighlighter.bgColor,
+                        RoundedCornerShape(8.dp)
+                    )
             ) {
-                val verticalScroll = rememberScrollState()
-                val horizontalScroll = rememberScrollState()
-
-                Text(
-                    text = SyntaxHighlighter.highlight(editorValue.text),
-                    style = TextStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 14.sp,
-                        color = SyntaxHighlighter.textColor,
-                        lineHeight = 22.sp
-                    ),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(verticalScroll)
-                        .horizontalScroll(horizontalScroll)
-                        .padding(12.dp)
-                )
+                if (mostrarFormulario && formularioActual != null) {
+                    // ── Formulario construido ────────────────────────────
+                    FormularioRenderer(
+                        formulario = formularioActual!!,
+                        onEnviar   = {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message  = "Formulario enviado",
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
+                        }
+                    )
+                } else {
+                    // ── Vista previa con resaltado de sintaxis ───────────
+                    val verticalScroll  = rememberScrollState()
+                    val horizontalScroll = rememberScrollState()
+                    Text(
+                        text = SyntaxHighlighter.highlight(editorValue.text),
+                        style = TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize   = 14.sp,
+                            color      = SyntaxHighlighter.textColor,
+                            lineHeight = 22.sp
+                        ),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(verticalScroll)
+                            .horizontalScroll(horizontalScroll)
+                            .padding(12.dp)
+                    )
+                }
             }
 
             // ── Editor de código ─────────────────────────────────────────
@@ -122,6 +145,7 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                         composition = newValue.composition
                     )
                     tipoMensaje = ""
+                    mostrarFormulario = false
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -169,7 +193,7 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                         // Mostrar todos los errores juntos con formato detallado
                         (erroresLexicos + erroresSintacticos + erroresSemanticos).forEach { error ->
                             Text(
-                                text = "Error ${error.toDetailedString()}",
+                                text = "${error.toDetailedString()}",
                                 style = TextStyle(
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 11.sp,
@@ -232,7 +256,23 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                                 val validador = ValidadorSemantico(TablaSimbolos(null))
                                 if (resultado?.value is List<*>) {
                                     @Suppress("UNCHECKED_CAST")
-                                    erroresSemanticos = validador.validar(resultado.value as List<NodoInstruccion>)
+                                    val instrucciones = resultado.value as List<NodoInstruccion>
+                                    erroresSemanticos = validador.validar(instrucciones)
+
+                                    // ── Interpretar y construir el formulario ────────────
+                                    if (erroresSemanticos.isEmpty()) {
+                                        val interprete = Interprete(TablaSimbolos(null))
+                                        val resultadoInterp = interprete.interpretar(instrucciones)
+                                        if (resultadoInterp.errores.isEmpty()) {
+                                            formularioActual = resultadoInterp.formulario
+                                            mostrarFormulario = true
+                                        } else {
+                                            erroresSemanticos = resultadoInterp.errores
+                                            mostrarFormulario = false
+                                        }
+                                    } else {
+                                        mostrarFormulario = false
+                                    }
                                 }
                             }
 
@@ -246,7 +286,7 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
 
                                 coroutineScope.launch {
                                     snackbarHostState.showSnackbar(
-                                        message = "Análisis exitoso - Sin errores",
+                                        message = "Formulario construido exitosamente",
                                         duration = SnackbarDuration.Short
                                     )
                                 }
@@ -269,8 +309,7 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                             }
 
                         } catch (e: Exception) {
-                            // CUP lanza excepción en errores irrecuperables pero ya
-                            // colectó los errores antes de lanzarla → recuperarlos aquí
+                            
                             val errLex = lexer?.lexicalErrors ?: emptyList()
                             val errSin = parser?.erroresSintacticos ?: emptyList()
 

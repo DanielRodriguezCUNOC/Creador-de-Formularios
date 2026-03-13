@@ -35,6 +35,17 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoErro
         private Symbol symbol(int type, Object value){
             return new Symbol(type, yyline+1, yycolumn+1, value);
         }
+
+        
+        private void addLexicalError(String mensaje) {
+            ErrorInfo error = new ErrorInfo(
+                TipoError.LEXICO,
+                mensaje,
+                yyline + 1,
+                yycolumn + 1
+            );
+            errorList.add(error);
+        }
 %}
 
 // --- Expresiones Regulares Básicas ---
@@ -45,8 +56,9 @@ ENTERO = {DIGITO}+
 DECIMAL = {DIGITO}+\.{DIGITO}+
 NUMERO = {ENTERO}|{DECIMAL}
 
+// Comentarios
 COMENTARIO_MULTILINEA = \/\*([^*]|\*[^\/])*\*\/
-COMENTARIO_LINEA = \$.*
+COMENTARIO_LINEA = \$[^\n\r]*
 
 // Colores hexadecimales (#RRGGBB o #RGB)
 COLOR_HEX = #[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{3}
@@ -59,6 +71,12 @@ ESPACIO = [ \t\r\n\f]+
 
 %%
 <YYINITIAL> {
+
+    [\u200B\u200C\u200D\uFEFF]        { /* Ignorar caracteres invisibles */ }
+
+    /* Ignorar caracteres de control no útiles */
+
+    [\p{C}&&[^\n\r\t]]      { /* Ignorar */ }
 
     // --- COMENTARIOS (ignorar) ---
 
@@ -84,11 +102,11 @@ ESPACIO = [ \t\r\n\f]+
     "orientation"       { return symbol(sym.ORIENTATION); }
     "elements"          { return symbol(sym.ELEMENTS); }
     "styles"            { return symbol(sym.STYLES); }
-    "color"             { return symbol(sym.COLOR_ATTR); }
-    "background color"  { return symbol(sym.BACKGROUND_COLOR); }
-    "font family"       { return symbol(sym.FONT_FAMILY); }
-    "text size"         { return symbol(sym.TEXT_SIZE); }
-    "border"            { return symbol(sym.BORDER); }
+    "\"color\""             { return symbol(sym.COLOR_ATTR); }
+    "\"background color\""  { return symbol(sym.BACKGROUND_COLOR); }
+    "\"font family\""       { return symbol(sym.FONT_FAMILY); }
+    "\"text size\""         { return symbol(sym.TEXT_SIZE); }
+    "\"border\""            { return symbol(sym.BORDER); }
     "content"           { return symbol(sym.CONTENT); }
     "label"             { return symbol(sym.LABEL); }
     "options"           { return symbol(sym.OPTIONS); }
@@ -132,9 +150,10 @@ ESPACIO = [ \t\r\n\f]+
     ")"                 { return symbol(sym.PAREN_DER); }
     ","                 { return symbol(sym.COMA); }
     ":"                 { return symbol(sym.DOS_PUNTOS); }
+    ";"                 {return symbol(sym.PUNTO_COMA)}
     "="                 { return symbol(sym.ASIGNACION); }
     "?"                 { return symbol(sym.COMODIN); }
-    ".."                { return symbol(sym.RANGO); }
+    "."                { return symbol(sym.PUNTO); }
 
     // --- OPERADORES ARITMÉTICOS ---
 
@@ -167,7 +186,7 @@ ESPACIO = [ \t\r\n\f]+
     // --- LITERALES NUMÉRICOS E IDENTIFICADORES ---
 
     {NUMERO}            { return symbol(sym.NUMBER_LITERAL, yytext()); }
-    {IDENTIFICADOR}     { return symbol(sym.ID, yytext()); }
+    {IDENTIFICADOR}     { return symbol(sym.IDENTIFICADOR, yytext()); }
 
     // --- INICIO DE CADENA DE TEXTO ---
 
@@ -182,14 +201,7 @@ ESPACIO = [ \t\r\n\f]+
 
     [^]  {
         String mensaje = "Carácter no reconocido '" + yytext() + "'";
-        ErrorInfo error = new ErrorInfo(
-            TipoError.LEXICO,
-            mensaje,
-            yyline + 1,
-            yycolumn + 1
-        );
-        errorList.add(error);
-        System.err.println(error.toDetailedString());
+        addLexicalError(mensaje);
     }
 }
 
@@ -205,16 +217,16 @@ ESPACIO = [ \t\r\n\f]+
 
     // ----- EMOJIS DINÁMICOS -----
     // @[:)] / @[:smile:]  — uno o más ')' para la boca
-    "@[:" ")"+  "]"     { return symbol(sym.EMOJI_SMILE,   yytext()); }
+    @\[:\)+\]           { return symbol(sym.EMOJI_SMILE,   yytext()); }
 
     // @[:(] / @[:sad:]   — uno o más '(' para la boca
-    "@[:" "("+ "]"      { return symbol(sym.EMOJI_SAD,     yytext()); }
+    @\[:\(+\]           { return symbol(sym.EMOJI_SAD,     yytext()); }
 
     // @[:|] / @[:serious:] — uno o más '|' para la boca
-    "@[:" "|"+ "]"      { return symbol(sym.EMOJI_SERIOUS, yytext()); }
+    @\[:\|+\]           { return symbol(sym.EMOJI_SERIOUS, yytext()); }
 
     // @[<3] / @[:heart:]  — una o más repeticiones de '<' seguidas de uno o más '3'
-    "@[" "<"+ "3"+ "]"  { return symbol(sym.EMOJI_HEART,   yytext()); }
+    @\[<+3+\]           { return symbol(sym.EMOJI_HEART,   yytext()); }
 
     // --- SECUENCIAS DE ESCAPE DENTRO DE CADENA ---
 
@@ -231,13 +243,8 @@ ESPACIO = [ \t\r\n\f]+
     \n                  {
         yybegin(YYINITIAL);
         String mensaje = "Cadena de texto sin cerrar en línea " + (yyline + 1);
-        ErrorInfo error = new ErrorInfo(
-            TipoError.LEXICO,
-            mensaje,
-            yyline + 1,
-            yycolumn + 1
-        );
-        errorList.add(error);
-        System.err.println(error.toDetailedString());
+        addLexicalError(mensaje);
+        //* Evita que el parser se bloquee
+        return symbol(sym.FIN_CADENA, "");
     }
 }
