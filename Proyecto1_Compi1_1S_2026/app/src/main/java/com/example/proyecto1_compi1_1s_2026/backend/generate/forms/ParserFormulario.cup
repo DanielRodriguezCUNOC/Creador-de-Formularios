@@ -16,6 +16,10 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoErro
 //================================
 
 parser code {:
+    // Con 1 token (la COMA separadora) basta para considerar recuperado el parser
+    // y permitir reportar el siguiente error en la misma lista de estilos.
+    public int error_sync_size() { return 1; }
+
     private List<ErrorInfo> erroresSintacticos = new ArrayList<>();
 
     public List<ErrorInfo> getErroresSintacticos() {
@@ -27,7 +31,8 @@ parser code {:
         List<Integer> ids = expected_token_ids();
         List<String> esperados = new ArrayList<>();
         for (Integer id : ids) {
-            esperados.add(traductor(symbl_name_from_id(id)));
+            String traducido = traductor(symbl_name_from_id(id));
+            if (!traducido.equals("error")) esperados.add(traducido);
         }
 
         String encontrado = (s != null && s.value != null)
@@ -37,10 +42,22 @@ parser code {:
         int linea   = s != null ? s.left  : 0;
         int columna = s != null ? s.right : 0;
 
-        String mensaje = esperados.isEmpty()
-            ? "Token inesperado '" + encontrado + "'"
-            : "Se esperaba: " + String.join(", ", esperados)
-              + ". Pero se encontró: '" + encontrado + "'";
+        // Detectar si todos los esperados son atributos de bloque styles (llevan comillas dobles)
+        boolean todosStyles = !esperados.isEmpty() &&
+            esperados.stream().allMatch(t -> t.startsWith("\"") && t.endsWith("\""));
+
+        String mensaje;
+        if (esperados.isEmpty()) {
+            mensaje = "Token inesperado '" + encontrado + "'";
+        } else if (todosStyles) {
+            mensaje = "Se esperaba un atributo de styles entre comillas: "
+                + String.join(", ", esperados)
+                + ". Recuerda que los atributos dentro de styles [ ] deben escribirse entre comillas."
+                + " Pero se encontró: '" + encontrado + "'";
+        } else {
+            mensaje = "Se esperaba: " + String.join(", ", esperados)
+                + ". Pero se encontró: '" + encontrado + "'";
+        }
 
         erroresSintacticos.add(new ErrorInfo(TipoError.SINTACTICO, mensaje, linea, columna));
     }
@@ -69,11 +86,11 @@ parser code {:
             case "ORIENTATION":       return "orientation";
             case "ELEMENTS":          return "elements";
             case "STYLES":            return "styles";
-            case "COLOR_ATTR":        return "color";
-            case "BACKGROUND_COLOR":  return "background color";
-            case "FONT_FAMILY":       return "font family";
-            case "TEXT_SIZE":         return "text size";
-            case "BORDER":            return "border";
+            case "COLOR_ATTR":        return "\"color\"";
+            case "BACKGROUND_COLOR":  return "\"background color\"";
+            case "FONT_FAMILY":       return "\"font family\"";
+            case "TEXT_SIZE":         return "\"text size\"";
+            case "BORDER":            return "\"border\"";
             case "CONTENT":           return "content";
             case "LABEL":             return "label";
             case "OPTIONS":           return "options";
@@ -866,13 +883,9 @@ atributoMultiple ::=
 //--- Estilos con borde (para SECTION y TABLE) ---
 estilosConBorde ::=
     estilosConBorde:list COMA estiloConBorde:e
-    {: list.add(e); RESULT = list; :}
+    {: if (e != null) list.add(e); RESULT = list; :}
     | estiloConBorde:e
-    {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(e); RESULT = l; :}
-    | estilosConBorde:list COMA error
-    {: RESULT = list; :}
-    | error
-    {: RESULT = new ArrayList<NodoAtributo>(); :}
+    {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); if (e != null) l.add(e); RESULT = l; :}
     ;
 
 estiloConBorde ::=
@@ -897,18 +910,17 @@ estiloConBorde ::=
         borderAttrs.add(new NodoAtributo("color", color));
         RESULT = new NodoAtributo("border", borderAttrs);
     :}
+
+    | error
+    {: RESULT = null; :}
     ;
 
 //--- Estilos sin borde (para TEXT y preguntas) ---
 estilosSinBorde ::=
     estilosSinBorde:list COMA estiloSinBorde:e
-    {: list.add(e); RESULT = list; :}
+    {: if (e != null) list.add(e); RESULT = list; :}
     | estiloSinBorde:e
-    {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); l.add(e); RESULT = l; :}
-    | estilosSinBorde:list COMA error
-    {: RESULT = list; :}
-    | error
-    {: RESULT = new ArrayList<NodoAtributo>(); :}
+    {:  List<NodoAtributo> l = new ArrayList<NodoAtributo>(); if (e != null) l.add(e); RESULT = l; :}
     ;
 
 estiloSinBorde ::=
@@ -923,6 +935,9 @@ estiloSinBorde ::=
 
     | TEXT_SIZE DOS_PUNTOS expresion:v
     {: RESULT = new NodoAtributo("textSize", v); :}
+
+    | error
+    {: RESULT = null; :}
     ;
 
 //--- Filas de Tabla ---
