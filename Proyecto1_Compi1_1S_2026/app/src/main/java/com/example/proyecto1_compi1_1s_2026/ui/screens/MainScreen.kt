@@ -34,8 +34,17 @@ import java.io.StringReader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
-    var editorValue by remember { mutableStateOf(TextFieldValue("")) }
+fun MainScreen(
+    editorValue: TextFieldValue,
+    onEditorValueChange: (TextFieldValue) -> Unit,
+    formularioActual: Formulario?,
+    mostrarFormulario: Boolean,
+    onFormularioActualChange: (Formulario?) -> Unit,
+    onMostrarFormularioChange: (Boolean) -> Unit,
+    onMenuClick: () -> Unit,
+    onFinalize: (String) -> Unit = {},
+    onViewErrors: (List<ErrorInfo>) -> Unit = {}
+) {
     var erroresLexicos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
     var erroresSintacticos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
     var erroresSemanticos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
@@ -43,8 +52,6 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
     var mensajeResultado by remember { mutableStateOf("") }
     var astResultado by remember { mutableStateOf("") }
     var tipoMensaje by remember { mutableStateOf("") }
-    var formularioActual by remember { mutableStateOf<Formulario?>(null) }
-    var mostrarFormulario by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -139,13 +146,15 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
             OutlinedTextField(
                 value = editorValue,
                 onValueChange = { newValue ->
-                    editorValue = TextFieldValue(
+                    onEditorValueChange(
+                        TextFieldValue(
                         annotatedString = SyntaxHighlighter.highlight(newValue.text),
                         selection = newValue.selection,
                         composition = newValue.composition
                     )
+                    )
                     tipoMensaje = ""
-                    mostrarFormulario = false
+                    onMostrarFormularioChange(false)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -169,45 +178,6 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                 ),
                 maxLines = Int.MAX_VALUE
             )
-
-            // ── Panel de Errores Detallados ────────────────────────────────
-            if (mostrarErrores && (erroresLexicos.isNotEmpty() || erroresSintacticos.isNotEmpty() || erroresSemanticos.isNotEmpty())) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp)
-                        .border(
-                            width = 1.dp,
-                            color = Color.Red,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .background(Color(0xFF1E1E1E), RoundedCornerShape(8.dp))
-                ) {
-                    Column(
-                        modifier = Modifier
-                               .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
-                            .padding(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        // Mostrar todos los errores juntos con formato detallado
-                        (erroresLexicos + erroresSintacticos + erroresSemanticos).forEach { error ->
-                            Text(
-                                text = "${error.toDetailedString()}",
-                                style = TextStyle(
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 11.sp,
-                                    color = when (error.tipo) {
-                                        TipoError.LEXICO -> Color(0xFFFF6B6B)
-                                        TipoError.SINTACTICO -> Color(0xFFFFD700)
-                                        TipoError.SEMANTICO -> Color(0xFFFF5722)
-                                    }
-                                )
-                            )
-                        }
-                    }
-                }
-            }
 
             // ── Botones de acción ────────────────────────────────────────
             Row(
@@ -264,16 +234,18 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                                         val interprete = Interprete(TablaSimbolos(null))
                                         val resultadoInterp = interprete.interpretar(instrucciones)
                                         if (resultadoInterp.errores.isEmpty()) {
-                                            formularioActual = resultadoInterp.formulario
-                                            mostrarFormulario = true
+                                            onFormularioActualChange(resultadoInterp.formulario)
+                                            onMostrarFormularioChange(true)
                                         } else {
                                             erroresSemanticos = resultadoInterp.errores
-                                            mostrarFormulario = false
+                                            onMostrarFormularioChange(false)
                                         }
                                     } else {
-                                        mostrarFormulario = false
+                                        onMostrarFormularioChange(false)
                                     }
                                 }
+                            } else {
+                                onMostrarFormularioChange(false)
                             }
 
                             val totalErrores = erroresLexicos.size + erroresSintacticos.size + erroresSemanticos.size
@@ -294,17 +266,22 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                                 tipoMensaje = "error"
                                 mensajeResultado = "Se encontraron $totalErrores error(es)"
                                 mostrarErrores = true
+                                onMostrarFormularioChange(false)
 
                                 val primerError = erroresLexicos.firstOrNull()
                                     ?: erroresSintacticos.firstOrNull()
                                     ?: erroresSemanticos.firstOrNull()
+                                val todosLosErrores = erroresLexicos + erroresSintacticos + erroresSemanticos
 
                                 coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(
+                                    val resultadoSnackbar = snackbarHostState.showSnackbar(
                                         message = primerError?.toDetailedString() ?: "Errores encontrados",
                                         actionLabel = "Ver Todos",
                                         duration = SnackbarDuration.Long
                                     )
+                                    if (resultadoSnackbar == SnackbarResult.ActionPerformed) {
+                                        onViewErrors(todosLosErrores)
+                                    }
                                 }
                             }
 
@@ -319,14 +296,19 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                                 erroresSemanticos = emptyList()
                                 tipoMensaje = "error"
                                 mostrarErrores = true
+                                onMostrarFormularioChange(false)
 
                                 val primerError = errLex.firstOrNull() ?: errSin.firstOrNull()
+                                val todosLosErrores = errLex + errSin
                                 coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(
+                                    val resultadoSnackbar = snackbarHostState.showSnackbar(
                                         message = primerError?.toDetailedString() ?: "Error de sintaxis",
                                         actionLabel = "Ver Todos",
                                         duration = SnackbarDuration.Long
                                     )
+                                    if (resultadoSnackbar == SnackbarResult.ActionPerformed) {
+                                        onViewErrors(todosLosErrores)
+                                    }
                                 }
                             } else {
                                 tipoMensaje = "error"
@@ -334,6 +316,7 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                                 erroresSemanticos = listOf(
                                     ErrorInfo(TipoError.SEMANTICO, "Excepción inesperada: ${e.message}", 0, 0)
                                 )
+                                onMostrarFormularioChange(false)
                                 coroutineScope.launch {
                                     snackbarHostState.showSnackbar(
                                         message = "Error inesperado: ${e.message}",

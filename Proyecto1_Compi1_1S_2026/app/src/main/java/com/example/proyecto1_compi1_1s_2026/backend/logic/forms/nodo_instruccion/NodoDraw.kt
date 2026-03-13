@@ -1,7 +1,6 @@
 package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion
 
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.ComponenteUI
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.NodoAtributo
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoExpresion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoLiteral
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_principal.Visitor
@@ -30,15 +29,14 @@ class NodoDraw(
             return
         }
 
-        val comodinesEnDraw = parametros.count { param ->
-            param is NodoLiteral && param.tipo == "comodin"
-        }
+        // En draw(...) los argumentos reales son los parámetros provistos por el usuario.
+        val parametrosEnDraw = parametros.size
 
         val comodinesEnVariable = contarComodinesEnComponente(valorEspecial)
 
-        if (comodinesEnDraw != comodinesEnVariable) {
+        if (parametrosEnDraw != comodinesEnVariable) {
             contexto.reportarError(
-                "Variable especial '$idVariableEspecial': Esperaba $comodinesEnVariable comodín(es) pero .draw() proporciona $comodinesEnDraw",
+                "Variable especial '$idVariableEspecial': Esperaba $comodinesEnVariable parámetro(s) en .draw(), pero se proporcionaron $parametrosEnDraw",
                 linea,
                 columna
             )
@@ -46,32 +44,25 @@ class NodoDraw(
     }
 
     private fun contarComodinesEnComponente(valor: Any?): Int {
-        val atributos: List<NodoAtributo> = when (valor) {
-            is ComponenteUI -> valor.atributos
-            is List<*> -> {
-                @Suppress("UNCHECKED_CAST")
-                (valor as? List<NodoAtributo>) ?: return 0
-            }
-            else -> return 0
+        return when (valor) {
+            is ComponenteUI -> valor.atributos.sumOf { attr -> contarComodinesEnValor(attr.valor) }
+            else -> contarComodinesEnValor(valor)
         }
+    }
 
-        var count = 0
-        for (attr in atributos) {
-            when (val v = attr.valor) {
-                is String -> count += v.count { it == '?' }
-                is NodoLiteral -> if (v.tipo == "string") count += v.valor.toString().count { it == '?' }
-                is List<*> -> {
-                    @Suppress("UNCHECKED_CAST")
-                    val exprs = v as? List<NodoExpresion>
-                    exprs?.forEach { expr ->
-                        if (expr is NodoLiteral) {
-                            if (expr.tipo == "comodin") count++
-                            if (expr.tipo == "string") count += expr.valor.toString().count { it == '?' }
-                        }
-                    }
-                }
+    private fun contarComodinesEnValor(valor: Any?): Int {
+        return when (valor) {
+            null -> 0
+            is String -> valor.count { it == '?' }
+            is NodoLiteral -> when (valor.tipo) {
+                "comodin" -> 1
+                "string" -> valor.valor.toString().count { it == '?' }
+                else -> 0
             }
+            is ComponenteUI -> valor.atributos.sumOf { attr -> contarComodinesEnValor(attr.valor) }
+            is List<*> -> valor.sumOf { item -> contarComodinesEnValor(item) }
+            is NodoExpresion -> 0
+            else -> 0
         }
-        return count
     }
 }
