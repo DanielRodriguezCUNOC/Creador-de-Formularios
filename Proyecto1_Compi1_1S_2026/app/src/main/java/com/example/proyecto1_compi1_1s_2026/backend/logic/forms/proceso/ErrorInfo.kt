@@ -13,9 +13,9 @@ data class ErrorInfo(
 
     fun toDetailedString(): String {
         val icono = when (tipo) {
-            TipoError.LEXICO -> "❌\u274C"
-            TipoError.SINTACTICO -> "⚠\uFE0F️"
-            TipoError.SEMANTICO -> "\uD83D\uDD34"
+            TipoError.LEXICO -> "❌"
+            TipoError.SINTACTICO -> "⚠️"
+            TipoError.SEMANTICO -> "🔴"
         }
         return if (linea > 0)
             "$icono Error ${tipo.nombre} en línea $linea, columna $columna: $mensaje"

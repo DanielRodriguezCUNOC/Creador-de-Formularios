@@ -29,6 +29,14 @@ parser code {:
     public void syntax_error(Symbol s) {
         // Construir lista de tokens esperados traducidos al español
         List<Integer> ids = expected_token_ids();
+
+        // Caso especial: draw() sin parámetros.
+        // La gramática antigua dispara recuperación por lista opcional vacía,
+        // pero no queremos reportarlo como error al usuario.
+        if (esDrawSinParametrosVacio(s, ids)) {
+            return;
+        }
+
         List<String> esperados = new ArrayList<>();
         for (Integer id : ids) {
             String traducido = traductor(symbl_name_from_id(id));
@@ -60,6 +68,30 @@ parser code {:
         }
 
         erroresSintacticos.add(new ErrorInfo(TipoError.SINTACTICO, mensaje, linea, columna));
+    }
+
+    private boolean esDrawSinParametrosVacio(Symbol s, List<Integer> ids) {
+        if (s == null || s.sym != sym.PAREN_DER) return false;
+        if (ids == null || ids.isEmpty()) return false;
+
+        // Esperados típicos al inicio de una expresión
+        List<Integer> inicioExpr = List.of(
+            sym.VERTICAL, sym.HORIZONTAL, sym.MONO,
+            sym.COLOR_NAME, sym.COLOR_HEX,
+            sym.FUNC_POKEMON,
+            sym.PAREN_IZQ, sym.COMODIN,
+            sym.MENOS, sym.NOT,
+            sym.IDENTIFICADOR, sym.NUMBER_LITERAL, sym.INICIO_CADENA
+        );
+        for (Integer id : ids) {
+            if (!inicioExpr.contains(id)) return false;
+        }
+
+        // Verificar contexto sintáctico: ... DRAW PAREN_IZQ )
+        if (stack == null || stack.size() < 2) return false;
+        Symbol top = (Symbol) stack.peek();
+        Symbol prev = (Symbol) stack.get(stack.size() - 2);
+        return top.sym == sym.PAREN_IZQ && prev.sym == sym.DRAW;
     }
 
     public void report_error(String message, Object info) {
@@ -162,6 +194,26 @@ parser code {:
             case "EOF":               return "fin de archivo";
             default:                  return token;
         }
+    }
+
+    /** Convierte sintaxis textual de emojis a sus caracteres Unicode. */
+    private String normalizarEmojis(String texto) {
+        if (texto == null || texto.isEmpty()) return texto;
+
+        String out = texto;
+        // Formas simbólicas
+        out = out.replaceAll("@\\[:\\)+\\]", "😄");
+        out = out.replaceAll("@\\[:\\(+\\]", "😢");
+        out = out.replaceAll("@\\[:\\|+\\]", "😐");
+        out = out.replaceAll("@\\[<+3+\\]", "❤️");
+
+        // Formas nombradas
+        out = out.replaceAll("@\\[:smile:\\]", "😄");
+        out = out.replaceAll("@\\[:sad:\\]", "😢");
+        out = out.replaceAll("@\\[:serious:\\]", "😐");
+        out = out.replaceAll("@\\[:heart:\\]", "❤️");
+
+        return out;
     }
 :};
 
@@ -645,6 +697,8 @@ llamadaAPI ::=
 listaExpresionesOpcional ::=
     listaExpresiones:lista
     {: RESULT = lista; :}
+    | 
+    {: RESULT = new ArrayList<NodoExpresion>(); :}
     | error
     {: RESULT = new ArrayList<NodoExpresion>(); :}
     ;
@@ -1029,13 +1083,13 @@ partesCadena ::=
 // Cada parte puede ser contenido normal o un emoji
 parteCadena ::=
     CONTENIDO_CADENA:c
-    {: RESULT = c; :}
+    {: RESULT = normalizarEmojis(c); :}
     | EMOJI_SMILE:e
-    {: RESULT = e; :}
+    {: RESULT = "😄"; :}
     | EMOJI_SAD:e
-    {: RESULT = e; :}
+    {: RESULT = "😢"; :}
     | EMOJI_SERIOUS:e
-    {: RESULT = e; :}
+    {: RESULT = "😐"; :}
     | EMOJI_HEART:e
-    {: RESULT = e; :}
+    {: RESULT = "❤️"; :}
     ;
