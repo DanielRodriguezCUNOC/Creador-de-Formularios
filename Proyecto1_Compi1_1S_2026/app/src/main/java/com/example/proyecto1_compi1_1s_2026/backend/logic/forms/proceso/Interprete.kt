@@ -1,6 +1,7 @@
 package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso
 
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.*
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.ElementoFormulario
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.*
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.*
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.*

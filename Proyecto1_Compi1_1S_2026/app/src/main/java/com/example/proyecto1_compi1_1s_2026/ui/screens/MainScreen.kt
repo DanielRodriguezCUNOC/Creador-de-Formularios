@@ -185,7 +185,7 @@ fun MainScreen(onMenuClick: () -> Unit, onFinalize: (String) -> Unit = {}) {
                 ) {
                     Column(
                         modifier = Modifier
-                            .fillMaxSize()
+                               .fillMaxWidth()
                             .verticalScroll(rememberScrollState())
                             .padding(8.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
