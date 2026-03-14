@@ -21,9 +21,22 @@ parser code {:
     public int error_sync_size() { return 1; }
 
     private List<ErrorInfo> erroresSintacticos = new ArrayList<>();
+    private java.util.HashMap<String, String> tiposDeclarados = new java.util.HashMap<>();
 
     public List<ErrorInfo> getErroresSintacticos() {
         return erroresSintacticos;
+    }
+
+    private void registrarTipo(String id, String tipo) {
+        tiposDeclarados.put(id, tipo);
+    }
+
+    private String obtenerTipo(String id) {
+        return tiposDeclarados.get(id);
+    }
+
+    private void reportarRestriccionParser(String mensaje, int linea, int columna) {
+        erroresSintacticos.add(new ErrorInfo(TipoError.SINTACTICO, mensaje, linea, columna));
     }
 
     public void syntax_error(Symbol s) {
@@ -281,6 +294,8 @@ terminal String EMOJI_SMILE, EMOJI_SAD, EMOJI_SERIOUS, EMOJI_HEART;
 non terminal List<NodoInstruccion> inicio;
 non terminal List<NodoInstruccion> listaInstrucciones;
 non terminal NodoInstruccion instruccion;
+non terminal List<NodoInstruccion> listaElementosUI;
+non terminal NodoInstruccion elementoUI;
 
 // Expresiones
 non terminal NodoExpresion expresion;
@@ -429,21 +444,46 @@ instruccion ::=
     | componenteSeccion:c
     {: RESULT = c; :}
 
-    | componenteTexto:c
-    {: RESULT = c; :}
-
     | componenteTabla:t
     {: RESULT = t; :}
+    ;
 
+//--- Lista de elementos UI (solo para SECTION.elements) ---
+listaElementosUI ::=
+    listaElementosUI:lista COMA elementoUI:elem
+    {:
+        if (elem != null) {
+            lista.add(elem);
+        }
+        RESULT = lista;
+    :}
+    | elementoUI:elem
+    {:
+        List<NodoInstruccion> lista = new ArrayList<NodoInstruccion>();
+        if (elem != null) {
+            lista.add(elem);
+        }
+        RESULT = lista;
+    :}
+    | listaElementosUI:lista COMA error
+    {: RESULT = lista; :}
+    | error
+    {: RESULT = new ArrayList<NodoInstruccion>(); :}
+    ;
+
+elementoUI ::=
+    componenteSeccion:c
+    {: RESULT = c; :}
+    | componenteTabla:t
+    {: RESULT = t; :}
+    | componenteTexto:c
+    {: RESULT = c; :}
     | preguntaAbierta:p
     {: RESULT = p; :}
-
     | preguntaDesplegable:p
     {: RESULT = p; :}
-
     | preguntaSeleccionUnica:p
     {: RESULT = p; :}
-
     | preguntaMultiple:p
     {: RESULT = p; :}
     ;
@@ -453,21 +493,36 @@ instruccion ::=
 declaracion ::=
     // Declaración sin inicialización
     TYPE_NUMBER:t IDENTIFICADOR:nombre
-    {: RESULT = new NodoDeclaracion(nombre, "number", null, tleft, tright); :}
+    {:
+        registrarTipo(nombre, "number");
+        RESULT = new NodoDeclaracion(nombre, "number", null, tleft, tright);
+    :}
 
     | TYPE_STRING:t IDENTIFICADOR:nombre
-    {: RESULT = new NodoDeclaracion(nombre, "string", null, tleft, tright); :}
+    {:
+        registrarTipo(nombre, "string");
+        RESULT = new NodoDeclaracion(nombre, "string", null, tleft, tright);
+    :}
 
     // Declaración con inicialización
     | TYPE_NUMBER:t IDENTIFICADOR:nombre ASIGNACION expresion:val
-    {: RESULT = new NodoDeclaracion(nombre, "number", val, tleft, tright); :}
+    {:
+        registrarTipo(nombre, "number");
+        RESULT = new NodoDeclaracion(nombre, "number", val, tleft, tright);
+    :}
 
     | TYPE_STRING:t IDENTIFICADOR:nombre ASIGNACION expresion:val
-    {: RESULT = new NodoDeclaracion(nombre, "string", val, tleft, tright); :}
+    {:
+        registrarTipo(nombre, "string");
+        RESULT = new NodoDeclaracion(nombre, "string", val, tleft, tright);
+    :}
 
     // special SIEMPRE debe inicializarse con una pregunta (gramática lo exige)
     | TYPE_SPECIAL:t IDENTIFICADOR:nombre ASIGNACION valorSpecial:preg
-    {: RESULT = new NodoDeclaracionSpecial(nombre, preg, tleft, tright); :}
+    {:
+        registrarTipo(nombre, "special");
+        RESULT = new NodoDeclaracionSpecial(nombre, preg, tleft, tright);
+    :}
     ;
 
 //--- Valor Special (tipos de pregunta que se asignan a variables special) ---
@@ -534,7 +589,23 @@ sentenciaFor ::=
 // Sintaxis: miPregunta.draw(10, 4)   →   IDENTIFICADOR PUNTO DRAW PAREN_IZQ params PAREN_DER
 instruccionDraw ::=
     IDENTIFICADOR:varEspecial PUNTO DRAW:t PAREN_IZQ listaExpresionesOpcional:params PAREN_DER
-    {: RESULT = new NodoDraw(varEspecial, params, tleft, tright); :}
+    {:
+        String tipoVar = obtenerTipo(varEspecial);
+        if (tipoVar == null) {
+            reportarRestriccionParser(
+                "No se puede invocar .draw() sobre '" + varEspecial + "' porque no está declarada",
+                tleft,
+                tright
+            );
+        } else if (!"special".equals(tipoVar)) {
+            reportarRestriccionParser(
+                "No se puede invocar .draw() sobre '" + varEspecial + "' porque es de tipo '" + tipoVar + "' y no 'special'",
+                tleft,
+                tright
+            );
+        }
+        RESULT = new NodoDraw(varEspecial, params, tleft, tright);
+    :}
     ;
 
 //--- Componente SECTION ---
@@ -745,7 +816,7 @@ atributoSeccion ::=
     | ORIENTATION DOS_PUNTOS valorOrientacion:v
     {: RESULT = new NodoAtributo("orientation", v); :}
 
-    | ELEMENTS DOS_PUNTOS LLAVE_IZQ listaInstrucciones:elems LLAVE_DER
+    | ELEMENTS DOS_PUNTOS LLAVE_IZQ listaElementosUI:elems LLAVE_DER
     {: RESULT = new NodoAtributo("elements", elems); :}
 
     | STYLES CORCHETE_IZQ estilosConBorde:ests CORCHETE_DER
