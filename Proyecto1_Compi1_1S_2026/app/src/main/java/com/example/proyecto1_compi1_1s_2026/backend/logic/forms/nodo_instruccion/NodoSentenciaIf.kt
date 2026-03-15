@@ -25,7 +25,13 @@ class NodoSentenciaIf(
             )
         }
 
-        instruccionesIf.forEach { it.validarSemantica(contexto) }
-        instruccionesElse?.forEach { it.validarSemantica(contexto) }
+        for (instruccion in instruccionesIf) {
+            instruccion.validarSemantica(contexto)
+        }
+        if (instruccionesElse != null) {
+            for (instruccion in instruccionesElse) {
+                instruccion.validarSemantica(contexto)
+            }
+        }
     }
 }

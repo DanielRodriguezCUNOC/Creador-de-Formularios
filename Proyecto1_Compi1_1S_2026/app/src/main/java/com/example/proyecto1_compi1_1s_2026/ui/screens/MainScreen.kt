@@ -233,7 +233,7 @@ fun MainScreen(
                                     erroresSemanticos = resultadoRecoleccion.errores
 
                                     if (erroresSemanticos.isEmpty()) {
-                                        val validador = ValidadorSemantico(TablaSimbolos(null))
+                                        val validador = ValidadorSemantico(resultadoRecoleccion.tablaSimbolos)
                                         erroresSemanticos = validador.validar(instrucciones)
 
                                         if (erroresSemanticos.isEmpty()) {

@@ -45,24 +45,31 @@ class ValidadorSemantico(var entornoActual: TablaSimbolos) : Visitor<List<ErrorI
     }
 
     override fun visit(node: NodoDeclaracion): List<ErrorInfo> {
-        node.validarSemantica(contexto)
+        // RecolectorSimbolos ya verificó redeclaraciones y registró las variables globales.
+        // Aquí solo validamos el tipo del valor inicial.
+        if (node.valorInicio != null) {
+            node.valorInicio.validarSemantica(contexto)
+            val tipoValor = node.valorInicio.inferirTipo(contexto)
+            if (tipoValor != node.tipo && !(node.tipo == "number" && tipoValor == "double")) {
+                contexto.reportarError(
+                    "Tipo incompatible en declaración '${node.id}': se esperaba ${node.tipo}, pero obtuvo $tipoValor",
+                    node.linea,
+                    node.columna
+                )
+            }
+        }
+        // Si la variable no está en el entorno (declaración dentro de un scope local),
+        // la registramos para que las instrucciones siguientes puedan resolverla.
+        if (contexto.entornoActual.obtenerTipo(node.id) == null) {
+            val valorInicial: Any = when (node.tipo) { "number" -> 0.0; else -> "" }
+            contexto.entornoActual.almacenarVariable(node.id, valorInicial, node.tipo)
+        }
         return errores
     }
 
     override fun visit(node: NodoDeclaracionSpecial): List<ErrorInfo> {
-        if (contexto.entornoActual.obtenerTipo(node.id) != null) {
-            contexto.reportarError(
-                "La variable '${node.id}' ya fue declarada y no puede redefinirse",
-                node.linea,
-                node.columna
-            )
-            return errores
-        }
-
-        // Registrar la variable en la tabla de símbolos como tipo "special"
-        contexto.entornoActual.almacenarVariable(node.id, node.pregunta, "special")
-        // Delegar la validación semántica a la pregunta interna
-        node.pregunta.validarSemantica(contexto)
+        // Delega al nodo; la tabla ya tiene la variable del RecolectorSimbolos.
+        node.validarSemantica(contexto)
         return errores
     }
 
