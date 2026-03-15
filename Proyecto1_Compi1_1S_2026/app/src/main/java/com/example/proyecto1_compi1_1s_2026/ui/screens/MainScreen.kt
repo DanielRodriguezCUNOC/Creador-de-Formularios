@@ -223,21 +223,30 @@ fun MainScreen(
 
                             // Validar semánticamente si no hay errores léxicos/sintácticos
                             if (erroresLexicos.isEmpty() && erroresSintacticos.isEmpty()) {
-                                val validador = ValidadorSemantico(TablaSimbolos(null))
                                 if (resultado?.value is List<*>) {
                                     @Suppress("UNCHECKED_CAST")
                                     val instrucciones = resultado.value as List<NodoInstruccion>
-                                    erroresSemanticos = validador.validar(instrucciones)
 
-                                    // ── Interpretar y construir el formulario ────────────
+                                    // Pasadas principales.
+                                    val recolector = RecolectorSimbolos(TablaSimbolos(null))
+                                    val resultadoRecoleccion = recolector.recolectar(instrucciones)
+                                    erroresSemanticos = resultadoRecoleccion.errores
+
                                     if (erroresSemanticos.isEmpty()) {
-                                        val interprete = Interprete(TablaSimbolos(null))
-                                        val resultadoInterp = interprete.interpretar(instrucciones)
-                                        if (resultadoInterp.errores.isEmpty()) {
-                                            onFormularioActualChange(resultadoInterp.formulario)
-                                            onMostrarFormularioChange(true)
+                                        val validador = ValidadorSemantico(TablaSimbolos(null))
+                                        erroresSemanticos = validador.validar(instrucciones)
+
+                                        if (erroresSemanticos.isEmpty()) {
+                                            val interprete = Interprete(TablaSimbolos(null))
+                                            val resultadoInterp = interprete.interpretar(instrucciones)
+                                            if (resultadoInterp.errores.isEmpty()) {
+                                                onFormularioActualChange(resultadoInterp.formulario)
+                                                onMostrarFormularioChange(true)
+                                            } else {
+                                                erroresSemanticos = resultadoInterp.errores
+                                                onMostrarFormularioChange(false)
+                                            }
                                         } else {
-                                            erroresSemanticos = resultadoInterp.errores
                                             onMostrarFormularioChange(false)
                                         }
                                     } else {
