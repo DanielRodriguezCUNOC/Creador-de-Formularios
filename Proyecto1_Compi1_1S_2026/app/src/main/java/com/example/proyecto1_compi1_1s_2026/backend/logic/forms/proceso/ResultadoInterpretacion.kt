@@ -7,7 +7,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulari
  *
  * @param formulario  Modelo visual construido a partir del código analizado.
  * @param errores     Errores de ejecución detectados durante la interpretación
- *                    (p.ej. división por cero, variable no declarada, bucle infinito).
+ *                    (división por cero, variable no declarada, bucle infinito).
  */
 data class ResultadoInterpretacion(
     val formulario: Formulario,

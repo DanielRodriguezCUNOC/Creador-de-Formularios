@@ -7,7 +7,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.Contexto
 class NodoSentenciaIf(
     val condicion: NodoExpresion,
     val instruccionesIf: List<NodoInstruccion>,
-    val instruccionesElse: List<NodoInstruccion>?, // null si no hay ELSE
+    val instruccionesElse: List<NodoInstruccion>?,
     override val linea: Int = 0,
     override val columna: Int = 0
 ) : NodoInstruccion {

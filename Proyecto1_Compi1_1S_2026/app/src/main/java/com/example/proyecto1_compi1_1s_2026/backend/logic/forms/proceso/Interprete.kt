@@ -2,6 +2,7 @@ package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso
 
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.ElementoFormulario
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.TextoFormulario
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.*
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.*
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.*
@@ -110,9 +111,13 @@ class Interprete(private var entornoActual: TablaSimbolos) : Visitor<Any?> {
         val temp = entornoActual
         entornoActual = nuevoEntorno
         if (condicion) {
-            node.instruccionesIf.forEach { it.accept(this) }
-        } else {
-            node.instruccionesElse?.forEach { it.accept(this) }
+            for (instruccion in node.instruccionesIf) {
+                instruccion.accept(this)
+            }
+        } else if (node.instruccionesElse != null) {
+            for (instruccion in node.instruccionesElse) {
+                instruccion.accept(this)
+            }
         }
         entornoActual = temp
         return null
@@ -122,13 +127,14 @@ class Interprete(private var entornoActual: TablaSimbolos) : Visitor<Any?> {
         var iter = 0
         while (exprBuilder.toBool(node.condicion.accept(this))) {
             if (++iter > MAX_ITER) {
-                errores.add(ErrorInfo(TipoError.SEMANTICO, "WHILE: posible bucle infinito (>$MAX_ITER iteraciones)", node.linea, node.columna))
                 break
             }
             val nuevoEntorno = TablaSimbolos(entornoActual)
             val temp = entornoActual
             entornoActual = nuevoEntorno
-            node.instruccionesWhile.forEach { it.accept(this) }
+            for (instruccion in node.instruccionesWhile) {
+                instruccion.accept(this)
+            }
             entornoActual = temp
         }
         return null
@@ -138,29 +144,34 @@ class Interprete(private var entornoActual: TablaSimbolos) : Visitor<Any?> {
         var iter = 0
         do {
             if (++iter > MAX_ITER) {
-                errores.add(ErrorInfo(TipoError.SEMANTICO, "DO-WHILE: posible bucle infinito (>$MAX_ITER iteraciones)", node.linea, node.columna))
                 break
             }
             val nuevoEntorno = TablaSimbolos(entornoActual)
             val temp = entornoActual
             entornoActual = nuevoEntorno
-            node.instrucciones.forEach { it.accept(this) }
+            for (instruccion in node.instrucciones) {
+                instruccion.accept(this)
+            }
             entornoActual = temp
         } while (exprBuilder.toBool(node.condicion.accept(this)))
         return null
     }
 
     override fun visit(node: NodoCicloFor): Any? {
-        if (node.incremento == null) {
+        if (!node.esImperativo) {
             // FOR clásica: FOR ID IN inicio..fin { }
-            val inicio = exprBuilder.toDouble(node.rangoInicio.accept(this))?.toInt() ?: 0
+            val inicio = exprBuilder.toDouble(node.rangoInicio?.accept(this))?.toInt() ?: 0
             val fin    = exprBuilder.toDouble(node.rangoFin.accept(this))?.toInt() ?: 0
             for (i in inicio..fin) {
                 val nuevoEntorno = TablaSimbolos(entornoActual)
-                nuevoEntorno.almacenarVariable(node.idVariable, i.toDouble(), "number")
+                if (node.idVariable != null) {
+                    nuevoEntorno.almacenarVariable(node.idVariable, i.toDouble(), "number")
+                }
                 val temp = entornoActual
                 entornoActual = nuevoEntorno
-                node.instruccionesFor.forEach { it.accept(this) }
+                for (instruccion in node.instruccionesFor) {
+                    instruccion.accept(this)
+                }
                 entornoActual = temp
             }
         } else {
@@ -168,23 +179,20 @@ class Interprete(private var entornoActual: TablaSimbolos) : Visitor<Any?> {
             val nuevoEntorno = TablaSimbolos(entornoActual)
             val temp = entornoActual
             entornoActual = nuevoEntorno
-            
-            // Inicialización: i = init
-            val valorInit = node.rangoInicio.accept(this)
-            entornoActual.almacenarVariable(node.idVariable, valorInit ?: 0.0, "number")
+
+            node.inicializacionImperativa?.accept(this)
             
             var iter = 0
             // Condición: mientras se cumpla
             while (exprBuilder.toBool(node.rangoFin.accept(this))) {
                 if (++iter > MAX_ITER) {
-                    errores.add(ErrorInfo(TipoError.SEMANTICO, "FOR imperativo: posible bucle infinito (>$MAX_ITER iteraciones)", node.linea, node.columna))
                     break
                 }
                 // Cuerpo
-                node.instruccionesFor.forEach { it.accept(this) }
-                // Incremento: i = inc
-                val valorInc = node.incremento.accept(this)
-                entornoActual.reasignarVariable(node.idVariable, valorInc ?: 0.0)
+                for (instruccion in node.instruccionesFor) {
+                    instruccion.accept(this)
+                }
+                node.actualizacionImperativa?.accept(this)
             }
             entornoActual = temp
         }
@@ -196,7 +204,7 @@ class Interprete(private var entornoActual: TablaSimbolos) : Visitor<Any?> {
         return try {
             val elemento = entornoActual.obtenerVariable(node.idVariableEspecial)
             if (elemento is ElementoFormulario) {
-                // TODO: aplicar comodines de node.parametros cuando se implemente
+                // Aplicar comodines de node.parametros cuando se implemente
                 elementos.add(elemento)
             }
             null
@@ -212,7 +220,9 @@ class Interprete(private var entornoActual: TablaSimbolos) : Visitor<Any?> {
         // Recolectar los elementos internos de forma aislada
         val elementosPrevios = elementos.toMutableList()
         elementos.clear()
-        node.elementosInternos.forEach { it.accept(this) }
+        for (interno in node.elementosInternos) {
+            interno.accept(this)
+        }
         val internos = elementos.toList()
         elementos.clear()
         elementos.addAll(elementosPrevios)
@@ -253,7 +263,52 @@ class Interprete(private var entornoActual: TablaSimbolos) : Visitor<Any?> {
     }
 
     override fun visit(node: ComponenteTabla): Any? {
-        val tabla = uiBuilder.construirTabla(node)
+        // Construir filas y celdas de forma iterativa (sin lambdas)
+        val filasEvaluadas = mutableListOf<List<ElementoFormulario>>()
+
+        for (fila in node.filas) {
+            val celdas = mutableListOf<ElementoFormulario>()
+
+            for (celdaExpr in fila) {
+                val celda: ElementoFormulario
+
+                if (celdaExpr is NodoLiteral && celdaExpr.tipo == "table_cell_component") {
+                    // La celda contiene un componente UI: visitarlo y rescatar el ElementoFormulario
+                    val tamanoPrevio = elementos.size
+                    val comp = celdaExpr.valor as ComponenteUI
+                    comp.accept(this)
+
+                    // Recoger todos los elementos que el componente añadió
+                    val elementosNuevos = mutableListOf<ElementoFormulario>()
+                    var indice = tamanoPrevio
+                    while (indice < elementos.size) {
+                        elementosNuevos.add(elementos[indice])
+                        indice++
+                    }
+
+                    // Quitarlos de la lista principal (no pertenecen al nivel raíz)
+                    var cantidad = elementosNuevos.size
+                    while (cantidad > 0) {
+                        elementos.removeAt(elementos.lastIndex)
+                        cantidad--
+                    }
+
+                    // Usar el primer elemento como contenido de la celda
+                    celda = if (elementosNuevos.isNotEmpty()) elementosNuevos[0]
+                            else TextoFormulario(contenido = "")
+                } else {
+                    // Celda normal: evaluar la expresión y convertir a texto
+                    val valor = celdaExpr.accept(this)?.toString() ?: ""
+                    celda = TextoFormulario(contenido = valor)
+                }
+
+                celdas.add(celda)
+            }
+
+            filasEvaluadas.add(celdas)
+        }
+
+        val tabla = uiBuilder.construirTabla(node, filasEvaluadas)
         elementos.add(tabla)
         return tabla
     }

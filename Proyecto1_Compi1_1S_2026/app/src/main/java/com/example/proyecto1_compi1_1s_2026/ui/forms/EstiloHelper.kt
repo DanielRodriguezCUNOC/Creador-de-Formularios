@@ -16,7 +16,7 @@ fun obtenerFontFamily(nombre: String): FontFamily = when (nombre.uppercase()) {
     "MONO"      -> FontFamily.Monospace
     "CURSIVE"   -> FontFamily.Cursive
     "SERIF"     -> FontFamily.Serif
-    else        -> FontFamily.SansSerif   // SANS_SERIF por defecto
+    else        -> FontFamily.SansSerif
 }
 
 // ── TextStyle ─────────────────────────────────────────────────────────────────
@@ -29,10 +29,6 @@ fun EstiloElemento.toTextStyle(): TextStyle = TextStyle(
 
 // ── Modifier de borde personalizado ──────────────────────────────────────────
 
-/**
- * Aplica el borde definido en [EstiloElemento] al [Modifier].
- * Soporta LINE (continuo), DOTTED (punteado) y DOUBLE (doble línea).
- */
 fun EstiloElemento.applyBorder(modifier: Modifier): Modifier {
     val b = border ?: return modifier
     return modifier.drawBehind {
@@ -41,7 +37,7 @@ fun EstiloElemento.applyBorder(modifier: Modifier): Modifier {
                 width       = b.grosor,
                 pathEffect  = PathEffect.dashPathEffect(floatArrayOf(b.grosor * 3, b.grosor * 2), 0f)
             )
-            else -> Stroke(width = b.grosor)  // LINE y DOUBLE usan línea continua
+            else -> Stroke(width = b.grosor)
         }
 
         // Rectángulo exterior

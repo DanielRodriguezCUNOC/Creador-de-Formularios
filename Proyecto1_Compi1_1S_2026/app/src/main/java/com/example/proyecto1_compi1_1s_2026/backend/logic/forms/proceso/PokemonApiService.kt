@@ -5,14 +5,6 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-/**
- * Servicio simple para consumir PokéAPI sin librerías externas.
- *
- * Diseño imperativo:
- * - Cache en memoria por id para no repetir consultas
- * - HTTP con HttpURLConnection
- * - Ejecución en hilo aparte para evitar NetworkOnMainThreadException
- */
 object PokemonApiService {
 
     private const val TAG = "PokemonApiService"
@@ -72,7 +64,7 @@ object PokemonApiService {
      * Retorna null si falla cualquier paso.
      */
     private fun obtenerNombrePorId(id: Int): String? {
-        // 1) Revisar cache
+        // Revisar cache
         if (cacheNombres.containsKey(id)) {
             Log.d(TAG, "Cache hit id=$id -> ${cacheNombres[id]}")
             return cacheNombres[id]
@@ -81,7 +73,7 @@ object PokemonApiService {
         var connection: HttpURLConnection? = null
 
         return try {
-            // 2) Abrir conexión HTTP
+            // Abrir conexión HTTP
             val url = URL(BASE_URL + id)
             connection = (url.openConnection() as HttpURLConnection)
             connection.requestMethod = "GET"
@@ -89,20 +81,20 @@ object PokemonApiService {
             connection.readTimeout = READ_TIMEOUT_MS
             connection.doInput = true
 
-            // 3) Validar respuesta
+            // Validar respuesta
             val status = connection.responseCode
             if (status != HttpURLConnection.HTTP_OK) {
                 Log.w(TAG, "HTTP no OK para id=$id. status=$status")
                 return null
             }
 
-            // 4) Leer cuerpo completo
+            // Leer cuerpo completo
             val body = connection.inputStream.bufferedReader().use { it.readText() }
             if (body.isBlank()) {
                 return null
             }
 
-            // 5) Parsear JSON y extraer campo "name"
+            // Parsear JSON y extraer campo "name"
             val json = JSONObject(body)
             val nombre = json.optString("name", "").trim()
             if (nombre.isBlank()) {
@@ -110,7 +102,7 @@ object PokemonApiService {
                 return null
             }
 
-            // 6) Guardar en cache y retornar
+            // Guardar en cache y retornar
             cacheNombres[id] = nombre
             Log.d(TAG, "Pokémon obtenido id=$id -> $nombre")
             nombre

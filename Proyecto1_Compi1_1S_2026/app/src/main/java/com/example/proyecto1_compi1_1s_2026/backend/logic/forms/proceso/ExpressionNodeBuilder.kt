@@ -28,11 +28,11 @@ class ExpressionNodeBuilder(
 
     fun construirLlamadaApi(node: NodoLlamadaApi, evaluarExpresion: (NodoExpresion) -> Any?): Any? {
         if (node.tipo == "pokemon") {
-            // 1) Evaluar límites del rango
+            // Evaluar límites del rango
             val inicio = toDouble(evaluarExpresion(node.rangoInicio))?.toInt() ?: 0
             val fin = toDouble(evaluarExpresion(node.rangoFin))?.toInt() ?: 0
 
-            // 2) Consumir PokéAPI de forma imperativa
+            // Consumir PokéAPI de forma imperativa
             val nombres = PokemonApiService.obtenerNombresEnRango(inicio, fin)
 
             // 3) Si no se obtuvo nada, registrar error semántico

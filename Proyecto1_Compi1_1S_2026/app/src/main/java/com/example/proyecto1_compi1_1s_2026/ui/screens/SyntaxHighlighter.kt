@@ -34,6 +34,8 @@ object SyntaxHighlighter {
     private val colorString  = Color(0xFFCE9178)   // naranja
     private val colorNumber  = Color(0xFFB5CEA8)   // verde claro
     private val colorComment = Color(0xFF6A9955)   // verde
+    private val colorOperator = Color(0xFF6A9955)  // verde
+    private val colorParenthesis = Color(0xFF569CD6) // azul
 
     // ── Palabras clave ────────────────────────────────────────────────────
 
@@ -77,6 +79,12 @@ object SyntaxHighlighter {
     /** Comentario multilínea */
     private val regexBlockComment = Regex("""/\*.*?\*/""", RegexOption.DOT_MATCHES_ALL)
 
+    /** Operadores aritméticos */
+    private val regexArithmeticOperators = Regex("""[+\-*/%^]""")
+
+    /** Paréntesis */
+    private val regexParentheses = Regex("""[()]""")
+
     // ── API pública ───────────────────────────────────────────────────────
 
     /**
@@ -112,12 +120,22 @@ object SyntaxHighlighter {
                 }
             }
 
-            // 4. Cadenas (prioridad sobre palabras clave)
+            // 4. Operadores aritméticos
+            regexArithmeticOperators.findAll(code).forEach { m ->
+                addStyle(SpanStyle(color = colorOperator), m.range.first, m.range.last + 1)
+            }
+
+            // 5. Paréntesis
+            regexParentheses.findAll(code).forEach { m ->
+                addStyle(SpanStyle(color = colorParenthesis), m.range.first, m.range.last + 1)
+            }
+
+            // 6. Cadenas (prioridad sobre palabras clave)
             regexString.findAll(code).forEach { m ->
                 addStyle(SpanStyle(color = colorString), m.range.first, m.range.last + 1)
             }
 
-            // 5. Comentarios de una línea
+            // 7. Comentarios de una línea
             regexLineComment.findAll(code).forEach { m ->
                 addStyle(
                     SpanStyle(color = colorComment, fontStyle = FontStyle.Italic),
@@ -125,7 +143,7 @@ object SyntaxHighlighter {
                 )
             }
 
-            // 6. Comentarios multilínea (mayor prioridad)
+            // 8. Comentarios multilínea (mayor prioridad)
             regexBlockComment.findAll(code).forEach { m ->
                 addStyle(
                     SpanStyle(color = colorComment, fontStyle = FontStyle.Italic),

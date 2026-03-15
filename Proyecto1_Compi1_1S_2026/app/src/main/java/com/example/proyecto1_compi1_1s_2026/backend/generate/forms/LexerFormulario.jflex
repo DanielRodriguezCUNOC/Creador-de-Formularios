@@ -62,6 +62,8 @@ COMENTARIO_LINEA = \$[^\n\r]*
 
 // Colores hexadecimales (#RRGGBB o #RGB)
 COLOR_HEX = #[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{3}
+COLOR_RGB = \([0-9]{1,3}[ ]*,[ ]*[0-9]{1,3}[ ]*,[ ]*[0-9]{1,3}\)
+COLOR_HSL = \<[0-9]{1,3}[ ]*,[ ]*[0-9]{1,3}[ ]*,[ ]*[0-9]{1,3}\>
 
 // Espacios en blanco
 ESPACIO = [ \t\r\n\f]+
@@ -120,6 +122,11 @@ ESPACIO = [ \t\r\n\f]+
     "VERTICAL"          { return symbol(sym.VERTICAL); }
     "HORIZONTAL"        { return symbol(sym.HORIZONTAL); }
     "MONO"              { return symbol(sym.MONO); }
+    "SANS_SERIF"        { return symbol(sym.SANS_SERIF); }
+    "CURSIVE"           { return symbol(sym.CURSIVE); }
+    "LINE"              { return symbol(sym.LINE); }
+    "DOTTED"            { return symbol(sym.DOTTED); }
+    "DOUBLE"            { return symbol(sym.DOUBLE); }
 
     // --- PALABRA RESERVADA UTILIZADA PARA LA POKEAPI ---
     "NUMBER"            {return symbol(sym.NUMBER)}
@@ -179,10 +186,12 @@ ESPACIO = [ \t\r\n\f]+
 
     "||"                { return symbol(sym.OR); }
     "&&"                { return symbol(sym.AND); }
-    "!"                 { return symbol(sym.NOT); }
+    "~"                 { return symbol(sym.NOT); }
 
     // --- FORMATOS DE COLOR ---
 
+    {COLOR_RGB}         { return symbol(sym.COLOR_RGB, yytext()); }
+    {COLOR_HSL}         { return symbol(sym.COLOR_HSL, yytext()); }
     {COLOR_HEX}         { return symbol(sym.COLOR_HEX, yytext()); }
 
     // --- LITERALES NUMÉRICOS E IDENTIFICADORES ---

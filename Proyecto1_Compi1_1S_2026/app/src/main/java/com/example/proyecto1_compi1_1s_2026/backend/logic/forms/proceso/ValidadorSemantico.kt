@@ -50,6 +50,15 @@ class ValidadorSemantico(var entornoActual: TablaSimbolos) : Visitor<List<ErrorI
     }
 
     override fun visit(node: NodoDeclaracionSpecial): List<ErrorInfo> {
+        if (contexto.entornoActual.obtenerTipo(node.id) != null) {
+            contexto.reportarError(
+                "La variable '${node.id}' ya fue declarada y no puede redefinirse",
+                node.linea,
+                node.columna
+            )
+            return errores
+        }
+
         // Registrar la variable en la tabla de símbolos como tipo "special"
         contexto.entornoActual.almacenarVariable(node.id, node.pregunta, "special")
         // Delegar la validación semántica a la pregunta interna

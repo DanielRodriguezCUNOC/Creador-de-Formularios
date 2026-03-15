@@ -4,6 +4,6 @@ import androidx.compose.ui.graphics.Color
 
 data class BorderEstilo(
     val grosor: Float,
-    val tipo: String,  // LINE, DOTTED, DOUBLE
+    val tipo: String,
     val color: Color
 )

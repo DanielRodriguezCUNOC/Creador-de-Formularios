@@ -16,6 +16,6 @@ class NodoOperacionUnaria(
     }
 
     override fun inferirTipo(contexto: ContextoSemantico): String {
-        return if (operador == "!") "boolean" else "number"
+        return if (operador == "~") "boolean" else "number"
     }
 }
