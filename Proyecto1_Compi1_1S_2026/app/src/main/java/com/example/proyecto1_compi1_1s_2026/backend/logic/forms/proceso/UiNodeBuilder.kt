@@ -2,6 +2,7 @@ package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso
 
 import androidx.compose.ui.graphics.Color
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.*
+import kotlin.math.abs
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.ComponenteSeccion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.ComponenteTabla
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.ComponenteTexto
@@ -101,7 +102,10 @@ class UiNodeBuilder(
         )
     }
 
-    fun construirTabla(node: ComponenteTabla): TablaFormulario {
+    fun construirTabla(
+        node: ComponenteTabla,
+        filasEvaluadas: List<List<ElementoFormulario>>? = null
+    ): TablaFormulario {
         val attrs = node.atributos
         val width = toFloat(evaluarAtributo(attrs, "width"))
         val height = toFloat(evaluarAtributo(attrs, "height"))
@@ -109,14 +113,22 @@ class UiNodeBuilder(
         val pointY = toFloat(evaluarAtributo(attrs, "pointY")) ?: 0f
         val estilos = parsearEstilos(attrs)
 
-        val filas = mutableListOf<List<ElementoFormulario>>()
-        for (fila in node.filas) {
-            val celdas = mutableListOf<ElementoFormulario>()
-            for (celdaExpr in fila) {
-                val texto = evaluarExpresion(celdaExpr)?.toString() ?: ""
-                celdas.add(TextoFormulario(contenido = texto))
+        // Si el intérprete ya construyó las filas, usarlas directamente
+        val filas: List<List<ElementoFormulario>>
+        if (filasEvaluadas != null) {
+            filas = filasEvaluadas
+        } else {
+            // Fallback: convertir cada celda a texto
+            val resultado = mutableListOf<List<ElementoFormulario>>()
+            for (fila in node.filas) {
+                val celdas = mutableListOf<ElementoFormulario>()
+                for (celdaExpr in fila) {
+                    val texto = evaluarExpresion(celdaExpr)?.toString() ?: ""
+                    celdas.add(TextoFormulario(contenido = texto))
+                }
+                resultado.add(celdas)
             }
-            filas.add(celdas)
+            filas = resultado
         }
 
         return TablaFormulario(
@@ -139,7 +151,7 @@ class UiNodeBuilder(
         val resultado = mutableListOf<String>()
 
         if (valor is NodoExpresion) {
-            // Caso 1: options viene como expresión (ej: llamada API)
+            // Cuando options viene como expresión ej: llamada API
             val evaluado = evaluarExpresion(valor)
 
             if (evaluado is List<*>) {
@@ -158,7 +170,7 @@ class UiNodeBuilder(
         }
 
         if (valor is List<*>) {
-            // Caso 2: options viene como lista literal {"a", "b"}
+            // Cuando options viene como lista literal {"a", "b"}
             for (item in valor) {
                 if (item is NodoExpresion) {
                     val evaluado = evaluarExpresion(item)
@@ -284,15 +296,40 @@ class UiNodeBuilder(
             else -> valor?.toString()
         } ?: return Color.Black
 
+        val s = str.trim()
+
+        // --- RGB: (r, g, b) ---
+        if (s.startsWith("(") && s.endsWith(")")) {
+            return try {
+                val partes = s.substring(1, s.length - 1).split(",")
+                val r = partes[0].trim().toInt().coerceIn(0, 255)
+                val g = partes[1].trim().toInt().coerceIn(0, 255)
+                val b = partes[2].trim().toInt().coerceIn(0, 255)
+                Color(r, g, b)
+            } catch (_: Exception) { Color.Black }
+        }
+
+        // --- HSL: <h, s, l> ---
+        if (s.startsWith("<") && s.endsWith(">")) {
+            return try {
+                val partes = s.substring(1, s.length - 1).split(",")
+                val h = partes[0].trim().toInt()
+                val sl = partes[1].trim().toInt()
+                val l = partes[2].trim().toInt()
+                hslToRgb(h, sl, l)
+            } catch (_: Exception) { Color.Black }
+        }
+
+        // --- HEX: #RRGGBB o #RGB ---
         return try {
-            val hex = str.trim().trimStart('#')
+            val hex = s.trimStart('#')
             when (hex.length) {
                 6 -> Color((0xFF000000L or hex.toLong(16)).toInt())
                 8 -> Color(hex.toLong(16).toInt())
                 else -> Color.Black
             }
         } catch (_: Exception) {
-            when (str.trim().lowercase()) {
+            when (s.lowercase()) {
                 "red" -> Color.Red
                 "blue" -> Color.Blue
                 "green" -> Color.Green
@@ -306,6 +343,35 @@ class UiNodeBuilder(
                 else -> Color.Black
             }
         }
+    }
+
+    private fun hslToRgb(h: Int, s: Int, l: Int): Color {
+        val hf = h.toFloat()
+        val sf = s.toFloat() / 100f
+        val lf = l.toFloat() / 100f
+        val c = (1f - abs(2f * lf - 1f)) * sf
+        val x = c * (1f - abs((hf / 60f) % 2f - 1f))
+        val m = lf - c / 2f
+        var r1: Float
+        var g1: Float
+        var b1: Float
+        if (hf < 60f) {
+            r1 = c; g1 = x; b1 = 0f
+        } else if (hf < 120f) {
+            r1 = x; g1 = c; b1 = 0f
+        } else if (hf < 180f) {
+            r1 = 0f; g1 = c; b1 = x
+        } else if (hf < 240f) {
+            r1 = 0f; g1 = x; b1 = c
+        } else if (hf < 300f) {
+            r1 = x; g1 = 0f; b1 = c
+        } else {
+            r1 = c; g1 = 0f; b1 = x
+        }
+        val r = ((r1 + m) * 255f).toInt().coerceIn(0, 255)
+        val g = ((g1 + m) * 255f).toInt().coerceIn(0, 255)
+        val b = ((b1 + m) * 255f).toInt().coerceIn(0, 255)
+        return Color(r, g, b)
     }
 
     private fun toDouble(v: Any?): Double? {

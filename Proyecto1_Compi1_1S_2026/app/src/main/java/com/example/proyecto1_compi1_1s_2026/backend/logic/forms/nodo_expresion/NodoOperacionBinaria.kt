@@ -37,6 +37,16 @@ class NodoOperacionBinaria(
                         columna
                     )
                 }
+
+                val operadores = mutableSetOf<String>()
+                recolectarOperadoresLogicos(this, operadores)
+                if (operadores.contains("&&") && operadores.contains("||")) {
+                    contexto.reportarError(
+                        "No se permite mezclar operadores lógicos '&&' y '||' en la misma expresión",
+                        linea,
+                        columna
+                    )
+                }
             }
             "==", "!!" -> {
                 if (tipoIzq != tipoDer) {
@@ -46,6 +56,16 @@ class NodoOperacionBinaria(
                         columna
                     )
                 }
+            }
+        }
+    }
+
+    private fun recolectarOperadoresLogicos(exp: NodoExpresion, acumulador: MutableSet<String>) {
+        if (exp is NodoOperacionBinaria) {
+            if (exp.operador == "&&" || exp.operador == "||") {
+                acumulador.add(exp.operador)
+                recolectarOperadoresLogicos(exp.izq, acumulador)
+                recolectarOperadoresLogicos(exp.der, acumulador)
             }
         }
     }

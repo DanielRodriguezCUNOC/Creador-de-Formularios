@@ -14,5 +14,6 @@ class PreguntaSeleccionUnica(
         validarAtributosObligatorios(contexto, listOf("options"), "SELECT_QUESTION")
         validarOpcionesNoVacias(contexto, "SELECT_QUESTION")
         validarIndiceCorrect(contexto, "SELECT_QUESTION")
+        validarAdvertenciaMaxOpciones(contexto, "SELECT_QUESTION", 5)
     }
 }
