@@ -24,6 +24,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.ParserFormula
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.NodoInstruccion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.GeneradorPkm
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.Interprete
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.RecolectorSimbolos
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TablaSimbolos
@@ -243,13 +244,24 @@ fun MainScreen(
                                             erroresSemanticos = validador.validar(instrucciones)
 
                                             if (erroresSemanticos.isEmpty()) {
-                                                val interprete = Interprete(TablaSimbolos(null))
-                                                val resultadoInterp = interprete.interpretar(instrucciones)
-                                                if (resultadoInterp.errores.isEmpty()) {
-                                                    onFormularioActualChange(resultadoInterp.formulario)
-                                                    onMostrarFormularioChange(true)
+                                                val generadorPkm = GeneradorPkm()
+                                                val resultadoPkm = generadorPkm.generar(instrucciones)
+                                                erroresSemanticos = resultadoPkm.errores
+
+                                                if (erroresSemanticos.isEmpty()) {
+                                                    // Guardar salida compilada para siguiente fase de integración con guardado/servidor.
+                                                    astResultado = resultadoPkm.codigo
+
+                                                    val interprete = Interprete(TablaSimbolos(null))
+                                                    val resultadoInterp = interprete.interpretar(instrucciones)
+                                                    if (resultadoInterp.errores.isEmpty()) {
+                                                        onFormularioActualChange(resultadoInterp.formulario)
+                                                        onMostrarFormularioChange(true)
+                                                    } else {
+                                                        erroresSemanticos = resultadoInterp.errores
+                                                        onMostrarFormularioChange(false)
+                                                    }
                                                 } else {
-                                                    erroresSemanticos = resultadoInterp.errores
                                                     onMostrarFormularioChange(false)
                                                 }
                                             } else {
