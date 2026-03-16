@@ -9,6 +9,10 @@ class PkmStatsCollector {
     private var totalDesplegables = 0
     private var totalSeleccion = 0
     private var totalMultiples = 0
+    private var totalTextos = 0
+    private var totalTablas = 0
+    private var totalEstilos = 0
+    private var totalDraws = 0
 
     fun limpiar() {
         totalSecciones = 0
@@ -16,6 +20,10 @@ class PkmStatsCollector {
         totalDesplegables = 0
         totalSeleccion = 0
         totalMultiples = 0
+        totalTextos = 0
+        totalTablas = 0
+        totalEstilos = 0
+        totalDraws = 0
     }
 
     fun registrarSeccion() {
@@ -38,15 +46,37 @@ class PkmStatsCollector {
         totalMultiples++
     }
 
+    fun registrarTexto() {
+        totalTextos++
+    }
+
+    fun registrarTabla() {
+        totalTablas++
+    }
+
+    fun registrarEstilo() {
+        totalEstilos++
+    }
+
+    fun registrarDraw() {
+        totalDraws++
+    }
+
     fun snapshot(): PkmStatsSnapshot {
         val totalPreguntas = totalAbiertas + totalDesplegables + totalSeleccion + totalMultiples
+        val totalComponentes = totalSecciones + totalPreguntas + totalTextos + totalTablas
         return PkmStatsSnapshot(
             totalSecciones = totalSecciones,
             totalPreguntas = totalPreguntas,
             abiertas = totalAbiertas,
             desplegables = totalDesplegables,
             seleccion = totalSeleccion,
-            multiples = totalMultiples
+            multiples = totalMultiples,
+            textos = totalTextos,
+            tablas = totalTablas,
+            estilos = totalEstilos,
+            draws = totalDraws,
+            totalComponentes = totalComponentes
         )
     }
 }
@@ -57,5 +87,10 @@ data class PkmStatsSnapshot(
     val abiertas: Int,
     val desplegables: Int,
     val seleccion: Int,
-    val multiples: Int
+    val multiples: Int,
+    val textos: Int,
+    val tablas: Int,
+    val estilos: Int,
+    val draws: Int,
+    val totalComponentes: Int
 )

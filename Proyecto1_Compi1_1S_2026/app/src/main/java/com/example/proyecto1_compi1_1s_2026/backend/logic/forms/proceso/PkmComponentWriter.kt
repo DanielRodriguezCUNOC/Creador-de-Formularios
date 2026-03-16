@@ -9,9 +9,6 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.PreguntaDesplegable
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.PreguntaSeleccionUnica
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.PreguntaSeleccionadaMultiple
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoExpresion
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoLiteral
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.NodoInstruccion
 
 // Renderiza componentes del AST al formato de etiquetas .pkm.
 
@@ -19,6 +16,9 @@ class PkmComponentWriter(
     private val expressionWriter: PkmExpressionWriter,
     private val stats: PkmStatsCollector
 ) {
+
+    private val styleWriter = PkmStyleWriter(expressionWriter, stats)
+    private val questionWriter = PkmQuestionWriter(expressionWriter, styleWriter, stats)
 
     fun crearSeccion(node: ComponenteSeccion, hijosInternos: List<PkmTagNode>): List<PkmTagNode> {
         stats.registrarSeccion()
@@ -33,7 +33,7 @@ class PkmComponentWriter(
         nodos.add(PkmTextNode(PkmSerializationContract.BLOQUE_DELIMITADOR))
 
         val hijosSeccion = mutableListOf<PkmTagNode>()
-        val styleNode = crearBloqueStylesSiExiste(node.atributos)
+        val styleNode = styleWriter.crearBloqueStylesSiExiste(node.atributos)
         if (styleNode != null) {
             hijosSeccion.add(styleNode)
         }
@@ -51,8 +51,9 @@ class PkmComponentWriter(
     }
 
     fun crearTabla(node: ComponenteTabla, filasRenderizadas: List<List<List<PkmTagNode>>>): PkmTagNode {
+        stats.registrarTabla()
         val hijosTabla = mutableListOf<PkmTagNode>()
-        val styleNode = crearBloqueStylesSiExiste(node.atributos)
+        val styleNode = styleWriter.crearBloqueStylesSiExiste(node.atributos)
         if (styleNode != null) {
             hijosTabla.add(styleNode)
         }
@@ -83,12 +84,13 @@ class PkmComponentWriter(
     }
 
     fun crearTexto(node: ComponenteTexto): PkmTagNode {
+        stats.registrarTexto()
         val width = valorTexto(node.atributos, "width", PkmSerializationContract.DEFAULT_WIDTH)
         val height = valorTexto(node.atributos, "height", PkmSerializationContract.DEFAULT_HEIGHT)
         val content = valorTexto(node.atributos, "content", "\"\"")
 
         val hijos = mutableListOf<PkmTagNode>()
-        val styleNode = crearBloqueStylesSiExiste(node.atributos)
+        val styleNode = styleWriter.crearBloqueStylesSiExiste(node.atributos)
         if (styleNode != null) {
             hijos.add(styleNode)
         }
@@ -106,123 +108,19 @@ class PkmComponentWriter(
     }
 
     fun crearPreguntaDesplegable(node: PreguntaDesplegable): PkmTagNode {
-        stats.registrarPreguntaDesplegable()
-        val width = valorTexto(node.atributos, "width", PkmSerializationContract.DEFAULT_WIDTH)
-        val height = valorTexto(node.atributos, "height", PkmSerializationContract.DEFAULT_HEIGHT)
-        val label = valorTexto(node.atributos, "label", "\"\"")
-
-        val optionsRaw = NodoAtributo.valor(node.atributos, "options")
-        val options = if (optionsRaw is NodoExpresion) expressionWriter.expresionComoTexto(optionsRaw)
-        else expressionWriter.valorComoTexto(optionsRaw)
-
-        val correctRaw = NodoAtributo.valor(node.atributos, "correct")
-        val correct = if (correctRaw == null) PkmSerializationContract.DEFAULT_CORRECT_SINGLE else expressionWriter.valorComoTexto(correctRaw)
-
-        if (NodoAtributo.contiene(node.atributos, "styles")) {
-            val hijos = mutableListOf<PkmTagNode>()
-            val styleNode = crearBloqueStylesSiExiste(node.atributos)
-            if (styleNode != null) {
-                hijos.add(styleNode)
-            }
-            return PkmElementNode(
-                PkmSerializationContract.tagDropOpen(width, height, label, options, correct),
-                PkmSerializationContract.tagDropClose(),
-                hijos
-            )
-        } else {
-            return PkmElementNode(PkmSerializationContract.tagDropSelf(width, height, label, options, correct))
-        }
+        return questionWriter.crearPreguntaDesplegable(node)
     }
 
     fun crearPreguntaSeleccion(node: PreguntaSeleccionUnica): PkmTagNode {
-        stats.registrarPreguntaSeleccion()
-        val width = valorTexto(node.atributos, "width", PkmSerializationContract.DEFAULT_WIDTH)
-        val height = valorTexto(node.atributos, "height", PkmSerializationContract.DEFAULT_HEIGHT)
-        val label = valorTexto(node.atributos, "label", "\"\"")
-
-        val optionsRaw = NodoAtributo.valor(node.atributos, "options")
-        val options = if (optionsRaw is NodoExpresion) expressionWriter.expresionComoTexto(optionsRaw)
-        else expressionWriter.valorComoTexto(optionsRaw)
-
-        val correctRaw = NodoAtributo.valor(node.atributos, "correct")
-        val correct = if (correctRaw == null) PkmSerializationContract.DEFAULT_CORRECT_SINGLE else expressionWriter.valorComoTexto(correctRaw)
-
-        if (NodoAtributo.contiene(node.atributos, "styles")) {
-            val hijos = mutableListOf<PkmTagNode>()
-            val styleNode = crearBloqueStylesSiExiste(node.atributos)
-            if (styleNode != null) {
-                hijos.add(styleNode)
-            }
-            return PkmElementNode(
-                PkmSerializationContract.tagSelectOpen(width, height, label, options, correct),
-                PkmSerializationContract.tagSelectClose(),
-                hijos
-            )
-        } else {
-            return PkmElementNode(PkmSerializationContract.tagSelectSelf(width, height, label, options, correct))
-        }
+        return questionWriter.crearPreguntaSeleccion(node)
     }
 
     fun crearPreguntaMultiple(node: PreguntaSeleccionadaMultiple): PkmTagNode {
-        stats.registrarPreguntaMultiple()
-        val width = valorTexto(node.atributos, "width", PkmSerializationContract.DEFAULT_WIDTH)
-        val height = valorTexto(node.atributos, "height", PkmSerializationContract.DEFAULT_HEIGHT)
-        val label = valorTexto(node.atributos, "label", "\"\"")
-
-        val optionsRaw = NodoAtributo.valor(node.atributos, "options")
-        val options = if (optionsRaw is NodoExpresion) expressionWriter.expresionComoTexto(optionsRaw)
-        else expressionWriter.valorComoTexto(optionsRaw)
-
-        val correctRaw = NodoAtributo.valor(node.atributos, "correct")
-        val correct = if (correctRaw == null) PkmSerializationContract.DEFAULT_CORRECT_MULTIPLE else expressionWriter.valorComoTexto(correctRaw)
-
-        if (NodoAtributo.contiene(node.atributos, "styles")) {
-            val hijos = mutableListOf<PkmTagNode>()
-            val styleNode = crearBloqueStylesSiExiste(node.atributos)
-            if (styleNode != null) {
-                hijos.add(styleNode)
-            }
-            return PkmElementNode(
-                PkmSerializationContract.tagMultipleOpen(width, height, label, options, correct),
-                PkmSerializationContract.tagMultipleClose(),
-                hijos
-            )
-        } else {
-            return PkmElementNode(PkmSerializationContract.tagMultipleSelf(width, height, label, options, correct))
-        }
+        return questionWriter.crearPreguntaMultiple(node)
     }
 
     fun crearPreguntaAbierta(node: PreguntaAbierta): PkmTagNode {
-        stats.registrarPreguntaAbierta()
-        val width = valorTexto(node.atributos, "width", PkmSerializationContract.DEFAULT_WIDTH)
-        val height = valorTexto(node.atributos, "height", PkmSerializationContract.DEFAULT_HEIGHT)
-        val label = valorTexto(node.atributos, "label", "\"\"")
-
-        if (NodoAtributo.contiene(node.atributos, "styles")) {
-            val hijos = mutableListOf<PkmTagNode>()
-            val styleNode = crearBloqueStylesSiExiste(node.atributos)
-            if (styleNode != null) {
-                hijos.add(styleNode)
-            }
-            return PkmElementNode(
-                PkmSerializationContract.tagOpenTextOpen(width, height, label),
-                PkmSerializationContract.tagOpenTextClose(),
-                hijos
-            )
-        } else {
-            return PkmElementNode(PkmSerializationContract.tagOpenTextSelf(width, height, label))
-        }
-    }
-
-    private fun crearBloqueStylesSiExiste(attrs: List<NodoAtributo>): PkmTagNode? {
-        val stylesRaw = NodoAtributo.valor(attrs, "styles") ?: return null
-        val stylesText = expressionWriter.valorComoTexto(stylesRaw)
-        // Serializa el bloque de estilos real según el contrato
-        return PkmElementNode(
-            PkmSerializationContract.tagStyleOpen(),
-            PkmSerializationContract.tagStyleClose(),
-            mutableListOf(PkmTextNode(stylesText))
-        )
+        return questionWriter.crearPreguntaAbierta(node)
     }
 
     private fun valorTexto(attrs: List<NodoAtributo>, nombre: String, defecto: String): String {

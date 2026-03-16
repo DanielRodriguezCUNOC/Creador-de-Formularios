@@ -36,6 +36,11 @@ object PkmSerializationContract {
         lineas.add("Desplegables: ${stats.desplegables}")
         lineas.add("Selección: ${stats.seleccion}")
         lineas.add("Múltiples: ${stats.multiples}")
+        lineas.add("Total de Componentes: ${stats.totalComponentes}")
+        lineas.add("Textos: ${stats.textos}")
+        lineas.add("Tablas: ${stats.tablas}")
+        lineas.add("Con estilos: ${stats.estilos}")
+        lineas.add("Draws ejecutados: ${stats.draws}")
         lineas.add(BLOQUE_DELIMITADOR)
         return lineas
     }
@@ -63,6 +68,10 @@ object PkmSerializationContract {
     fun tagElementClose(): String = "</element>"
 
     fun tagStylePlaceholder(): String = "<style> ... </style>"
+
+    fun tagStyleOpen(): String = "<style>"
+
+    fun tagStyleClose(): String = "</style>"
 
     fun tagOpenTextSelf(width: String, height: String, content: String): String {
         return "<open=$width,$height,$content/>"

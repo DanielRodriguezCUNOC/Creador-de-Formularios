@@ -154,6 +154,7 @@ class GeneradorPkm(private val autorPorDefecto: String = "Sistema") : Visitor<Un
             )
             return
         }
+        statsCollector.registrarDraw()
         renderizarComponenteDesdeDraw(componente)
     }
 
