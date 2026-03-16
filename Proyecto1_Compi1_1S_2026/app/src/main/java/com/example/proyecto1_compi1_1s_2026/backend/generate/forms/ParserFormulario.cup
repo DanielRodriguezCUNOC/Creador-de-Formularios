@@ -297,6 +297,10 @@ instruccion ::=
     | sentenciaFor:f
     {: RESULT = f; :}
 
+    // Draw (Esto nos permite reportar un error en la pasada del ValidadorEstructural)
+    | instruccionDraw:d
+    {: RESULT = d; :}
+
     // Componentes UI
     | componenteSeccion:c
     {: RESULT = c; :}

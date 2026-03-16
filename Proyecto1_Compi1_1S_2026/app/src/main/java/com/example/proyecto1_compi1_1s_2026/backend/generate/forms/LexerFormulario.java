@@ -1572,7 +1572,7 @@ public class LexerFormulario implements java_cup.runtime.Scanner {
           // fall through
           case 101: break;
           case 15:
-            { return symbol(sym.PUNTO_COMA)
+            { return symbol(sym.PUNTO_COMA);
             }
           // fall through
           case 102: break;
@@ -1792,7 +1792,7 @@ public class LexerFormulario implements java_cup.runtime.Scanner {
           // fall through
           case 144: break;
           case 58:
-            { return symbol(sym.NUMBER)
+            { return symbol(sym.NUMBER);
             }
           // fall through
           case 145: break;

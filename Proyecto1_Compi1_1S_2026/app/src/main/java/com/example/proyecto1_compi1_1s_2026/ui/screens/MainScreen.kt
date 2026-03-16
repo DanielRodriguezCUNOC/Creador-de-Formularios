@@ -28,6 +28,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.Interpre
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.RecolectorSimbolos
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TablaSimbolos
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ValidadorEstructural
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ValidadorSemantico
 import com.example.proyecto1_compi1_1s_2026.ui.forms.FormularioRenderer
 import kotlinx.coroutines.launch
@@ -234,17 +235,24 @@ fun MainScreen(
                                     erroresSemanticos = resultadoRecoleccion.errores
 
                                     if (erroresSemanticos.isEmpty()) {
-                                        val validador = ValidadorSemantico(resultadoRecoleccion.tablaSimbolos)
-                                        erroresSemanticos = validador.validar(instrucciones)
+                                        val validadorEstructural = ValidadorEstructural()
+                                        erroresSemanticos = validadorEstructural.validar(instrucciones)
 
                                         if (erroresSemanticos.isEmpty()) {
-                                            val interprete = Interprete(TablaSimbolos(null))
-                                            val resultadoInterp = interprete.interpretar(instrucciones)
-                                            if (resultadoInterp.errores.isEmpty()) {
-                                                onFormularioActualChange(resultadoInterp.formulario)
-                                                onMostrarFormularioChange(true)
+                                            val validador = ValidadorSemantico(resultadoRecoleccion.tablaSimbolos)
+                                            erroresSemanticos = validador.validar(instrucciones)
+
+                                            if (erroresSemanticos.isEmpty()) {
+                                                val interprete = Interprete(TablaSimbolos(null))
+                                                val resultadoInterp = interprete.interpretar(instrucciones)
+                                                if (resultadoInterp.errores.isEmpty()) {
+                                                    onFormularioActualChange(resultadoInterp.formulario)
+                                                    onMostrarFormularioChange(true)
+                                                } else {
+                                                    erroresSemanticos = resultadoInterp.errores
+                                                    onMostrarFormularioChange(false)
+                                                }
                                             } else {
-                                                erroresSemanticos = resultadoInterp.errores
                                                 onMostrarFormularioChange(false)
                                             }
                                         } else {
