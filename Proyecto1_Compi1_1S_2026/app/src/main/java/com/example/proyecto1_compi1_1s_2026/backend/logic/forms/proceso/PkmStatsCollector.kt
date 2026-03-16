@@ -1,6 +1,6 @@
 package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso
 
-// Acumula estadísticas para el bloque de metadatos del .pkm.
+// Acumula estadísticas para el bloque de metadatos del .pkm
 
 class PkmStatsCollector {
 

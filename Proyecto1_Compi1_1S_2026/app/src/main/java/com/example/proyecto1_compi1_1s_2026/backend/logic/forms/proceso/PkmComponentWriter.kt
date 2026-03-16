@@ -16,12 +16,11 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion
 // Renderiza componentes del AST al formato de etiquetas .pkm.
 
 class PkmComponentWriter(
-    private val lineWriter: PkmLineWriter,
     private val expressionWriter: PkmExpressionWriter,
     private val stats: PkmStatsCollector
 ) {
 
-    fun escribirSeccion(node: ComponenteSeccion, renderInstruccion: (NodoInstruccion) -> Unit) {
+    fun crearSeccion(node: ComponenteSeccion, hijosInternos: List<PkmTagNode>): List<PkmTagNode> {
         stats.registrarSeccion()
 
         val width = valorTexto(node.atributos, "width", "100")
@@ -30,77 +29,65 @@ class PkmComponentWriter(
         val pointY = valorTexto(node.atributos, "pointY", "0")
         val orientacion = valorTexto(node.atributos, "orientation", "VERTICAL")
 
-        lineWriter.agregarLinea("###")
-        lineWriter.agregarLinea("<section=$width,$height,$pointX,$pointY,$orientacion>")
-        lineWriter.aumentarIndentacion()
-        escribirBloqueStylesSiExiste(node.atributos)
-        lineWriter.agregarLinea("<content>")
-        lineWriter.aumentarIndentacion()
+        val nodos = mutableListOf<PkmTagNode>()
+        nodos.add(PkmTextNode("###"))
 
-        for (interno in node.elementosInternos) {
-            renderInstruccion(interno)
+        val hijosSeccion = mutableListOf<PkmTagNode>()
+        val styleNode = crearBloqueStylesSiExiste(node.atributos)
+        if (styleNode != null) {
+            hijosSeccion.add(styleNode)
         }
+        hijosSeccion.add(PkmElementNode("<content>", "</content>", hijosInternos.toMutableList()))
 
-        lineWriter.disminuirIndentacion()
-        lineWriter.agregarLinea("</content>")
-        lineWriter.disminuirIndentacion()
-        lineWriter.agregarLinea("</section>")
-        lineWriter.agregarLinea("###")
+        nodos.add(
+            PkmElementNode(
+                apertura = "<section=$width,$height,$pointX,$pointY,$orientacion>",
+                cierre = "</section>",
+                hijos = hijosSeccion
+            )
+        )
+        nodos.add(PkmTextNode("###"))
+        return nodos
     }
 
-    fun escribirTabla(node: ComponenteTabla, renderComponente: (ComponenteUI) -> Unit) {
-        lineWriter.agregarLinea("<table>")
-        lineWriter.aumentarIndentacion()
-        escribirBloqueStylesSiExiste(node.atributos)
-        lineWriter.agregarLinea("<content>")
-        lineWriter.aumentarIndentacion()
+    fun crearTabla(node: ComponenteTabla, filasRenderizadas: List<List<List<PkmTagNode>>>): PkmTagNode {
+        val hijosTabla = mutableListOf<PkmTagNode>()
+        val styleNode = crearBloqueStylesSiExiste(node.atributos)
+        if (styleNode != null) {
+            hijosTabla.add(styleNode)
+        }
 
-        for (fila in node.filas) {
-            lineWriter.agregarLinea("<line>")
-            lineWriter.aumentarIndentacion()
-
+        val lineasTabla = mutableListOf<PkmTagNode>()
+        for (fila in filasRenderizadas) {
+            val hijosLinea = mutableListOf<PkmTagNode>()
             for (celda in fila) {
-                lineWriter.agregarLinea("<element>")
-                lineWriter.aumentarIndentacion()
-
-                if (celda is NodoLiteral && celda.tipo == "table_cell_component" && celda.valor is ComponenteUI) {
-                    val componente = celda.valor as ComponenteUI
-                    renderComponente(componente)
-                } else {
-                    lineWriter.agregarLinea(expressionWriter.expresionComoTexto(celda))
-                }
-
-                lineWriter.disminuirIndentacion()
-                lineWriter.agregarLinea("</element>")
+                hijosLinea.add(PkmElementNode("<element>", "</element>", celda.toMutableList()))
             }
-
-            lineWriter.disminuirIndentacion()
-            lineWriter.agregarLinea("</line>")
+            lineasTabla.add(PkmElementNode("<line>", "</line>", hijosLinea))
         }
 
-        lineWriter.disminuirIndentacion()
-        lineWriter.agregarLinea("</content>")
-        lineWriter.disminuirIndentacion()
-        lineWriter.agregarLinea("</table>")
+        hijosTabla.add(PkmElementNode("<content>", "</content>", lineasTabla))
+        return PkmElementNode("<table>", "</table>", hijosTabla)
     }
 
-    fun escribirTexto(node: ComponenteTexto) {
+    fun crearTexto(node: ComponenteTexto): PkmTagNode {
         val width = valorTexto(node.atributos, "width", "50")
         val height = valorTexto(node.atributos, "height", "10")
         val content = valorTexto(node.atributos, "content", "\"\"")
 
         if (NodoAtributo.contiene(node.atributos, "styles")) {
-            lineWriter.agregarLinea("<open=$width,$height,$content>")
-            lineWriter.aumentarIndentacion()
-            escribirBloqueStylesSiExiste(node.atributos)
-            lineWriter.disminuirIndentacion()
-            lineWriter.agregarLinea("</open>")
+            val hijos = mutableListOf<PkmTagNode>()
+            val styleNode = crearBloqueStylesSiExiste(node.atributos)
+            if (styleNode != null) {
+                hijos.add(styleNode)
+            }
+            return PkmElementNode("<open=$width,$height,$content>", "</open>", hijos)
         } else {
-            lineWriter.agregarLinea("<open=$width,$height,$content/>")
+            return PkmElementNode("<open=$width,$height,$content/>")
         }
     }
 
-    fun escribirPreguntaDesplegable(node: PreguntaDesplegable) {
+    fun crearPreguntaDesplegable(node: PreguntaDesplegable): PkmTagNode {
         stats.registrarPreguntaDesplegable()
         val width = valorTexto(node.atributos, "width", "50")
         val height = valorTexto(node.atributos, "height", "10")
@@ -114,17 +101,18 @@ class PkmComponentWriter(
         val correct = if (correctRaw == null) "-1" else expressionWriter.valorComoTexto(correctRaw)
 
         if (NodoAtributo.contiene(node.atributos, "styles")) {
-            lineWriter.agregarLinea("<drop=$width,$height,$label,$options,$correct>")
-            lineWriter.aumentarIndentacion()
-            escribirBloqueStylesSiExiste(node.atributos)
-            lineWriter.disminuirIndentacion()
-            lineWriter.agregarLinea("</drop>")
+            val hijos = mutableListOf<PkmTagNode>()
+            val styleNode = crearBloqueStylesSiExiste(node.atributos)
+            if (styleNode != null) {
+                hijos.add(styleNode)
+            }
+            return PkmElementNode("<drop=$width,$height,$label,$options,$correct>", "</drop>", hijos)
         } else {
-            lineWriter.agregarLinea("<drop=$width,$height,$label,$options,$correct/>")
+            return PkmElementNode("<drop=$width,$height,$label,$options,$correct/>")
         }
     }
 
-    fun escribirPreguntaSeleccion(node: PreguntaSeleccionUnica) {
+    fun crearPreguntaSeleccion(node: PreguntaSeleccionUnica): PkmTagNode {
         stats.registrarPreguntaSeleccion()
         val width = valorTexto(node.atributos, "width", "50")
         val height = valorTexto(node.atributos, "height", "10")
@@ -138,17 +126,18 @@ class PkmComponentWriter(
         val correct = if (correctRaw == null) "-1" else expressionWriter.valorComoTexto(correctRaw)
 
         if (NodoAtributo.contiene(node.atributos, "styles")) {
-            lineWriter.agregarLinea("<select=$width,$height,$label,$options,$correct>")
-            lineWriter.aumentarIndentacion()
-            escribirBloqueStylesSiExiste(node.atributos)
-            lineWriter.disminuirIndentacion()
-            lineWriter.agregarLinea("</select>")
+            val hijos = mutableListOf<PkmTagNode>()
+            val styleNode = crearBloqueStylesSiExiste(node.atributos)
+            if (styleNode != null) {
+                hijos.add(styleNode)
+            }
+            return PkmElementNode("<select=$width,$height,$label,$options,$correct>", "</select>", hijos)
         } else {
-            lineWriter.agregarLinea("<select=$width,$height,$label,$options,$correct/>")
+            return PkmElementNode("<select=$width,$height,$label,$options,$correct/>")
         }
     }
 
-    fun escribirPreguntaMultiple(node: PreguntaSeleccionadaMultiple) {
+    fun crearPreguntaMultiple(node: PreguntaSeleccionadaMultiple): PkmTagNode {
         stats.registrarPreguntaMultiple()
         val width = valorTexto(node.atributos, "width", "50")
         val height = valorTexto(node.atributos, "height", "10")
@@ -162,38 +151,40 @@ class PkmComponentWriter(
         val correct = if (correctRaw == null) "{}" else expressionWriter.valorComoTexto(correctRaw)
 
         if (NodoAtributo.contiene(node.atributos, "styles")) {
-            lineWriter.agregarLinea("<multiple=$width,$height,$label,$options,$correct>")
-            lineWriter.aumentarIndentacion()
-            escribirBloqueStylesSiExiste(node.atributos)
-            lineWriter.disminuirIndentacion()
-            lineWriter.agregarLinea("</multiple>")
+            val hijos = mutableListOf<PkmTagNode>()
+            val styleNode = crearBloqueStylesSiExiste(node.atributos)
+            if (styleNode != null) {
+                hijos.add(styleNode)
+            }
+            return PkmElementNode("<multiple=$width,$height,$label,$options,$correct>", "</multiple>", hijos)
         } else {
-            lineWriter.agregarLinea("<multiple=$width,$height,$label,$options,$correct/>")
+            return PkmElementNode("<multiple=$width,$height,$label,$options,$correct/>")
         }
     }
 
-    fun escribirPreguntaAbierta(node: PreguntaAbierta) {
+    fun crearPreguntaAbierta(node: PreguntaAbierta): PkmTagNode {
         stats.registrarPreguntaAbierta()
         val width = valorTexto(node.atributos, "width", "50")
         val height = valorTexto(node.atributos, "height", "10")
         val label = valorTexto(node.atributos, "label", "\"\"")
 
         if (NodoAtributo.contiene(node.atributos, "styles")) {
-            lineWriter.agregarLinea("<open=$width,$height,$label>")
-            lineWriter.aumentarIndentacion()
-            escribirBloqueStylesSiExiste(node.atributos)
-            lineWriter.disminuirIndentacion()
-            lineWriter.agregarLinea("</open>")
+            val hijos = mutableListOf<PkmTagNode>()
+            val styleNode = crearBloqueStylesSiExiste(node.atributos)
+            if (styleNode != null) {
+                hijos.add(styleNode)
+            }
+            return PkmElementNode("<open=$width,$height,$label>", "</open>", hijos)
         } else {
-            lineWriter.agregarLinea("<open=$width,$height,$label/>")
+            return PkmElementNode("<open=$width,$height,$label/>")
         }
     }
 
-    private fun escribirBloqueStylesSiExiste(attrs: List<NodoAtributo>) {
+    private fun crearBloqueStylesSiExiste(attrs: List<NodoAtributo>): PkmTagNode? {
         if (!NodoAtributo.contiene(attrs, "styles")) {
-            return
+            return null
         }
-        lineWriter.agregarLinea("<style> ... </style>")
+        return PkmElementNode("<style> ... </style>")
     }
 
     private fun valorTexto(attrs: List<NodoAtributo>, nombre: String, defecto: String): String {

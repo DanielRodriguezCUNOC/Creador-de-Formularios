@@ -4,7 +4,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-// Construye el bloque inicial de metadatos del .pkm.
+// Construye el bloque inicial de metadatos del .pkm
 class PkmMetadataBuilder {
 
     fun construir(autor: String, stats: PkmStatsSnapshot): String {

@@ -30,14 +30,15 @@ class GeneradorPkm(private val autorPorDefecto: String = "Sistema") : Visitor<Un
 
     private val errores = mutableListOf<ErrorInfo>()
     private val especiales = mutableMapOf<String, ComponenteUI>()
+    private val nodosDocumento = mutableListOf<PkmTagNode>()
+    private val pilaContenedores = ArrayDeque<MutableList<PkmTagNode>>()
 
-    private val lineWriter = PkmLineWriter()
     private val statsCollector = PkmStatsCollector()
     private val textSanitizer = PkmTextSanitizer()
     private val expressionWriter = PkmExpressionWriter(textSanitizer)
     private val metadataBuilder = PkmMetadataBuilder()
+    private val tagTreeWriter = PkmTagTreeWriter()
     private val componentWriter = PkmComponentWriter(
-        lineWriter = lineWriter,
         expressionWriter = expressionWriter,
         stats = statsCollector
     )
@@ -51,7 +52,7 @@ class GeneradorPkm(private val autorPorDefecto: String = "Sistema") : Visitor<Un
 
         val stats = statsCollector.snapshot()
         val metadatos = metadataBuilder.construir(autor ?: autorPorDefecto, stats)
-        val cuerpo = lineWriter.obtenerTexto()
+        val cuerpo = tagTreeWriter.escribir(nodosDocumento)
         val codigoFinal = if (cuerpo.isBlank()) metadatos else metadatos + "\n\n" + cuerpo
 
         return ResultadoGeneracionPkm(codigoFinal, errores.toList())
@@ -60,8 +61,34 @@ class GeneradorPkm(private val autorPorDefecto: String = "Sistema") : Visitor<Un
     private fun limpiarEstado() {
         errores.clear()
         especiales.clear()
-        lineWriter.limpiar()
+        nodosDocumento.clear()
+        pilaContenedores.clear()
         statsCollector.limpiar()
+    }
+
+    private fun agregarNodo(nodo: PkmTagNode) {
+        if (pilaContenedores.isEmpty()) {
+            nodosDocumento.add(nodo)
+        } else {
+            pilaContenedores.last().add(nodo)
+        }
+    }
+
+    private fun agregarNodos(nodos: List<PkmTagNode>) {
+        for (nodo in nodos) {
+            agregarNodo(nodo)
+        }
+    }
+
+    private fun recolectarNodos(bloque: () -> Unit): List<PkmTagNode> {
+        val contenedor = mutableListOf<PkmTagNode>()
+        pilaContenedores.addLast(contenedor)
+        try {
+            bloque()
+        } finally {
+            pilaContenedores.removeLast()
+        }
+        return contenedor
     }
 
     private fun renderizarComponenteDesdeDraw(componente: ComponenteUI) {
@@ -131,34 +158,53 @@ class GeneradorPkm(private val autorPorDefecto: String = "Sistema") : Visitor<Un
     }
 
     override fun visit(node: ComponenteSeccion) {
-        componentWriter.escribirSeccion(node) { instruccion ->
-            instruccion.accept(this)
+        val hijosInternos = recolectarNodos {
+            for (interno in node.elementosInternos) {
+                interno.accept(this)
+            }
         }
+        agregarNodos(componentWriter.crearSeccion(node, hijosInternos))
     }
 
     override fun visit(node: ComponenteTabla) {
-        componentWriter.escribirTabla(node) { componente ->
-            renderizarComponenteDesdeDraw(componente)
+        val filasRenderizadas = mutableListOf<List<List<PkmTagNode>>>()
+
+        for (fila in node.filas) {
+            val celdasRenderizadas = mutableListOf<List<PkmTagNode>>()
+            for (celda in fila) {
+                if (celda is NodoLiteral && celda.tipo == "table_cell_component" && celda.valor is ComponenteUI) {
+                    val componente = celda.valor as ComponenteUI
+                    val nodosCelda = recolectarNodos {
+                        renderizarComponenteDesdeDraw(componente)
+                    }
+                    celdasRenderizadas.add(nodosCelda)
+                } else {
+                    celdasRenderizadas.add(listOf(PkmTextNode(expressionWriter.expresionComoTexto(celda))))
+                }
+            }
+            filasRenderizadas.add(celdasRenderizadas)
         }
+
+        agregarNodo(componentWriter.crearTabla(node, filasRenderizadas))
     }
 
     override fun visit(node: ComponenteTexto) {
-        componentWriter.escribirTexto(node)
+        agregarNodo(componentWriter.crearTexto(node))
     }
 
     override fun visit(node: PreguntaDesplegable) {
-        componentWriter.escribirPreguntaDesplegable(node)
+        agregarNodo(componentWriter.crearPreguntaDesplegable(node))
     }
 
     override fun visit(node: PreguntaSeleccionUnica) {
-        componentWriter.escribirPreguntaSeleccion(node)
+        agregarNodo(componentWriter.crearPreguntaSeleccion(node))
     }
 
     override fun visit(node: PreguntaSeleccionadaMultiple) {
-        componentWriter.escribirPreguntaMultiple(node)
+        agregarNodo(componentWriter.crearPreguntaMultiple(node))
     }
 
     override fun visit(node: PreguntaAbierta) {
-        componentWriter.escribirPreguntaAbierta(node)
+        agregarNodo(componentWriter.crearPreguntaAbierta(node))
     }
 }
