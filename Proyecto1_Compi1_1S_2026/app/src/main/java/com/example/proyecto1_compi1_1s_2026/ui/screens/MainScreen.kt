@@ -25,6 +25,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulari
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.NodoInstruccion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.Interprete
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.RecolectorSimbolos
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TablaSimbolos
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ValidadorSemantico

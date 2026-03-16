@@ -210,25 +210,6 @@ parser code {:
         }
     }
 
-    /** Convierte sintaxis textual de emojis a sus caracteres Unicode. */
-    private String normalizarEmojis(String texto) {
-        if (texto == null || texto.isEmpty()) return texto;
-
-        String out = texto;
-        // Formas simbólicas
-        out = out.replaceAll("@\\[:\\)+\\]", "😄");
-        out = out.replaceAll("@\\[:\\(+\\]", "😢");
-        out = out.replaceAll("@\\[:\\|+\\]", "😐");
-        out = out.replaceAll("@\\[<+3+\\]", "❤️");
-
-        // Formas nombradas
-        out = out.replaceAll("@\\[:smile:\\]", "😄");
-        out = out.replaceAll("@\\[:sad:\\]", "😢");
-        out = out.replaceAll("@\\[:serious:\\]", "😐");
-        out = out.replaceAll("@\\[:heart:\\]", "❤️");
-
-        return out;
-    }
 :};
 
 //================================
@@ -442,10 +423,6 @@ instruccion ::=
     | sentenciaFor:f
     {: RESULT = f; :}
 
-    // Instrucción DRAW
-    | instruccionDraw:d
-    {: RESULT = d; :}
-
     // Componentes UI
     | componenteSeccion:c
     {: RESULT = c; :}
@@ -492,6 +469,8 @@ elementoUI ::=
     {: RESULT = p; :}
     | preguntaMultiple:p
     {: RESULT = p; :}
+    | instruccionDraw:d
+    {: RESULT = d; :}
     ;
 
 //--- Declaraciones ---
@@ -807,6 +786,7 @@ atributoSeccion ::=
 
     | STYLES CORCHETE_IZQ estilosConBorde:ests CORCHETE_DER
     {: RESULT = new NodoAtributo("styles", ests); :}
+    //* Agregar la produccion de draw
     ;
 
 //--- Atributos para TABLE ---
@@ -1172,7 +1152,7 @@ valorTipoBorde ::=
     {: RESULT = new NodoLiteral("DOUBLE", "borderType", tleft, tright); :}
     ;
 
-//--- Cadena de texto con soporte de emojis ---
+//--- Cadena de texto ---
 // Una cadena puede estar vacía o tener una o más partes
 cadenaTexto ::=
     INICIO_CADENA partesCadena:partes FIN_CADENA
@@ -1181,7 +1161,7 @@ cadenaTexto ::=
     {: RESULT = ""; :}
     ;
 
-// Acumulación de partes (texto normal + emojis)
+// Acumulación de partes (texto + tokens especiales)
 partesCadena ::=
     partesCadena:acum parteCadena:parte
     {: RESULT = acum + parte; :}
@@ -1189,16 +1169,17 @@ partesCadena ::=
     {: RESULT = parte; :}
     ;
 
-// Cada parte puede ser contenido normal o un emoji
+// Cada parte puede ser contenido normal o token especial.
+// El parser no transforma emojis: solo conserva el texto fuente.
 parteCadena ::=
     CONTENIDO_CADENA:c
-    {: RESULT = normalizarEmojis(c); :}
+    {: RESULT = c; :}
     | EMOJI_SMILE:e
-    {: RESULT = "😄"; :}
+    {: RESULT = e; :}
     | EMOJI_SAD:e
-    {: RESULT = "😢"; :}
+    {: RESULT = e; :}
     | EMOJI_SERIOUS:e
-    {: RESULT = "😐"; :}
+    {: RESULT = e; :}
     | EMOJI_HEART:e
-    {: RESULT = "❤️"; :}
+    {: RESULT = e; :}
     ;
