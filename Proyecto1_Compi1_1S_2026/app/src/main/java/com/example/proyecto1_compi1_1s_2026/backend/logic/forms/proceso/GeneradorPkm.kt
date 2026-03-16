@@ -130,7 +130,7 @@ class GeneradorPkm(private val autorPorDefecto: String = "Sistema") : Visitor<Un
     }
 
     override fun visit(node: NodoCicloWhile) {
-        .
+       
     }
 
     override fun visit(node: NodoCicloDoWhile) {

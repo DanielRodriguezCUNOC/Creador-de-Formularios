@@ -11,19 +11,7 @@ class PkmMetadataBuilder {
         val fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yy"))
         val hora = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
 
-        val bloque = mutableListOf<String>()
-        bloque.add("###")
-        bloque.add("Author: $autor")
-        bloque.add("Fecha: $fecha")
-        bloque.add("Hora: $hora")
-        bloque.add("Description: Generado automáticamente")
-        bloque.add("Total de Secciones: ${stats.totalSecciones}")
-        bloque.add("Total de Preguntas: ${stats.totalPreguntas}")
-        bloque.add("Abiertas: ${stats.abiertas}")
-        bloque.add("Desplegables: ${stats.desplegables}")
-        bloque.add("Selección: ${stats.seleccion}")
-        bloque.add("Múltiples: ${stats.multiples}")
-        bloque.add("###")
-        return bloque.joinToString("\n")
+        val lineas = PkmSerializationContract.construirMetadatos(autor, fecha, hora, stats)
+        return lineas.joinToString("\n")
     }
 }

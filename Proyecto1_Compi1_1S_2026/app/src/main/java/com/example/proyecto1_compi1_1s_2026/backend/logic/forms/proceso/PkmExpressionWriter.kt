@@ -45,7 +45,7 @@ class PkmExpressionWriter(private val sanitizer: PkmTextSanitizer) {
             is NodoLlamadaApi -> {
                 val inicio = expresionComoTexto(exp.rangoInicio)
                 val fin = expresionComoTexto(exp.rangoFin)
-                "who_is_that_pokemon(NUMBER, $inicio, $fin)"
+                "${PkmSerializationContract.API_POKEMON_PREFIX}, $inicio, $fin)"
             }
             else -> "<expr>"
         }

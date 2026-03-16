@@ -23,14 +23,14 @@ class PkmComponentWriter(
     fun crearSeccion(node: ComponenteSeccion, hijosInternos: List<PkmTagNode>): List<PkmTagNode> {
         stats.registrarSeccion()
 
-        val width = valorTexto(node.atributos, "width", "100")
-        val height = valorTexto(node.atributos, "height", "100")
-        val pointX = valorTexto(node.atributos, "pointX", "0")
-        val pointY = valorTexto(node.atributos, "pointY", "0")
-        val orientacion = valorTexto(node.atributos, "orientation", "VERTICAL")
+        val width = valorTexto(node.atributos, "width", PkmSerializationContract.DEFAULT_SECTION_WIDTH)
+        val height = valorTexto(node.atributos, "height", PkmSerializationContract.DEFAULT_SECTION_HEIGHT)
+        val pointX = valorTexto(node.atributos, "pointX", PkmSerializationContract.DEFAULT_POINT_X)
+        val pointY = valorTexto(node.atributos, "pointY", PkmSerializationContract.DEFAULT_POINT_Y)
+        val orientacion = valorTexto(node.atributos, "orientation", PkmSerializationContract.DEFAULT_ORIENTATION)
 
         val nodos = mutableListOf<PkmTagNode>()
-        nodos.add(PkmTextNode("###"))
+        nodos.add(PkmTextNode(PkmSerializationContract.BLOQUE_DELIMITADOR))
 
         val hijosSeccion = mutableListOf<PkmTagNode>()
         val styleNode = crearBloqueStylesSiExiste(node.atributos)
@@ -41,12 +41,12 @@ class PkmComponentWriter(
 
         nodos.add(
             PkmElementNode(
-                apertura = "<section=$width,$height,$pointX,$pointY,$orientacion>",
-                cierre = "</section>",
+                apertura = PkmSerializationContract.tagSectionOpen(width, height, pointX, pointY, orientacion),
+                cierre = PkmSerializationContract.tagSectionClose(),
                 hijos = hijosSeccion
             )
         )
-        nodos.add(PkmTextNode("###"))
+        nodos.add(PkmTextNode(PkmSerializationContract.BLOQUE_DELIMITADOR))
         return nodos
     }
 
@@ -61,18 +61,30 @@ class PkmComponentWriter(
         for (fila in filasRenderizadas) {
             val hijosLinea = mutableListOf<PkmTagNode>()
             for (celda in fila) {
-                hijosLinea.add(PkmElementNode("<element>", "</element>", celda.toMutableList()))
+                hijosLinea.add(
+                    PkmElementNode(
+                        PkmSerializationContract.tagElementOpen(),
+                        PkmSerializationContract.tagElementClose(),
+                        celda.toMutableList()
+                    )
+                )
             }
-            lineasTabla.add(PkmElementNode("<line>", "</line>", hijosLinea))
+            lineasTabla.add(
+                PkmElementNode(
+                    PkmSerializationContract.tagLineOpen(),
+                    PkmSerializationContract.tagLineClose(),
+                    hijosLinea
+                )
+            )
         }
 
-        hijosTabla.add(PkmElementNode("<content>", "</content>", lineasTabla))
-        return PkmElementNode("<table>", "</table>", hijosTabla)
+        hijosTabla.add(PkmElementNode(PkmSerializationContract.tagContentOpen(), PkmSerializationContract.tagContentClose(), lineasTabla))
+        return PkmElementNode(PkmSerializationContract.tagTableOpen(), PkmSerializationContract.tagTableClose(), hijosTabla)
     }
 
     fun crearTexto(node: ComponenteTexto): PkmTagNode {
-        val width = valorTexto(node.atributos, "width", "50")
-        val height = valorTexto(node.atributos, "height", "10")
+        val width = valorTexto(node.atributos, "width", PkmSerializationContract.DEFAULT_WIDTH)
+        val height = valorTexto(node.atributos, "height", PkmSerializationContract.DEFAULT_HEIGHT)
         val content = valorTexto(node.atributos, "content", "\"\"")
 
         if (NodoAtributo.contiene(node.atributos, "styles")) {
@@ -81,16 +93,20 @@ class PkmComponentWriter(
             if (styleNode != null) {
                 hijos.add(styleNode)
             }
-            return PkmElementNode("<open=$width,$height,$content>", "</open>", hijos)
+            return PkmElementNode(
+                PkmSerializationContract.tagOpenTextOpen(width, height, content),
+                PkmSerializationContract.tagOpenTextClose(),
+                hijos
+            )
         } else {
-            return PkmElementNode("<open=$width,$height,$content/>")
+            return PkmElementNode(PkmSerializationContract.tagOpenTextSelf(width, height, content))
         }
     }
 
     fun crearPreguntaDesplegable(node: PreguntaDesplegable): PkmTagNode {
         stats.registrarPreguntaDesplegable()
-        val width = valorTexto(node.atributos, "width", "50")
-        val height = valorTexto(node.atributos, "height", "10")
+        val width = valorTexto(node.atributos, "width", PkmSerializationContract.DEFAULT_WIDTH)
+        val height = valorTexto(node.atributos, "height", PkmSerializationContract.DEFAULT_HEIGHT)
         val label = valorTexto(node.atributos, "label", "\"\"")
 
         val optionsRaw = NodoAtributo.valor(node.atributos, "options")
@@ -98,7 +114,7 @@ class PkmComponentWriter(
         else expressionWriter.valorComoTexto(optionsRaw)
 
         val correctRaw = NodoAtributo.valor(node.atributos, "correct")
-        val correct = if (correctRaw == null) "-1" else expressionWriter.valorComoTexto(correctRaw)
+        val correct = if (correctRaw == null) PkmSerializationContract.DEFAULT_CORRECT_SINGLE else expressionWriter.valorComoTexto(correctRaw)
 
         if (NodoAtributo.contiene(node.atributos, "styles")) {
             val hijos = mutableListOf<PkmTagNode>()
@@ -106,16 +122,20 @@ class PkmComponentWriter(
             if (styleNode != null) {
                 hijos.add(styleNode)
             }
-            return PkmElementNode("<drop=$width,$height,$label,$options,$correct>", "</drop>", hijos)
+            return PkmElementNode(
+                PkmSerializationContract.tagDropOpen(width, height, label, options, correct),
+                PkmSerializationContract.tagDropClose(),
+                hijos
+            )
         } else {
-            return PkmElementNode("<drop=$width,$height,$label,$options,$correct/>")
+            return PkmElementNode(PkmSerializationContract.tagDropSelf(width, height, label, options, correct))
         }
     }
 
     fun crearPreguntaSeleccion(node: PreguntaSeleccionUnica): PkmTagNode {
         stats.registrarPreguntaSeleccion()
-        val width = valorTexto(node.atributos, "width", "50")
-        val height = valorTexto(node.atributos, "height", "10")
+        val width = valorTexto(node.atributos, "width", PkmSerializationContract.DEFAULT_WIDTH)
+        val height = valorTexto(node.atributos, "height", PkmSerializationContract.DEFAULT_HEIGHT)
         val label = valorTexto(node.atributos, "label", "\"\"")
 
         val optionsRaw = NodoAtributo.valor(node.atributos, "options")
@@ -123,7 +143,7 @@ class PkmComponentWriter(
         else expressionWriter.valorComoTexto(optionsRaw)
 
         val correctRaw = NodoAtributo.valor(node.atributos, "correct")
-        val correct = if (correctRaw == null) "-1" else expressionWriter.valorComoTexto(correctRaw)
+        val correct = if (correctRaw == null) PkmSerializationContract.DEFAULT_CORRECT_SINGLE else expressionWriter.valorComoTexto(correctRaw)
 
         if (NodoAtributo.contiene(node.atributos, "styles")) {
             val hijos = mutableListOf<PkmTagNode>()
@@ -131,16 +151,20 @@ class PkmComponentWriter(
             if (styleNode != null) {
                 hijos.add(styleNode)
             }
-            return PkmElementNode("<select=$width,$height,$label,$options,$correct>", "</select>", hijos)
+            return PkmElementNode(
+                PkmSerializationContract.tagSelectOpen(width, height, label, options, correct),
+                PkmSerializationContract.tagSelectClose(),
+                hijos
+            )
         } else {
-            return PkmElementNode("<select=$width,$height,$label,$options,$correct/>")
+            return PkmElementNode(PkmSerializationContract.tagSelectSelf(width, height, label, options, correct))
         }
     }
 
     fun crearPreguntaMultiple(node: PreguntaSeleccionadaMultiple): PkmTagNode {
         stats.registrarPreguntaMultiple()
-        val width = valorTexto(node.atributos, "width", "50")
-        val height = valorTexto(node.atributos, "height", "10")
+        val width = valorTexto(node.atributos, "width", PkmSerializationContract.DEFAULT_WIDTH)
+        val height = valorTexto(node.atributos, "height", PkmSerializationContract.DEFAULT_HEIGHT)
         val label = valorTexto(node.atributos, "label", "\"\"")
 
         val optionsRaw = NodoAtributo.valor(node.atributos, "options")
@@ -148,7 +172,7 @@ class PkmComponentWriter(
         else expressionWriter.valorComoTexto(optionsRaw)
 
         val correctRaw = NodoAtributo.valor(node.atributos, "correct")
-        val correct = if (correctRaw == null) "{}" else expressionWriter.valorComoTexto(correctRaw)
+        val correct = if (correctRaw == null) PkmSerializationContract.DEFAULT_CORRECT_MULTIPLE else expressionWriter.valorComoTexto(correctRaw)
 
         if (NodoAtributo.contiene(node.atributos, "styles")) {
             val hijos = mutableListOf<PkmTagNode>()
@@ -156,16 +180,20 @@ class PkmComponentWriter(
             if (styleNode != null) {
                 hijos.add(styleNode)
             }
-            return PkmElementNode("<multiple=$width,$height,$label,$options,$correct>", "</multiple>", hijos)
+            return PkmElementNode(
+                PkmSerializationContract.tagMultipleOpen(width, height, label, options, correct),
+                PkmSerializationContract.tagMultipleClose(),
+                hijos
+            )
         } else {
-            return PkmElementNode("<multiple=$width,$height,$label,$options,$correct/>")
+            return PkmElementNode(PkmSerializationContract.tagMultipleSelf(width, height, label, options, correct))
         }
     }
 
     fun crearPreguntaAbierta(node: PreguntaAbierta): PkmTagNode {
         stats.registrarPreguntaAbierta()
-        val width = valorTexto(node.atributos, "width", "50")
-        val height = valorTexto(node.atributos, "height", "10")
+        val width = valorTexto(node.atributos, "width", PkmSerializationContract.DEFAULT_WIDTH)
+        val height = valorTexto(node.atributos, "height", PkmSerializationContract.DEFAULT_HEIGHT)
         val label = valorTexto(node.atributos, "label", "\"\"")
 
         if (NodoAtributo.contiene(node.atributos, "styles")) {
@@ -174,9 +202,13 @@ class PkmComponentWriter(
             if (styleNode != null) {
                 hijos.add(styleNode)
             }
-            return PkmElementNode("<open=$width,$height,$label>", "</open>", hijos)
+            return PkmElementNode(
+                PkmSerializationContract.tagOpenTextOpen(width, height, label),
+                PkmSerializationContract.tagOpenTextClose(),
+                hijos
+            )
         } else {
-            return PkmElementNode("<open=$width,$height,$label/>")
+            return PkmElementNode(PkmSerializationContract.tagOpenTextSelf(width, height, label))
         }
     }
 
@@ -184,7 +216,7 @@ class PkmComponentWriter(
         if (!NodoAtributo.contiene(attrs, "styles")) {
             return null
         }
-        return PkmElementNode("<style> ... </style>")
+        return PkmElementNode(PkmSerializationContract.tagStylePlaceholder())
     }
 
     private fun valorTexto(attrs: List<NodoAtributo>, nombre: String, defecto: String): String {
