@@ -87,19 +87,21 @@ class PkmComponentWriter(
         val height = valorTexto(node.atributos, "height", PkmSerializationContract.DEFAULT_HEIGHT)
         val content = valorTexto(node.atributos, "content", "\"\"")
 
-        if (NodoAtributo.contiene(node.atributos, "styles")) {
-            val hijos = mutableListOf<PkmTagNode>()
-            val styleNode = crearBloqueStylesSiExiste(node.atributos)
-            if (styleNode != null) {
-                hijos.add(styleNode)
-            }
-            return PkmElementNode(
+        val hijos = mutableListOf<PkmTagNode>()
+        val styleNode = crearBloqueStylesSiExiste(node.atributos)
+        if (styleNode != null) {
+            hijos.add(styleNode)
+        }
+
+        // Si hay estilos, serializa como bloque abierto, si no, como self-closing
+        return if (hijos.isNotEmpty()) {
+            PkmElementNode(
                 PkmSerializationContract.tagOpenTextOpen(width, height, content),
                 PkmSerializationContract.tagOpenTextClose(),
                 hijos
             )
         } else {
-            return PkmElementNode(PkmSerializationContract.tagOpenTextSelf(width, height, content))
+            PkmElementNode(PkmSerializationContract.tagOpenTextSelf(width, height, content))
         }
     }
 
@@ -213,10 +215,14 @@ class PkmComponentWriter(
     }
 
     private fun crearBloqueStylesSiExiste(attrs: List<NodoAtributo>): PkmTagNode? {
-        if (!NodoAtributo.contiene(attrs, "styles")) {
-            return null
-        }
-        return PkmElementNode(PkmSerializationContract.tagStylePlaceholder())
+        val stylesRaw = NodoAtributo.valor(attrs, "styles") ?: return null
+        val stylesText = expressionWriter.valorComoTexto(stylesRaw)
+        // Serializa el bloque de estilos real según el contrato
+        return PkmElementNode(
+            PkmSerializationContract.tagStyleOpen(),
+            PkmSerializationContract.tagStyleClose(),
+            mutableListOf(PkmTextNode(stylesText))
+        )
     }
 
     private fun valorTexto(attrs: List<NodoAtributo>, nombre: String, defecto: String): String {
