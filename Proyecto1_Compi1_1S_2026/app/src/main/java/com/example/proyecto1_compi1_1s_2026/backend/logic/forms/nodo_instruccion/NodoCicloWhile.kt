@@ -24,6 +24,8 @@ class NodoCicloWhile(
             )
         }
 
-        instruccionesWhile.forEach { it.validarSemantica(contexto) }
+        for (instruccion in instruccionesWhile) {
+            instruccion.validarSemantica(contexto)
+        }
     }
 }

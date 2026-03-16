@@ -22,7 +22,9 @@ class NodoCicloDoWhile(
             )
         }
 
-        instrucciones.forEach { it.validarSemantica(contexto) }
+        for (instruccion in instrucciones) {
+            instruccion.validarSemantica(contexto)
+        }
         condicion.validarSemantica(contexto)
     }
 }

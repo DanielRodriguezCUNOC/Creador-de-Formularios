@@ -16,7 +16,9 @@ class NodoDraw(
     override fun <T> accept(visitor: Visitor<T>): T = visitor.visit(this)
 
     override fun validarSemantica(contexto: ContextoSemantico) {
-        parametros.forEach { it.validarSemantica(contexto) }
+        for (parametro in parametros) {
+            parametro.validarSemantica(contexto)
+        }
 
         val valorEspecial = try {
             contexto.entornoActual.obtenerVariable(idVariableEspecial)
