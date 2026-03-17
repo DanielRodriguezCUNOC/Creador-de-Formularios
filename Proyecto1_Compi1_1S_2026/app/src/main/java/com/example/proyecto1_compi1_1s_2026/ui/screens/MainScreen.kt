@@ -19,21 +19,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.LexerFormulario
-import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.ParserFormulario
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.NodoInstruccion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.GeneradorPkm
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.Interprete
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.RecolectorSimbolos
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TablaSimbolos
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ValidadorEstructural
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ValidadorSemantico
 import com.example.proyecto1_compi1_1s_2026.ui.forms.FormularioRenderer
+import com.example.proyecto1_compi1_1s_2026.ui.integration.FormularioUiCoordinator
+import com.example.proyecto1_compi1_1s_2026.ui.integration.ResultadoAnalisisUi
 import kotlinx.coroutines.launch
-import java.io.StringReader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,19 +36,59 @@ fun MainScreen(
     onFormularioActualChange: (Formulario?) -> Unit,
     onMostrarFormularioChange: (Boolean) -> Unit,
     onMenuClick: () -> Unit,
-    onFinalize: (String) -> Unit = {},
+    onFinalize: (Formulario) -> Unit = {},
     onViewErrors: (List<ErrorInfo>) -> Unit = {}
 ) {
     var erroresLexicos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
     var erroresSintacticos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
     var erroresSemanticos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
-    var mostrarErrores by remember { mutableStateOf(false) }
-    var mensajeResultado by remember { mutableStateOf("") }
-    var astResultado by remember { mutableStateOf("") }
     var tipoMensaje by remember { mutableStateOf("") }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val coordinator = remember { FormularioUiCoordinator() }
+
+    fun aplicarResultado(resultado: ResultadoAnalisisUi, navegarAlFormulario: Boolean) {
+        erroresLexicos = resultado.erroresLexicos
+        erroresSintacticos = resultado.erroresSintacticos
+        erroresSemanticos = resultado.erroresSemanticos
+
+        if (resultado.exitoso) {
+            onFormularioActualChange(resultado.formulario)
+            onMostrarFormularioChange(true)
+            tipoMensaje = "exito"
+
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar(
+                    message = if (navegarAlFormulario) "Formulario listo para contestar" else "Formulario construido exitosamente",
+                    duration = SnackbarDuration.Short
+                )
+            }
+
+            if (navegarAlFormulario && resultado.formulario != null) {
+                onFinalize(resultado.formulario)
+            }
+            return
+        }
+
+        onFormularioActualChange(null)
+        onMostrarFormularioChange(false)
+        tipoMensaje = "error"
+
+        val primerError = resultado.primerError
+        val todosLosErrores = resultado.errores
+
+        coroutineScope.launch {
+            val resultadoSnackbar = snackbarHostState.showSnackbar(
+                message = primerError?.toDetailedString() ?: "Errores encontrados",
+                actionLabel = "Ver Todos",
+                duration = SnackbarDuration.Long
+            )
+            if (resultadoSnackbar == SnackbarResult.ActionPerformed) {
+                onViewErrors(todosLosErrores)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -203,7 +234,10 @@ fun MainScreen(
                 }
 
                 Button(
-                    onClick = { onFinalize(editorValue.text) },
+                    onClick = {
+                        val resultado = coordinator.analizar(editorValue.text)
+                        aplicarResultado(resultado, navegarAlFormulario = true)
+                    },
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("Finalizar")
@@ -211,151 +245,8 @@ fun MainScreen(
 
                 Button(
                     onClick = {
-                        // Declarar fuera del try para acceder desde el catch
-                        var lexer: LexerFormulario? = null
-                        var parser: ParserFormulario? = null
-
-                        try {
-                            lexer = LexerFormulario(StringReader(editorValue.text))
-                            parser = ParserFormulario(lexer)
-                            val resultado = parser.parse()
-
-                            erroresLexicos = lexer.lexicalErrors
-                            erroresSintacticos = parser.erroresSintacticos
-                            erroresSemanticos = emptyList()
-
-                            // Validar semánticamente si no hay errores léxicos/sintácticos
-                            if (erroresLexicos.isEmpty() && erroresSintacticos.isEmpty()) {
-                                if (resultado?.value is List<*>) {
-                                    @Suppress("UNCHECKED_CAST")
-                                    val instrucciones = resultado.value as List<NodoInstruccion>
-
-                                    // Pasadas principales.
-                                    val recolector = RecolectorSimbolos(TablaSimbolos(null))
-                                    val resultadoRecoleccion = recolector.recolectar(instrucciones)
-                                    erroresSemanticos = resultadoRecoleccion.errores
-
-                                    if (erroresSemanticos.isEmpty()) {
-                                        val validadorEstructural = ValidadorEstructural()
-                                        erroresSemanticos = validadorEstructural.validar(instrucciones)
-
-                                        if (erroresSemanticos.isEmpty()) {
-                                            val validador = ValidadorSemantico(resultadoRecoleccion.tablaSimbolos)
-                                            erroresSemanticos = validador.validar(instrucciones)
-
-                                            if (erroresSemanticos.isEmpty()) {
-                                                val generadorPkm = GeneradorPkm()
-                                                val resultadoPkm = generadorPkm.generar(instrucciones)
-                                                erroresSemanticos = resultadoPkm.errores
-
-                                                if (erroresSemanticos.isEmpty()) {
-                                                    // Guardar salida compilada para siguiente fase de integración con guardado/servidor.
-                                                    astResultado = resultadoPkm.codigo
-
-                                                    val interprete = Interprete(TablaSimbolos(null))
-                                                    val resultadoInterp = interprete.interpretar(instrucciones)
-                                                    if (resultadoInterp.errores.isEmpty()) {
-                                                        onFormularioActualChange(resultadoInterp.formulario)
-                                                        onMostrarFormularioChange(true)
-                                                    } else {
-                                                        erroresSemanticos = resultadoInterp.errores
-                                                        onMostrarFormularioChange(false)
-                                                    }
-                                                } else {
-                                                    onMostrarFormularioChange(false)
-                                                }
-                                            } else {
-                                                onMostrarFormularioChange(false)
-                                            }
-                                        } else {
-                                            onMostrarFormularioChange(false)
-                                        }
-                                    } else {
-                                        onMostrarFormularioChange(false)
-                                    }
-                                }
-                            } else {
-                                onMostrarFormularioChange(false)
-                            }
-
-                            val totalErrores = erroresLexicos.size + erroresSintacticos.size + erroresSemanticos.size
-
-                            if (totalErrores == 0) {
-                                tipoMensaje = "exito"
-                                mensajeResultado = "Sintaxis correcta - Sin errores"
-                                astResultado = resultado?.value?.toString() ?: "AST vacío"
-                                mostrarErrores = false
-
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        message = "Formulario construido exitosamente",
-                                        duration = SnackbarDuration.Short
-                                    )
-                                }
-                            } else {
-                                tipoMensaje = "error"
-                                mensajeResultado = "Se encontraron $totalErrores error(es)"
-                                mostrarErrores = true
-                                onMostrarFormularioChange(false)
-
-                                val primerError = erroresLexicos.firstOrNull()
-                                    ?: erroresSintacticos.firstOrNull()
-                                    ?: erroresSemanticos.firstOrNull()
-                                val todosLosErrores = erroresLexicos + erroresSintacticos + erroresSemanticos
-
-                                coroutineScope.launch {
-                                    val resultadoSnackbar = snackbarHostState.showSnackbar(
-                                        message = primerError?.toDetailedString() ?: "Errores encontrados",
-                                        actionLabel = "Ver Todos",
-                                        duration = SnackbarDuration.Long
-                                    )
-                                    if (resultadoSnackbar == SnackbarResult.ActionPerformed) {
-                                        onViewErrors(todosLosErrores)
-                                    }
-                                }
-                            }
-
-                        } catch (e: Exception) {
-                            
-                            val errLex = lexer?.lexicalErrors ?: emptyList()
-                            val errSin = parser?.erroresSintacticos ?: emptyList()
-
-                            if (errLex.isNotEmpty() || errSin.isNotEmpty()) {
-                                erroresLexicos = errLex
-                                erroresSintacticos = errSin
-                                erroresSemanticos = emptyList()
-                                tipoMensaje = "error"
-                                mostrarErrores = true
-                                onMostrarFormularioChange(false)
-
-                                val primerError = errLex.firstOrNull() ?: errSin.firstOrNull()
-                                val todosLosErrores = errLex + errSin
-                                coroutineScope.launch {
-                                    val resultadoSnackbar = snackbarHostState.showSnackbar(
-                                        message = primerError?.toDetailedString() ?: "Error de sintaxis",
-                                        actionLabel = "Ver Todos",
-                                        duration = SnackbarDuration.Long
-                                    )
-                                    if (resultadoSnackbar == SnackbarResult.ActionPerformed) {
-                                        onViewErrors(todosLosErrores)
-                                    }
-                                }
-                            } else {
-                                tipoMensaje = "error"
-                                mostrarErrores = true
-                                erroresSemanticos = listOf(
-                                    ErrorInfo(TipoError.SEMANTICO, "Excepción inesperada: ${e.message}", 0, 0)
-                                )
-                                onMostrarFormularioChange(false)
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        message = "Error inesperado: ${e.message}",
-                                        duration = SnackbarDuration.Long
-                                    )
-                                }
-                            }
-                            e.printStackTrace()
-                        }
+                        val resultado = coordinator.analizar(editorValue.text)
+                        aplicarResultado(resultado, navegarAlFormulario = false)
                     },
                     modifier = Modifier.weight(1f)
                 ) {

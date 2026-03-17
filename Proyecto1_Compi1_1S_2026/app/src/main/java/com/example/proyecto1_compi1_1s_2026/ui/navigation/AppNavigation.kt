@@ -11,7 +11,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulari
 import com.example.proyecto1_compi1_1s_2026.ui.screens.ErrorScreen
 import com.example.proyecto1_compi1_1s_2026.ui.screens.MainScreen
 import com.example.proyecto1_compi1_1s_2026.ui.screens.MenuScreen
-import com.example.proyecto1_compi1_1s_2026.ui.screens.FillForm
+import com.example.proyecto1_compi1_1s_2026.ui.screens.FillFormScreen
 
 
 sealed class Screen {
@@ -24,7 +24,6 @@ sealed class Screen {
 @Composable
 fun AppNavigation() {
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Main) }
-    var formText by remember { mutableStateOf("") }
     var erroresActuales by remember { mutableStateOf<List<ErrorInfo>>(emptyList()) }
     var editorValue by remember { mutableStateOf(TextFieldValue("")) }
     var formularioPreview by remember { mutableStateOf<Formulario?>(null) }
@@ -39,8 +38,8 @@ fun AppNavigation() {
             onFormularioActualChange = { formularioPreview = it },
             onMostrarFormularioChange = { mostrarFormularioPreview = it },
             onMenuClick = { currentScreen = Screen.Menu },
-            onFinalize = { text ->
-                formText = text
+            onFinalize = { formulario ->
+                formularioPreview = formulario
                 currentScreen = Screen.FillForm
             },
             onViewErrors = { errores ->
@@ -51,8 +50,8 @@ fun AppNavigation() {
         is Screen.Menu -> MenuScreen(
             onBack = { currentScreen = Screen.Main }
         )
-        is Screen.FillForm -> FillForm(
-            formText = formText,
+        is Screen.FillForm -> FillFormScreen(
+            formulario = formularioPreview,
             onBack = { currentScreen = Screen.Main }
         )
         is Screen.Errors -> ErrorScreen(
