@@ -1,7 +1,7 @@
 package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso
 
-import androidx.compose.ui.graphics.Color
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.*
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Color
 import kotlin.math.abs
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.ComponenteSeccion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.ComponenteTabla
@@ -294,7 +294,7 @@ class UiNodeBuilder(
         val str = when (valor) {
             is NodoExpresion -> evaluarExpresion(valor)?.toString()
             else -> valor?.toString()
-        } ?: return Color.Black
+        } ?: return Color.defecto()
 
         val s = str.trim()
 
@@ -306,7 +306,7 @@ class UiNodeBuilder(
                 val g = partes[1].trim().toInt().coerceIn(0, 255)
                 val b = partes[2].trim().toInt().coerceIn(0, 255)
                 Color(r, g, b)
-            } catch (_: Exception) { Color.Black }
+            } catch (_: Exception) { Color.defecto() }
         }
 
         // --- HSL: <h, s, l> ---
@@ -317,30 +317,43 @@ class UiNodeBuilder(
                 val sl = partes[1].trim().toInt()
                 val l = partes[2].trim().toInt()
                 hslToRgb(h, sl, l)
-            } catch (_: Exception) { Color.Black }
+            } catch (_: Exception) { Color.defecto() }
         }
 
         // --- HEX: #RRGGBB o #RGB ---
         return try {
             val hex = s.trimStart('#')
             when (hex.length) {
-                6 -> Color((0xFF000000L or hex.toLong(16)).toInt())
-                8 -> Color(hex.toLong(16).toInt())
-                else -> Color.Black
+                6 -> {
+                    val argb = (0xFF000000L or hex.toLong(16)).toInt()
+                    val r = (argb shr 16) and 0xFF
+                    val g = (argb shr 8) and 0xFF
+                    val b = argb and 0xFF
+                    Color(r, g, b)
+                }
+                8 -> {
+                    val argb = hex.toLong(16).toInt()
+                    val a = (argb shr 24) and 0xFF
+                    val r = (argb shr 16) and 0xFF
+                    val g = (argb shr 8) and 0xFF
+                    val b = argb and 0xFF
+                    Color(r, g, b, a)
+                }
+                else -> Color.defecto()
             }
         } catch (_: Exception) {
             when (s.lowercase()) {
-                "red" -> Color.Red
-                "blue" -> Color.Blue
-                "green" -> Color.Green
-                "white" -> Color.White
-                "black" -> Color.Black
-                "yellow" -> Color.Yellow
-                "cyan" -> Color.Cyan
-                "magenta" -> Color.Magenta
-                "gray", "grey" -> Color.Gray
-                "transparent" -> Color.Transparent
-                else -> Color.Black
+                "red" -> Color(255, 0, 0)
+                "blue" -> Color(0, 0, 255)
+                "green" -> Color(0, 128, 0)
+                "white" -> Color(255, 255, 255)
+                "black" -> Color(0, 0, 0)
+                "yellow" -> Color(255, 255, 0)
+                "cyan" -> Color(0, 255, 255)
+                "magenta" -> Color(255, 0, 255)
+                "gray", "grey" -> Color(128, 128, 128)
+                "transparent" -> Color(0, 0, 0, 0)
+                else -> Color.defecto()
             }
         }
     }
@@ -355,18 +368,13 @@ class UiNodeBuilder(
         var r1: Float
         var g1: Float
         var b1: Float
-        if (hf < 60f) {
-            r1 = c; g1 = x; b1 = 0f
-        } else if (hf < 120f) {
-            r1 = x; g1 = c; b1 = 0f
-        } else if (hf < 180f) {
-            r1 = 0f; g1 = c; b1 = x
-        } else if (hf < 240f) {
-            r1 = 0f; g1 = x; b1 = c
-        } else if (hf < 300f) {
-            r1 = x; g1 = 0f; b1 = c
-        } else {
-            r1 = c; g1 = 0f; b1 = x
+        when {
+            hf < 60f -> { r1 = c; g1 = x; b1 = 0f }
+            hf < 120f -> { r1 = x; g1 = c; b1 = 0f }
+            hf < 180f -> { r1 = 0f; g1 = c; b1 = x }
+            hf < 240f -> { r1 = 0f; g1 = x; b1 = c }
+            hf < 300f -> { r1 = x; g1 = 0f; b1 = c }
+            else -> { r1 = c; g1 = 0f; b1 = x }
         }
         val r = ((r1 + m) * 255f).toInt().coerceIn(0, 255)
         val g = ((g1 + m) * 255f).toInt().coerceIn(0, 255)
