@@ -781,6 +781,12 @@ atributoPreguntaDesplegable ::=
         RESULT = new NodoAtributo("options", new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright));
     :}
 
+    //who_is_that_pokemon(NUMBER, 1, 10)
+    | FUNC_POKEMON:t PAREN_IZQ NUMBER COMA expresion:inicio COMA expresion:fin PAREN_DER
+    {:
+        RESULT = new NodoAtributo("options", new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright));
+    :}
+
     | CORRECT DOS_PUNTOS expresion:v
     {: RESULT = new NodoAtributo("correct", v); :}
 
@@ -816,6 +822,12 @@ atributoSeleccionUnica ::=
         RESULT = new NodoAtributo("options", new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright));
     :}
 
+    //who_is_that_pokemon(NUMBER, 1, 10)
+    | FUNC_POKEMON:t PAREN_IZQ NUMBER COMA expresion:inicio COMA expresion:fin PAREN_DER
+    {:
+        RESULT = new NodoAtributo("options", new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright));
+    :}
+
     | CORRECT DOS_PUNTOS expresion:v
     {: RESULT = new NodoAtributo("correct", v); :}
 
@@ -847,6 +859,12 @@ atributoMultiple ::=
     {: RESULT = new NodoAtributo("options", opts); :}
 
     | OPTIONS DOS_PUNTOS LLAVE_IZQ FUNC_POKEMON:t PAREN_IZQ NUMBER COMA expresion:inicio COMA expresion:fin PAREN_DER LLAVE_DER
+    {:
+        RESULT = new NodoAtributo("options", new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright));
+    :}
+
+    // who_is_that_pokemon(NUMBER, 1, 10)
+    | FUNC_POKEMON:t PAREN_IZQ NUMBER COMA expresion:inicio COMA expresion:fin PAREN_DER
     {:
         RESULT = new NodoAtributo("options", new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright));
     :}

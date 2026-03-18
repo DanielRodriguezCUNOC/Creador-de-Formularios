@@ -268,9 +268,9 @@ class Interprete(entornoActual: TablaSimbolos) : Visitor<Any?> {
                 val celda: ElementoFormulario
 
                 if (celdaExpr is NodoLiteral && celdaExpr.tipo == "table_cell_component") {
-                    // La celda contiene un componente UI: visitarlo y rescatar el ElementoFormulario
+                    // La celda contiene un componente UI o instrucción Draw: visitarlo y rescatar el ElementoFormulario
                     val tamanoPrevio = composer.obtenerElementos().size
-                    val comp = celdaExpr.valor as ComponenteUI
+                    val comp = celdaExpr.valor as NodoInstruccion
                     comp.accept(this)
 
                     // Recoger todos los elementos que el componente añadió

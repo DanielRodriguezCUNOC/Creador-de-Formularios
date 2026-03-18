@@ -62,8 +62,9 @@ COMENTARIO_LINEA = \$[^\n\r]*
 
 // Colores hexadecimales (#RRGGBB o #RGB)
 COLOR_HEX = #[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{3}
-COLOR_RGB = \([0-9]{1,3}[ ]*,[ ]*[0-9]{1,3}[ ]*,[ ]*[0-9]{1,3}\)
-COLOR_HSL = \<[0-9]{1,3}[ ]*,[ ]*[0-9]{1,3}[ ]*,[ ]*[0-9]{1,3}\>
+COMP_COLOR = ([0-9]{1,3}|\?)
+COLOR_RGB = \({COMP_COLOR}[ ]*,[ ]*{COMP_COLOR}[ ]*,[ ]*{COMP_COLOR}\)
+COLOR_HSL = \<{COMP_COLOR}[ ]*,[ ]*{COMP_COLOR}[ ]*,[ ]*{COMP_COLOR}\>
 
 // Espacios en blanco
 ESPACIO = [ \t\r\n\f]+
@@ -129,7 +130,7 @@ ESPACIO = [ \t\r\n\f]+
     "DOUBLE"            { return symbol(sym.DOUBLE); }
 
     // --- PALABRA RESERVADA UTILIZADA PARA LA POKEAPI ---
-    "NUMBER"            {return symbol(sym.NUMBER)}
+    "NUMBER"            { return symbol(sym.NUMBER); }
     // --- COLORES POR DEFECTO ---
 
     "RED" | "BLUE" | "GREEN" | "PURPLE" | "SKY" | "YELLOW" | "BLACK" | "WHITE"
@@ -159,7 +160,7 @@ ESPACIO = [ \t\r\n\f]+
     ")"                 { return symbol(sym.PAREN_DER); }
     ","                 { return symbol(sym.COMA); }
     ":"                 { return symbol(sym.DOS_PUNTOS); }
-    ";"                 {return symbol(sym.PUNTO_COMA)}
+    ";"                 { return symbol(sym.PUNTO_COMA); }
     "="                 { return symbol(sym.ASIGNACION); }
     "?"                 { return symbol(sym.COMODIN); }
     "."                { return symbol(sym.PUNTO); }
