@@ -13,6 +13,7 @@ class PkmTextSanitizer {
         out = out.replace("😢", "@[:sad:]")
         out = out.replace("😐", "@[:serious:]")
         out = out.replace("❤️", "@[:heart:]")
+        out = out.replace("😺", "@[:cat:]")
         return out
     }
 

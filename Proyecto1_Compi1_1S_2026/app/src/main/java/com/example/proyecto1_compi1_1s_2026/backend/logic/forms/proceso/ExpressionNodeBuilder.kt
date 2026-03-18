@@ -34,6 +34,8 @@ class ExpressionNodeBuilder(
         out = out.replace("@[:sad:]", "😢")
         out = out.replace("@[:serious:]", "😐")
         out = out.replace("@[:heart:]", "❤️")
+        out = out.replace("@[:cat:]", "😺")
+        out = out.replace("@[:^^:]", "😺")
 
         return out
     }

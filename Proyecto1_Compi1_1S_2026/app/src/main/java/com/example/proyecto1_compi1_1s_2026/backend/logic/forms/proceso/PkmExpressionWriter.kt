@@ -1,5 +1,6 @@
 package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso
 
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.NodoAtributo
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoAccesoVariable
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoExpresion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoLiteral
@@ -56,6 +57,9 @@ class PkmExpressionWriter(private val sanitizer: PkmTextSanitizer) {
         for (item in lista) {
             if (item is NodoExpresion) {
                 partes.add(expresionComoTexto(item))
+            } else if (item is NodoAtributo) {
+                val valor = valorComoTexto(item.valor)
+                partes.add("\"${item.nombre}\":$valor")
             } else if (item is Number) {
                 partes.add(numeroComoTexto(item))
             } else if (item is String) {
