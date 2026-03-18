@@ -1,47 +1,32 @@
 package com.example.proyecto1_compi1_1s_2026.ui.forms
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.TablaFormulario
 
 /**
- * Renderiza una [TablaFormulario] como una cuadrícula de filas y celdas.
- * Cada celda puede contener cualquier [ElementoFormulario].
- * Si `width` y `height` están definidos, el contenedor usa ese tamaño fijo.
+ * Renderiza una [TablaFormulario] como una cuadrícula de elementos.
  */
 @Composable
 fun RenderTabla(tabla: TablaFormulario) {
     val modifier = Modifier
-        .then(
-            if (tabla.width != null && tabla.height != null)
-                Modifier.size(tabla.width.dp, tabla.height.dp)
-            else
-                Modifier.fillMaxWidth().wrapContentHeight()
-        )
-        .background(tabla.estilos.backgroundColor)
+        .then(if (tabla.width != null) Modifier.width(tabla.width.dp) else Modifier.fillMaxWidth())
+        .then(if (tabla.height != null) Modifier.height(tabla.height.dp) else Modifier.wrapContentHeight())
+        .background(tabla.estilos.backgroundColor.toComposeColor())
         .let { tabla.estilos.applyBorder(it) }
-        .horizontalScroll(rememberScrollState())
+        .padding(4.dp)
 
     Column(modifier = modifier) {
         tabla.filas.forEach { fila ->
             Row(
-                modifier      = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 fila.forEach { celda ->
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .border(0.5.dp, Color.Gray)
-                            .padding(6.dp)
-                    ) {
+                    Box(modifier = Modifier.weight(1f)) {
                         RenderElemento(celda)
                     }
                 }

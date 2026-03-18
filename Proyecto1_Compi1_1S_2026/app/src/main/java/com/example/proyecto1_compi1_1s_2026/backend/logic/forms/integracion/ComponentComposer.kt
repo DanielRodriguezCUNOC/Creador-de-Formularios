@@ -1,23 +1,16 @@
 package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.integracion
 
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.ElementoFormulario
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.TextoFormulario
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.*
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoLiteral
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoExpresion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.NodoDraw
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.ErrorInfo
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.TipoError
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.UiNodeBuilder
+import kotlin.getValue
 
 /**
  * Compone y gestiona la construcción de elementos UI del formulario.
- * Responsable de mantener la lista de elementos y coordinar todas las operaciones
- * de creación de componentes (secciones, preguntas, tablas, etc.).
- *
- * GRASP Experto: Esta clase es experta en composición de UI porque:
- * - Mantiene el estado de elementos acumulados
- * - Decide cómo agregar, remover y reorganizar elementos
- * - Coordina la construcción de componentes anidados
- * - Conoce cómo el intérprete contribuye elementos a través del patrón Visitor
  */
 class ComponentComposer(
     private val executionContext: ExecutionContext,
@@ -25,11 +18,13 @@ class ComponentComposer(
     private val erroresRef: MutableList<ErrorInfo>
 ) {
     private val elementos = mutableListOf<ElementoFormulario>()
-    private val uiBuilder by lazy {
-        UiNodeBuilder { expr -> expr }  // Será actualizado con el visitor real desde Interprete
+    
+    // Inicialización explícita para evitar errores de inferencia en el lazy
+    private val uiBuilder: UiNodeBuilder by lazy {
+        UiNodeBuilder { expr: NodoExpresion -> 
+            evaluarExpresion(expr) 
+        }
     }
-
-    // ─── Acceso a elementos ─────────────────────────────────────────────────
 
     fun obtenerElementos(): List<ElementoFormulario> = elementos.toList()
 
@@ -37,9 +32,7 @@ class ComponentComposer(
         elementos.clear()
     }
 
-    // ─── Composición de componentes UI ───────────────────────────────────────
-
-    fun agregarSección(node: ComponenteSeccion, elementosInternos: List<ElementoFormulario>) {
+    fun agregarSeccion(node: ComponenteSeccion, elementosInternos: List<ElementoFormulario>) {
         val seccion = uiBuilder.construirSeccion(node, elementosInternos)
         elementos.add(seccion)
     }
@@ -74,15 +67,13 @@ class ComponentComposer(
         elementos.add(tabla)
     }
 
-    // ─── Manejo de draw() ────────────────────────────────────────────────────
-
     fun procesarDraw(node: NodoDraw) {
         try {
             val elemento = executionContext.obtenerVariable(node.idVariableEspecial)
             if (elemento is ElementoFormulario) {
                 elementos.add(elemento)
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             erroresRef.add(
                 ErrorInfo(
                     TipoError.SEMANTICO,
@@ -93,8 +84,6 @@ class ComponentComposer(
             )
         }
     }
-
-    // ─── Aislamiento de scope para construcción anidada ─────────────────────
 
     fun guardarEstadoElementos(): List<ElementoFormulario> = elementos.toList()
 

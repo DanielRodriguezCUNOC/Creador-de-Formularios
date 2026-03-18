@@ -20,7 +20,7 @@ fun RenderPreguntaAbierta(pregunta: PreguntaAbierta) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(pregunta.estilos.backgroundColor)
+            .background(pregunta.estilos.backgroundColor.toComposeColor())
             .let { pregunta.estilos.applyBorder(it) }
             .padding(6.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)

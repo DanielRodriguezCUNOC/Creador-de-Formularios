@@ -228,7 +228,7 @@ class Interprete(entornoActual: TablaSimbolos) : Visitor<Any?> {
         composer.limpiarElementos()
         composer.restaurarEstadoElementos(elementosPrevios)
 
-        composer.agregarSección(node, internos)
+        composer.agregarSeccion(node, internos)
         return internos.firstOrNull()
     }
 
