@@ -28,6 +28,7 @@ fun AppNavigation() {
     var editorValue by remember { mutableStateOf(TextFieldValue("")) }
     var formularioPreview by remember { mutableStateOf<Formulario?>(null) }
     var mostrarFormularioPreview by remember { mutableStateOf(false) }
+    var codigoPkmActual by remember { mutableStateOf("") }
 
     when (currentScreen) {
         is Screen.Main -> MainScreen(
@@ -45,9 +46,13 @@ fun AppNavigation() {
             onViewErrors = { errores ->
                 erroresActuales = errores
                 currentScreen = Screen.Errors
+            },
+            onCodigoPkmGenerado = { codigo ->
+                codigoPkmActual = codigo
             }
         )
         is Screen.Menu -> MenuScreen(
+            codigoPkmActual = codigoPkmActual,
             onBack = { currentScreen = Screen.Main }
         )
         is Screen.FillForm -> FillFormScreen(

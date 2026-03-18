@@ -434,14 +434,8 @@ sentenciaFor ::=
     ;
 
 instruccionForCabecera ::=
-    TYPE_NUMBER:t IDENTIFICADOR:nombre ASIGNACION expresion:val
-    {: RESULT = new NodoDeclaracion(nombre, "number", val, tleft, tright); :}
-
-    | TYPE_STRING:t IDENTIFICADOR:nombre ASIGNACION expresion:val
-    {: RESULT = new NodoDeclaracion(nombre, "string", val, tleft, tright); :}
-
-    | IDENTIFICADOR:id ASIGNACION expresion:exp
-    {: RESULT = new NodoAsignacion(id, exp, idleft, idright); :}
+    IDENTIFICADOR:nombre ASIGNACION expresion:val
+    {: RESULT = new NodoAsignacion(nombre, val, nombreleft, nombreright); :}
     ;
 
 //--- Instrucción DRAW ---

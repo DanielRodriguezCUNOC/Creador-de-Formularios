@@ -167,16 +167,19 @@ class RecolectorSimbolos(private val entornoGlobal: TablaSimbolos = TablaSimbolo
 
         if (!node.esImperativo) {
             if (node.idVariable != null) {
-                if (entornoActual.obtenerTipo(node.idVariable) != null) {
+                val tipoExistente = entornoActual.obtenerTipo(node.idVariable)
+                if (tipoExistente != null && tipoExistente != "number") {
                     errores.add(
                         ErrorInfo(
                             TipoError.SEMANTICO,
-                            "La variable '${node.idVariable}' ya fue declarada y no puede redefinirse",
+                            "La variable '${node.idVariable}' del FOR ya existe y no es de tipo number",
                             node.linea,
                             node.columna
                         )
                     )
-                } else {
+                }
+
+                if (tipoExistente == null) {
                     entornoActual.almacenarVariable(node.idVariable, 0.0, "number")
                 }
             }

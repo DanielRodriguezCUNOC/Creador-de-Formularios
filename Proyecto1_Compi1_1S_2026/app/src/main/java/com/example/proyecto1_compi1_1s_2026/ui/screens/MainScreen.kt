@@ -37,7 +37,8 @@ fun MainScreen(
     onMostrarFormularioChange: (Boolean) -> Unit,
     onMenuClick: () -> Unit,
     onFinalize: (Formulario) -> Unit = {},
-    onViewErrors: (List<ErrorInfo>) -> Unit = {}
+    onViewErrors: (List<ErrorInfo>) -> Unit = {},
+    onCodigoPkmGenerado: (String) -> Unit = {}
 ) {
     var erroresLexicos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
     var erroresSintacticos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
@@ -56,6 +57,7 @@ fun MainScreen(
         if (resultado.exitoso) {
             onFormularioActualChange(resultado.formulario)
             onMostrarFormularioChange(true)
+            onCodigoPkmGenerado(resultado.codigoPkm)
             tipoMensaje = "exito"
 
             coroutineScope.launch {
@@ -73,6 +75,7 @@ fun MainScreen(
 
         onFormularioActualChange(null)
         onMostrarFormularioChange(false)
+        onCodigoPkmGenerado("")
         tipoMensaje = "error"
 
         val primerError = resultado.primerError
@@ -189,6 +192,7 @@ fun MainScreen(
                     )
                     tipoMensaje = ""
                     onMostrarFormularioChange(false)
+                    onCodigoPkmGenerado("")
                 },
                 modifier = Modifier
                     .fillMaxWidth()
