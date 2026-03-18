@@ -1,5 +1,12 @@
 package com.example.proyecto1_compi1_1s_2026.ui.screens
 
+import android.content.Context
+import android.content.ContentValues
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -13,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -25,6 +33,10 @@ import com.example.proyecto1_compi1_1s_2026.ui.forms.FormularioRenderer
 import com.example.proyecto1_compi1_1s_2026.ui.integration.FormularioUiCoordinator
 import com.example.proyecto1_compi1_1s_2026.ui.integration.ResultadoAnalisisUi
 import kotlinx.coroutines.launch
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +60,7 @@ fun MainScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val coordinator = remember { FormularioUiCoordinator() }
+    val context = LocalContext.current
 
     fun aplicarResultado(resultado: ResultadoAnalisisUi, navegarAlFormulario: Boolean) {
         erroresLexicos = resultado.erroresLexicos
@@ -60,11 +73,31 @@ fun MainScreen(
             onCodigoPkmGenerado(resultado.codigoPkm)
             tipoMensaje = "exito"
 
+            val resultadoGuardado = guardarCodigoPkmEnDocumentos(context, resultado.codigoPkm)
+            val mensajeBase = if (navegarAlFormulario) {
+                "Formulario listo para contestar"
+            } else {
+                "Formulario construido exitosamente"
+            }
+
             coroutineScope.launch {
-                snackbarHostState.showSnackbar(
-                    message = if (navegarAlFormulario) "Formulario listo para contestar" else "Formulario construido exitosamente",
-                    duration = SnackbarDuration.Short
-                )
+                if (resultadoGuardado.exitoso) {
+                    val accion = if (resultadoGuardado.uri != null) "Abrir" else null
+                    val resultadoSnackbar = snackbarHostState.showSnackbar(
+                        message = "$mensajeBase. Guardado en ${resultadoGuardado.rutaMostrada}",
+                        actionLabel = accion,
+                        duration = SnackbarDuration.Long
+                    )
+
+                    if (resultadoSnackbar == SnackbarResult.ActionPerformed && resultadoGuardado.uri != null) {
+                        abrirArchivoGuardado(context, resultadoGuardado.uri)
+                    }
+                } else {
+                    snackbarHostState.showSnackbar(
+                        message = "$mensajeBase. No se pudo guardar PKM en Documentos",
+                        duration = SnackbarDuration.Short
+                    )
+                }
             }
 
             if (navegarAlFormulario && resultado.formulario != null) {
@@ -258,5 +291,91 @@ fun MainScreen(
                 }
             }
         }
+    }
+}
+
+private data class ResultadoGuardadoPkm(
+    val exitoso: Boolean,
+    val rutaMostrada: String,
+    val uri: Uri? = null
+)
+
+private fun guardarCodigoPkmEnDocumentos(context: Context, codigoPkm: String): ResultadoGuardadoPkm {
+    if (codigoPkm.isBlank()) {
+        return ResultadoGuardadoPkm(
+            exitoso = false,
+            rutaMostrada = "Documentos/CreadorFormularios"
+        )
+    }
+
+    val nombreArchivo = "formulario_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())}.pkm"
+
+    return try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val rutaRelativa = "${Environment.DIRECTORY_DOCUMENTS}/CreadorFormularios"
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, nombreArchivo)
+                put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, rutaRelativa)
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+
+            val resolver = context.contentResolver
+            val uri = resolver.insert(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), values)
+                ?: return ResultadoGuardadoPkm(false, "Documentos/CreadorFormularios/$nombreArchivo")
+
+            try {
+                resolver.openOutputStream(uri)?.use { salida ->
+                    salida.write(codigoPkm.toByteArray(Charsets.UTF_8))
+                    salida.flush()
+                } ?: throw IllegalStateException("No se pudo abrir stream de escritura")
+
+                val finalizar = ContentValues().apply {
+                    put(MediaStore.MediaColumns.IS_PENDING, 0)
+                }
+                resolver.update(uri, finalizar, null, null)
+
+                ResultadoGuardadoPkm(
+                    exitoso = true,
+                    rutaMostrada = "Documentos/CreadorFormularios/$nombreArchivo",
+                    uri = uri
+                )
+            } catch (_: Exception) {
+                resolver.delete(uri, null, null)
+                ResultadoGuardadoPkm(false, "Documentos/CreadorFormularios/$nombreArchivo")
+            }
+        } else {
+            val carpeta = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
+                "CreadorFormularios"
+            )
+            if (!carpeta.exists()) {
+                carpeta.mkdirs()
+            }
+
+            val archivo = File(carpeta, nombreArchivo)
+            archivo.writeText(codigoPkm, Charsets.UTF_8)
+
+            ResultadoGuardadoPkm(
+                exitoso = true,
+                rutaMostrada = archivo.absolutePath,
+                uri = Uri.fromFile(archivo)
+            )
+        }
+    } catch (_: Exception) {
+        ResultadoGuardadoPkm(false, "Documentos/CreadorFormularios/$nombreArchivo")
+    }
+}
+
+private fun abrirArchivoGuardado(context: Context, uri: Uri) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "text/plain")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(Intent.createChooser(intent, "Abrir archivo PKM"))
+    } catch (_: Exception) {
+        // Si no existe app para abrir el archivo, omitimos la acción.
     }
 }
