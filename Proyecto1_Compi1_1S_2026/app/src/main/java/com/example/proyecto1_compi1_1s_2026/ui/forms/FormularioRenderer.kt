@@ -27,15 +27,15 @@ fun FormularioRenderer(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(FormularioConstants.PADDING_PRINCIPAL),
+        verticalArrangement = Arrangement.spacedBy(FormularioConstants.PADDING_ELEMENTO)
     ) {
         formulario.elementos.forEach { elemento ->
             RenderElemento(elemento)
         }
 
         // Botón de envío obligatorio por defecto
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(FormularioConstants.PADDING_ELEMENTO))
         Button(
             onClick  = onEnviar,
             modifier = Modifier.fillMaxWidth()

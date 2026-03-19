@@ -10,17 +10,21 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.SeccionFo
 
 @Composable
 fun RenderSeccion(seccion: SeccionFormulario) {
+    // Aplicar escala a las dimensiones
+    val widthEscalado = FormularioConstants.escalarDimension(seccion.width)
+    val heightEscalado = FormularioConstants.escalarDimension(seccion.height)
+
     val modifier = Modifier
-        .then(if (seccion.width != null) Modifier.width(seccion.width.dp) else Modifier.fillMaxWidth())
-        .then(if (seccion.height != null) Modifier.height(seccion.height.dp) else Modifier.wrapContentHeight())
+        .then(if (widthEscalado != null) Modifier.width(widthEscalado.dp) else Modifier.fillMaxWidth())
+        .then(if (heightEscalado != null) Modifier.height(heightEscalado.dp) else Modifier.wrapContentHeight())
         .background(seccion.estilos.backgroundColor.toComposeColor())
         .let { seccion.estilos.applyBorder(it) }
-        .padding(8.dp)
+        .padding(FormularioConstants.PADDING_ELEMENTO)
 
     if (seccion.orientacion == Orientacion.HORIZONTAL) {
         Row(
             modifier = modifier,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(FormularioConstants.SPACING_HORIZONTAL)
         ) {
             seccion.elementos.forEach { elemento ->
                 Box(modifier = Modifier.weight(1f)) {
@@ -31,7 +35,7 @@ fun RenderSeccion(seccion: SeccionFormulario) {
     } else {
         Column(
             modifier = modifier,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(FormularioConstants.SPACING_VERTICAL)
         ) {
             seccion.elementos.forEach { elemento ->
                 RenderElemento(elemento)

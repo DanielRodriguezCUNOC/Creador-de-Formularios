@@ -12,18 +12,22 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.TablaForm
  */
 @Composable
 fun RenderTabla(tabla: TablaFormulario) {
+    // Aplicar escala a las dimensiones
+    val widthEscalado = FormularioConstants.escalarDimension(tabla.width)
+    val heightEscalado = FormularioConstants.escalarDimension(tabla.height)
+
     val modifier = Modifier
-        .then(if (tabla.width != null) Modifier.width(tabla.width.dp) else Modifier.fillMaxWidth())
-        .then(if (tabla.height != null) Modifier.height(tabla.height.dp) else Modifier.wrapContentHeight())
+        .then(if (widthEscalado != null) Modifier.width(widthEscalado.dp) else Modifier.fillMaxWidth())
+        .then(if (heightEscalado != null) Modifier.height(heightEscalado.dp) else Modifier.wrapContentHeight())
         .background(tabla.estilos.backgroundColor.toComposeColor())
         .let { tabla.estilos.applyBorder(it) }
-        .padding(4.dp)
+        .padding(FormularioConstants.PADDING_TABLA)
 
     Column(modifier = modifier) {
         tabla.filas.forEach { fila ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(FormularioConstants.SPACING_HORIZONTAL)
             ) {
                 fila.forEach { celda ->
                     Box(modifier = Modifier.weight(1f)) {

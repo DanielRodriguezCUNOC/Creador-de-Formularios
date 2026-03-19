@@ -21,8 +21,8 @@ fun RenderSeleccionUnica(pregunta: PreguntaSeleccionUnica) {
             .fillMaxWidth()
             .background(pregunta.estilos.backgroundColor.toComposeColor())
             .let { pregunta.estilos.applyBorder(it) }
-            .padding(6.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+            .padding(FormularioConstants.PADDING_INTERNO),
+        verticalArrangement = Arrangement.spacedBy(FormularioConstants.SPACING_VERTICAL)
     ) {
         Text(
             text  = pregunta.label,

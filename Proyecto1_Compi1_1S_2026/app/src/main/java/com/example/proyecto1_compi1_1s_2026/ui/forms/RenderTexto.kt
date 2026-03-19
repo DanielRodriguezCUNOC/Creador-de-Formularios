@@ -21,6 +21,6 @@ fun RenderTexto(texto: TextoFormulario) {
             .fillMaxWidth()
             .background(texto.estilos.backgroundColor.toComposeColor())
             .let { texto.estilos.applyBorder(it) }
-            .padding(4.dp)
+            .padding(FormularioConstants.PADDING_INTERNO)
     )
 }
