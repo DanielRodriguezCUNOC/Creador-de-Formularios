@@ -24,7 +24,9 @@ class Interprete(entornoActual: TablaSimbolos) : Visitor<Any?> {
     private val errores = mutableListOf<ErrorInfo>()
     private val executionContext = ExecutionContext(entornoActual, errores)
     private val composer by lazy {
-        ComponentComposer(executionContext, { it }, errores)
+        ComponentComposer(executionContext, { expr ->
+            if (expr is NodoExpresion) expr.accept(this) else expr
+        }, errores)
     }
     private val uiBuilder by lazy {
         UiNodeBuilder { expr -> expr.accept(this) }
@@ -85,14 +87,8 @@ class Interprete(entornoActual: TablaSimbolos) : Visitor<Any?> {
     }
 
     override fun visit(node: NodoDeclaracionSpecial): Any? {
-        // Interpretar el componente de forma aislada para no contaminar el flujo principal
-        val elementosPrevios = composer.guardarEstadoElementos()
-        composer.limpiarElementos()
-        val componente = node.pregunta.accept(this)
-        composer.limpiarElementos()
-        composer.restaurarEstadoElementos(elementosPrevios)
-        // Guardar el ElementoFormulario construido para que .draw() lo añada al flujo cuando sea llamado
-        executionContext.almacenarVariableEspecial(node.id, componente)
+        // Guardar la plantilla del componente special; draw(...) aplicará parámetros/comodines.
+        executionContext.almacenarVariableEspecial(node.id, node.pregunta)
         return null
     }
 

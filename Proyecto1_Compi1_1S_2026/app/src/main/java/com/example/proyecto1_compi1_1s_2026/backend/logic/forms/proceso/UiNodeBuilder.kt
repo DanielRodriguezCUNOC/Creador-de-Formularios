@@ -259,7 +259,7 @@ class UiNodeBuilder(
         }
 
         val color = parsearColor(NodoAtributo.valor(stylesAttrs, "color"))
-        val background = parsearColor(NodoAtributo.valor(stylesAttrs, "background"))
+        val background = parsearColor(NodoAtributo.valor(stylesAttrs, "backgroundColor"))
         val fontFamily = evaluarAtributo(stylesAttrs, "fontFamily")?.toString()?.uppercase() ?: "SANS_SERIF"
         val textSize = toFloat(evaluarAtributo(stylesAttrs, "textSize")) ?: 14f
 
