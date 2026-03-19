@@ -27,7 +27,7 @@ parser code {:
     }
 
     public void syntax_error(Symbol s) {
-        // Construir lista de tokens esperados traducidos al español
+        // Construir lista de tokens esperados traducidos al español.
         List<Integer> ids = expected_token_ids();
 
         // Caso especial: draw() sin parámetros.
@@ -37,40 +37,21 @@ parser code {:
 
         List<String> esperados = new ArrayList<>();
         for (Integer id : ids) {
-            String traducido = traductor(symbl_name_from_id(id));
-            if (!traducido.equals("error")) esperados.add(traducido);
+            String traducido = TokenLabelProvider.traducir(symbl_name_from_id(id));
+            if (!traducido.equals("error")) {
+                esperados.add(traducido);
+            }
         }
 
         String encontrado = (s != null && s.value != null)
             ? s.value.toString()
-            : traductor(symbl_name_from_id(s != null ? s.sym : 0));
+            : TokenLabelProvider.traducir(symbl_name_from_id(s != null ? s.sym : 0));
 
         int linea   = s != null ? s.left  : 0;
         int columna = s != null ? s.right : 0;
 
-        // Detectar si todos los esperados son atributos de bloque styles (llevan comillas dobles)
-        boolean todosStyles = !esperados.isEmpty();
-        if (todosStyles) {
-            for (String esperado : esperados) {
-                if (!(esperado.startsWith("\"") && esperado.endsWith("\""))) {
-                    todosStyles = false;
-                    break;
-                }
-            }
-        }
-
-        String mensaje;
-        if (esperados.isEmpty()) {
-            mensaje = "Token inesperado '" + encontrado + "'";
-        } else if (todosStyles) {
-            mensaje = "Se esperaba un atributo de styles entre comillas: "
-                + String.join(", ", esperados)
-                + ". Recuerda que los atributos dentro de styles [ ] deben escribirse entre comillas."
-                + " Pero se encontró: '" + encontrado + "'";
-        } else {
-            mensaje = "Se esperaba: " + String.join(", ", esperados)
-                + ". Pero se encontró: '" + encontrado + "'";
-        }
+        // Pasamos el menssaje a un formateador experto
+        String mensaje = SintaxisErrorFormatter.construirMensaje(esperados, encontrado);
 
         erroresSintacticos.add(new ErrorInfo(TipoError.SINTACTICO, mensaje, linea, columna));
     }
@@ -79,7 +60,7 @@ parser code {:
         if (s == null || s.sym != sym.PAREN_DER) return false;
         if (ids == null || ids.isEmpty()) return false;
 
-        // Esperados típicos al inicio de una expresión
+        // Esperados típicos al inicio de una expresión.
         List<Integer> inicioExpr = List.of(
             sym.VERTICAL, sym.HORIZONTAL, sym.MONO,
             sym.COLOR_NAME, sym.COLOR_HEX,
@@ -100,135 +81,9 @@ parser code {:
     }
 
     public void report_error(String message, Object info) {
-        // Los errores ya se gestionan en syntax_error; evitar mensajes duplicados
+        // Los errores ya se gestionan en syntax_error; evitar mensajes duplicados.
     }
 
-    /** Traduce el nombre interno del token a una descripción legible en español. */
-    private String traductor(String token) {
-        if (token == null) return "desconocido";
-        switch (token) {
-            // --- Componentes UI ---
-            case "SECTION":           return "SECTION";
-            case "TABLE":             return "TABLE";
-            case "TEXT":              return "TEXT";
-            case "OPEN_QUESTION":     return "OPEN_QUESTION";
-            case "DROP_QUESTION":     return "DROP_QUESTION";
-            case "SELECT_QUESTION":   return "SELECT_QUESTION";
-            case "MULTIPLE_QUESTION": return "MULTIPLE_QUESTION";
-            // --- Atributos ---
-            case "WIDTH":             return "width";
-            case "HEIGHT":            return "height";
-            case "POINT_X":           return "pointX";
-            case "POINT_Y":           return "pointY";
-            case "ORIENTATION":       return "orientation";
-            case "ELEMENTS":          return "elements";
-            case "STYLES":            return "styles";
-            case "COLOR_ATTR":        return "\"color\"";
-            case "BACKGROUND_COLOR":  return "\"background color\"";
-            case "FONT_FAMILY":       return "\"font family\"";
-            case "TEXT_SIZE":         return "\"text size\"";
-            case "BORDER":            return "\"border\"";
-            case "CONTENT":           return "content";
-            case "LABEL":             return "label";
-            case "OPTIONS":           return "options";
-            case "CORRECT":           return "correct";
-            // --- Tipos ---
-            case "TYPE_NUMBER":       return "number";
-            case "TYPE_STRING":       return "string";
-            case "TYPE_SPECIAL":      return "special";
-            // --- Orientación ---
-            case "VERTICAL":          return "VERTICAL";
-            case "HORIZONTAL":        return "HORIZONTAL";
-            case "MONO":              return "MONO";
-            case "SANS_SERIF":        return "SANS_SERIF";
-            case "CURSIVE":           return "CURSIVE";
-            case "LINE":              return "LINE";
-            case "DOTTED":            return "DOTTED";
-            case "DOUBLE":            return "DOUBLE";
-            // --- POKEAPI ---
-            case "NUMBER":            return "NUMBER";
-            // --- Control ---
-            case "IF":                return "IF";
-            case "ELSE":              return "ELSE";
-            case "WHILE":             return "WHILE";
-            case "DO":                return "DO";
-            case "FOR":               return "FOR";
-            case "IN":                return "in";
-            // --- Funciones especiales ---
-            case "FUNC_POKEMON":      return "who_is_that_pokemon";
-            case "DRAW":              return "draw";
-            // --- Símbolos estructurales ---
-            case "CORCHETE_IZQ":      return "'['";
-            case "CORCHETE_DER":      return "']'";
-            case "LLAVE_IZQ":         return "'{'";
-            case "LLAVE_DER":         return "'}'";
-            case "PAREN_IZQ":         return "'('";
-            case "PAREN_DER":         return "')'";
-            case "COMA":              return "','";
-            case "DOS_PUNTOS":        return "':'";
-            case "PUNTO_COMA":        return "';'";
-            case "ASIGNACION":        return "'='";
-            case "PUNTO":             return "'.'";
-            case "COMODIN":           return "'?'";
-            // --- Operadores aritméticos ---
-            case "MAS":               return "'+'";
-            case "MENOS":             return "'-'";
-            case "POR":               return "'*'";
-            case "DIV":               return "'/'";
-            case "POTENCIA":          return "'^'";
-            case "MODULO":            return "'%'";
-            // --- Operadores relacionales ---
-            case "MAYOR":             return "'>'";
-            case "MENOR":             return "'<'";
-            case "MAYOR_IGUAL":       return "'>='";
-            case "MENOR_IGUAL":       return "'<='";
-            case "IGUALDAD":          return "'=='";
-            case "DIFERENTE":         return "'!!'";
-            // --- Operadores lógicos ---
-            case "OR":                return "'||'";
-            case "AND":               return "'&&'";
-            case "NOT":               return "'~'";
-            // --- Literales e identificadores ---
-            case "IDENTIFICADOR":     return "identificador";
-            case "NUMBER_LITERAL":    return "número";
-            case "INICIO_CADENA":     return "'\"' (inicio de cadena)";
-            case "FIN_CADENA":        return "'\"' (fin de cadena)";
-            case "CONTENIDO_CADENA":  return "contenido de cadena";
-            // --- Emojis ---
-            case "EMOJI_SMILE":       return "emoji @[:)]";
-            case "EMOJI_SAD":         return "emoji @[:(]";
-            case "EMOJI_SERIOUS":     return "emoji @[:|]";
-            case "EMOJI_HEART":       return "emoji @[<3]";
-            // --- Colores ---
-            case "COLOR_NAME":        return "color (RED, BLUE, GREEN...)";
-            case "COLOR_HEX":         return "color hexadecimal (#RRGGBB)";
-            case "COLOR_RGB":         return "color RGB (r,g,b)";
-            case "COLOR_HSL":         return "color HSL <h,s,l>";
-            // --- Fin de archivo ---
-            case "EOF":               return "fin de archivo";
-            default:                  return token;
-        }
-    }
-
-    /** Convierte sintaxis textual de emojis a sus caracteres Unicode. */
-    private String normalizarEmojis(String texto) {
-        if (texto == null || texto.isEmpty()) return texto;
-
-        String out = texto;
-        // Formas simbólicas
-        out = out.replaceAll("@\\[:\\)+\\]", "😄");
-        out = out.replaceAll("@\\[:\\(+\\]", "😢");
-        out = out.replaceAll("@\\[:\\|+\\]", "😐");
-        out = out.replaceAll("@\\[<+3+\\]", "❤️");
-
-        // Formas nombradas
-        out = out.replaceAll("@\\[:smile:\\]", "😄");
-        out = out.replaceAll("@\\[:sad:\\]", "😢");
-        out = out.replaceAll("@\\[:serious:\\]", "😐");
-        out = out.replaceAll("@\\[:heart:\\]", "❤️");
-
-        return out;
-    }
 :};
 
 //================================
@@ -442,7 +297,7 @@ instruccion ::=
     | sentenciaFor:f
     {: RESULT = f; :}
 
-    // Instrucción DRAW
+    // Draw (Esto nos permite reportar un error en la pasada del ValidadorEstructural)
     | instruccionDraw:d
     {: RESULT = d; :}
 
@@ -492,6 +347,8 @@ elementoUI ::=
     {: RESULT = p; :}
     | preguntaMultiple:p
     {: RESULT = p; :}
+    | instruccionDraw:d
+    {: RESULT = d; :}
     ;
 
 //--- Declaraciones ---
@@ -577,14 +434,8 @@ sentenciaFor ::=
     ;
 
 instruccionForCabecera ::=
-    TYPE_NUMBER:t IDENTIFICADOR:nombre ASIGNACION expresion:val
-    {: RESULT = new NodoDeclaracion(nombre, "number", val, tleft, tright); :}
-
-    | TYPE_STRING:t IDENTIFICADOR:nombre ASIGNACION expresion:val
-    {: RESULT = new NodoDeclaracion(nombre, "string", val, tleft, tright); :}
-
-    | IDENTIFICADOR:id ASIGNACION expresion:exp
-    {: RESULT = new NodoAsignacion(id, exp, idleft, idright); :}
+    IDENTIFICADOR:nombre ASIGNACION expresion:val
+    {: RESULT = new NodoAsignacion(nombre, val, nombreleft, nombreright); :}
     ;
 
 //--- Instrucción DRAW ---
@@ -807,6 +658,7 @@ atributoSeccion ::=
 
     | STYLES CORCHETE_IZQ estilosConBorde:ests CORCHETE_DER
     {: RESULT = new NodoAtributo("styles", ests); :}
+    //* Agregar la produccion de draw
     ;
 
 //--- Atributos para TABLE ---
@@ -929,6 +781,12 @@ atributoPreguntaDesplegable ::=
         RESULT = new NodoAtributo("options", new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright));
     :}
 
+    //who_is_that_pokemon(NUMBER, 1, 10)
+    | FUNC_POKEMON:t PAREN_IZQ NUMBER COMA expresion:inicio COMA expresion:fin PAREN_DER
+    {:
+        RESULT = new NodoAtributo("options", new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright));
+    :}
+
     | CORRECT DOS_PUNTOS expresion:v
     {: RESULT = new NodoAtributo("correct", v); :}
 
@@ -964,6 +822,12 @@ atributoSeleccionUnica ::=
         RESULT = new NodoAtributo("options", new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright));
     :}
 
+    //who_is_that_pokemon(NUMBER, 1, 10)
+    | FUNC_POKEMON:t PAREN_IZQ NUMBER COMA expresion:inicio COMA expresion:fin PAREN_DER
+    {:
+        RESULT = new NodoAtributo("options", new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright));
+    :}
+
     | CORRECT DOS_PUNTOS expresion:v
     {: RESULT = new NodoAtributo("correct", v); :}
 
@@ -995,6 +859,12 @@ atributoMultiple ::=
     {: RESULT = new NodoAtributo("options", opts); :}
 
     | OPTIONS DOS_PUNTOS LLAVE_IZQ FUNC_POKEMON:t PAREN_IZQ NUMBER COMA expresion:inicio COMA expresion:fin PAREN_DER LLAVE_DER
+    {:
+        RESULT = new NodoAtributo("options", new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright));
+    :}
+
+    // who_is_that_pokemon(NUMBER, 1, 10)
+    | FUNC_POKEMON:t PAREN_IZQ NUMBER COMA expresion:inicio COMA expresion:fin PAREN_DER
     {:
         RESULT = new NodoAtributo("options", new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright));
     :}
@@ -1172,7 +1042,7 @@ valorTipoBorde ::=
     {: RESULT = new NodoLiteral("DOUBLE", "borderType", tleft, tright); :}
     ;
 
-//--- Cadena de texto con soporte de emojis ---
+//--- Cadena de texto ---
 // Una cadena puede estar vacía o tener una o más partes
 cadenaTexto ::=
     INICIO_CADENA partesCadena:partes FIN_CADENA
@@ -1181,7 +1051,7 @@ cadenaTexto ::=
     {: RESULT = ""; :}
     ;
 
-// Acumulación de partes (texto normal + emojis)
+// Acumulación de partes (texto + tokens especiales)
 partesCadena ::=
     partesCadena:acum parteCadena:parte
     {: RESULT = acum + parte; :}
@@ -1189,16 +1059,17 @@ partesCadena ::=
     {: RESULT = parte; :}
     ;
 
-// Cada parte puede ser contenido normal o un emoji
+// Cada parte puede ser contenido normal o token especial.
+// El parser no transforma emojis: solo conserva el texto fuente.
 parteCadena ::=
     CONTENIDO_CADENA:c
-    {: RESULT = normalizarEmojis(c); :}
+    {: RESULT = c; :}
     | EMOJI_SMILE:e
-    {: RESULT = "😄"; :}
+    {: RESULT = e; :}
     | EMOJI_SAD:e
-    {: RESULT = "😢"; :}
+    {: RESULT = e; :}
     | EMOJI_SERIOUS:e
-    {: RESULT = "😐"; :}
+    {: RESULT = e; :}
     | EMOJI_HEART:e
-    {: RESULT = "❤️"; :}
+    {: RESULT = e; :}
     ;

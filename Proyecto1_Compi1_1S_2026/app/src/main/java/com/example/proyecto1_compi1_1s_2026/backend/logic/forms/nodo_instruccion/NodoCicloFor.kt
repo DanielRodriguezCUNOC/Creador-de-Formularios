@@ -73,6 +73,22 @@ class NodoCicloFor(
             if (!esImperativo && idVariable != null) {
                 entornoFor.almacenarVariable(idVariable, 0.0, "number")
             } else {
+                if (inicializacionImperativa is NodoAsignacion) {
+                    val nombreVariable = inicializacionImperativa.id
+                    val tipoExistente = entornoFor.obtenerTipo(nombreVariable)
+
+                    if (tipoExistente == null) {
+                        // Regla del enunciado: en FOR se asume declaración implícita number.
+                        entornoFor.almacenarVariable(nombreVariable, 0.0, "number")
+                    } else if (tipoExistente != "number") {
+                        contexto.reportarError(
+                            "La variable '$nombreVariable' del FOR ya existe y no es de tipo number",
+                            linea,
+                            columna
+                        )
+                    }
+                }
+
                 inicializacionImperativa?.validarSemantica(contexto)
 
                 val tipoCondicionImperativa = rangoFin.inferirTipo(contexto)

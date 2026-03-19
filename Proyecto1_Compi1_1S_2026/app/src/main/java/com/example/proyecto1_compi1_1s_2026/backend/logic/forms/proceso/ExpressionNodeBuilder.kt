@@ -14,7 +14,30 @@ class ExpressionNodeBuilder(
 ) {
 
     fun construirLiteral(node: NodoLiteral): Any? {
+        if (node.tipo == "string" && node.valor is String) {
+            return normalizarTextoConEmojis(node.valor)
+        }
         return node.valor
+    }
+
+    private fun normalizarTextoConEmojis(texto: String): String {
+        var out = texto
+
+        // Formas simbólicas
+        out = out.replace(Regex("@\\[:\\)+\\]"), "😄")
+        out = out.replace(Regex("@\\[:\\(+\\]"), "😢")
+        out = out.replace(Regex("@\\[:\\|+\\]"), "😐")
+        out = out.replace(Regex("@\\[<+3+\\]"), "❤️")
+
+        // Formas nombradas
+        out = out.replace("@[:smile:]", "😄")
+        out = out.replace("@[:sad:]", "😢")
+        out = out.replace("@[:serious:]", "😐")
+        out = out.replace("@[:heart:]", "❤️")
+        out = out.replace("@[:cat:]", "😺")
+        out = out.replace("@[:^^:]", "😺")
+
+        return out
     }
 
     fun construirAccesoVariable(node: NodoAccesoVariable): Any? {

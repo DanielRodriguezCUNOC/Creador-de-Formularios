@@ -1,5 +1,12 @@
 package com.example.proyecto1_compi1_1s_2026.ui.screens
 
+import android.content.Context
+import android.content.ContentValues
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -13,24 +20,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.LexerFormulario
-import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.ParserFormulario
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.NodoInstruccion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.Interprete
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TablaSimbolos
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ValidadorSemantico
 import com.example.proyecto1_compi1_1s_2026.ui.forms.FormularioRenderer
+import com.example.proyecto1_compi1_1s_2026.ui.integration.FormularioUiCoordinator
+import com.example.proyecto1_compi1_1s_2026.ui.integration.ResultadoAnalisisUi
 import kotlinx.coroutines.launch
-import java.io.StringReader
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,19 +48,83 @@ fun MainScreen(
     onFormularioActualChange: (Formulario?) -> Unit,
     onMostrarFormularioChange: (Boolean) -> Unit,
     onMenuClick: () -> Unit,
-    onFinalize: (String) -> Unit = {},
-    onViewErrors: (List<ErrorInfo>) -> Unit = {}
+    onFinalize: (Formulario) -> Unit = {},
+    onViewErrors: (List<ErrorInfo>) -> Unit = {},
+    onCodigoPkmGenerado: (String) -> Unit = {}
 ) {
     var erroresLexicos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
     var erroresSintacticos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
     var erroresSemanticos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
-    var mostrarErrores by remember { mutableStateOf(false) }
-    var mensajeResultado by remember { mutableStateOf("") }
-    var astResultado by remember { mutableStateOf("") }
     var tipoMensaje by remember { mutableStateOf("") }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val coordinator = remember { FormularioUiCoordinator() }
+    val context = LocalContext.current
+
+    fun aplicarResultado(resultado: ResultadoAnalisisUi, navegarAlFormulario: Boolean) {
+        erroresLexicos = resultado.erroresLexicos
+        erroresSintacticos = resultado.erroresSintacticos
+        erroresSemanticos = resultado.erroresSemanticos
+
+        if (resultado.exitoso) {
+            onFormularioActualChange(resultado.formulario)
+            onMostrarFormularioChange(true)
+            onCodigoPkmGenerado(resultado.codigoPkm)
+            tipoMensaje = "exito"
+
+            val resultadoGuardado = guardarCodigoPkmEnDocumentos(context, resultado.codigoPkm)
+            val mensajeBase = if (navegarAlFormulario) {
+                "Formulario listo para contestar"
+            } else {
+                "Formulario construido exitosamente"
+            }
+
+            coroutineScope.launch {
+                if (resultadoGuardado.exitoso) {
+                    val accion = if (resultadoGuardado.uri != null) "Abrir" else null
+                    val resultadoSnackbar = snackbarHostState.showSnackbar(
+                        message = "$mensajeBase. Guardado en ${resultadoGuardado.rutaMostrada}",
+                        actionLabel = accion,
+                        duration = SnackbarDuration.Long
+                    )
+
+                    if (resultadoSnackbar == SnackbarResult.ActionPerformed && resultadoGuardado.uri != null) {
+                        abrirArchivoGuardado(context, resultadoGuardado.uri)
+                    }
+                } else {
+                    snackbarHostState.showSnackbar(
+                        message = "$mensajeBase. No se pudo guardar PKM en Documentos",
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            }
+
+            if (navegarAlFormulario && resultado.formulario != null) {
+                onFinalize(resultado.formulario)
+            }
+            return
+        }
+
+        onFormularioActualChange(null)
+        onMostrarFormularioChange(false)
+        onCodigoPkmGenerado("")
+        tipoMensaje = "error"
+
+        val primerError = resultado.primerError
+        val todosLosErrores = resultado.errores
+
+        coroutineScope.launch {
+            val resultadoSnackbar = snackbarHostState.showSnackbar(
+                message = primerError?.toDetailedString() ?: "Errores encontrados",
+                actionLabel = "Ver Todos",
+                duration = SnackbarDuration.Long
+            )
+            if (resultadoSnackbar == SnackbarResult.ActionPerformed) {
+                onViewErrors(todosLosErrores)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -155,6 +225,7 @@ fun MainScreen(
                     )
                     tipoMensaje = ""
                     onMostrarFormularioChange(false)
+                    onCodigoPkmGenerado("")
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -200,7 +271,10 @@ fun MainScreen(
                 }
 
                 Button(
-                    onClick = { onFinalize(editorValue.text) },
+                    onClick = {
+                        val resultado = coordinator.analizar(editorValue.text)
+                        aplicarResultado(resultado, navegarAlFormulario = true)
+                    },
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("Finalizar")
@@ -208,133 +282,8 @@ fun MainScreen(
 
                 Button(
                     onClick = {
-                        // Declarar fuera del try para acceder desde el catch
-                        var lexer: LexerFormulario? = null
-                        var parser: ParserFormulario? = null
-
-                        try {
-                            lexer = LexerFormulario(StringReader(editorValue.text))
-                            parser = ParserFormulario(lexer)
-                            val resultado = parser.parse()
-
-                            erroresLexicos = lexer.lexicalErrors
-                            erroresSintacticos = parser.erroresSintacticos
-                            erroresSemanticos = emptyList()
-
-                            // Validar semánticamente si no hay errores léxicos/sintácticos
-                            if (erroresLexicos.isEmpty() && erroresSintacticos.isEmpty()) {
-                                if (resultado?.value is List<*>) {
-                                    @Suppress("UNCHECKED_CAST")
-                                    val instrucciones = resultado.value as List<NodoInstruccion>
-
-                                    // Pasadas principales.
-                                    val recolector = RecolectorSimbolos(TablaSimbolos(null))
-                                    val resultadoRecoleccion = recolector.recolectar(instrucciones)
-                                    erroresSemanticos = resultadoRecoleccion.errores
-
-                                    if (erroresSemanticos.isEmpty()) {
-                                        val validador = ValidadorSemantico(resultadoRecoleccion.tablaSimbolos)
-                                        erroresSemanticos = validador.validar(instrucciones)
-
-                                        if (erroresSemanticos.isEmpty()) {
-                                            val interprete = Interprete(TablaSimbolos(null))
-                                            val resultadoInterp = interprete.interpretar(instrucciones)
-                                            if (resultadoInterp.errores.isEmpty()) {
-                                                onFormularioActualChange(resultadoInterp.formulario)
-                                                onMostrarFormularioChange(true)
-                                            } else {
-                                                erroresSemanticos = resultadoInterp.errores
-                                                onMostrarFormularioChange(false)
-                                            }
-                                        } else {
-                                            onMostrarFormularioChange(false)
-                                        }
-                                    } else {
-                                        onMostrarFormularioChange(false)
-                                    }
-                                }
-                            } else {
-                                onMostrarFormularioChange(false)
-                            }
-
-                            val totalErrores = erroresLexicos.size + erroresSintacticos.size + erroresSemanticos.size
-
-                            if (totalErrores == 0) {
-                                tipoMensaje = "exito"
-                                mensajeResultado = "Sintaxis correcta - Sin errores"
-                                astResultado = resultado?.value?.toString() ?: "AST vacío"
-                                mostrarErrores = false
-
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        message = "Formulario construido exitosamente",
-                                        duration = SnackbarDuration.Short
-                                    )
-                                }
-                            } else {
-                                tipoMensaje = "error"
-                                mensajeResultado = "Se encontraron $totalErrores error(es)"
-                                mostrarErrores = true
-                                onMostrarFormularioChange(false)
-
-                                val primerError = erroresLexicos.firstOrNull()
-                                    ?: erroresSintacticos.firstOrNull()
-                                    ?: erroresSemanticos.firstOrNull()
-                                val todosLosErrores = erroresLexicos + erroresSintacticos + erroresSemanticos
-
-                                coroutineScope.launch {
-                                    val resultadoSnackbar = snackbarHostState.showSnackbar(
-                                        message = primerError?.toDetailedString() ?: "Errores encontrados",
-                                        actionLabel = "Ver Todos",
-                                        duration = SnackbarDuration.Long
-                                    )
-                                    if (resultadoSnackbar == SnackbarResult.ActionPerformed) {
-                                        onViewErrors(todosLosErrores)
-                                    }
-                                }
-                            }
-
-                        } catch (e: Exception) {
-                            
-                            val errLex = lexer?.lexicalErrors ?: emptyList()
-                            val errSin = parser?.erroresSintacticos ?: emptyList()
-
-                            if (errLex.isNotEmpty() || errSin.isNotEmpty()) {
-                                erroresLexicos = errLex
-                                erroresSintacticos = errSin
-                                erroresSemanticos = emptyList()
-                                tipoMensaje = "error"
-                                mostrarErrores = true
-                                onMostrarFormularioChange(false)
-
-                                val primerError = errLex.firstOrNull() ?: errSin.firstOrNull()
-                                val todosLosErrores = errLex + errSin
-                                coroutineScope.launch {
-                                    val resultadoSnackbar = snackbarHostState.showSnackbar(
-                                        message = primerError?.toDetailedString() ?: "Error de sintaxis",
-                                        actionLabel = "Ver Todos",
-                                        duration = SnackbarDuration.Long
-                                    )
-                                    if (resultadoSnackbar == SnackbarResult.ActionPerformed) {
-                                        onViewErrors(todosLosErrores)
-                                    }
-                                }
-                            } else {
-                                tipoMensaje = "error"
-                                mostrarErrores = true
-                                erroresSemanticos = listOf(
-                                    ErrorInfo(TipoError.SEMANTICO, "Excepción inesperada: ${e.message}", 0, 0)
-                                )
-                                onMostrarFormularioChange(false)
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        message = "Error inesperado: ${e.message}",
-                                        duration = SnackbarDuration.Long
-                                    )
-                                }
-                            }
-                            e.printStackTrace()
-                        }
+                        val resultado = coordinator.analizar(editorValue.text)
+                        aplicarResultado(resultado, navegarAlFormulario = false)
                     },
                     modifier = Modifier.weight(1f)
                 ) {
@@ -342,5 +291,91 @@ fun MainScreen(
                 }
             }
         }
+    }
+}
+
+private data class ResultadoGuardadoPkm(
+    val exitoso: Boolean,
+    val rutaMostrada: String,
+    val uri: Uri? = null
+)
+
+private fun guardarCodigoPkmEnDocumentos(context: Context, codigoPkm: String): ResultadoGuardadoPkm {
+    if (codigoPkm.isBlank()) {
+        return ResultadoGuardadoPkm(
+            exitoso = false,
+            rutaMostrada = "Documentos/CreadorFormularios"
+        )
+    }
+
+    val nombreArchivo = "formulario_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())}.pkm"
+
+    return try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val rutaRelativa = "${Environment.DIRECTORY_DOCUMENTS}/CreadorFormularios"
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, nombreArchivo)
+                put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, rutaRelativa)
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+
+            val resolver = context.contentResolver
+            val uri = resolver.insert(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), values)
+                ?: return ResultadoGuardadoPkm(false, "Documentos/CreadorFormularios/$nombreArchivo")
+
+            try {
+                resolver.openOutputStream(uri)?.use { salida ->
+                    salida.write(codigoPkm.toByteArray(Charsets.UTF_8))
+                    salida.flush()
+                } ?: throw IllegalStateException("No se pudo abrir stream de escritura")
+
+                val finalizar = ContentValues().apply {
+                    put(MediaStore.MediaColumns.IS_PENDING, 0)
+                }
+                resolver.update(uri, finalizar, null, null)
+
+                ResultadoGuardadoPkm(
+                    exitoso = true,
+                    rutaMostrada = "Documentos/CreadorFormularios/$nombreArchivo",
+                    uri = uri
+                )
+            } catch (_: Exception) {
+                resolver.delete(uri, null, null)
+                ResultadoGuardadoPkm(false, "Documentos/CreadorFormularios/$nombreArchivo")
+            }
+        } else {
+            val carpeta = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
+                "CreadorFormularios"
+            )
+            if (!carpeta.exists()) {
+                carpeta.mkdirs()
+            }
+
+            val archivo = File(carpeta, nombreArchivo)
+            archivo.writeText(codigoPkm, Charsets.UTF_8)
+
+            ResultadoGuardadoPkm(
+                exitoso = true,
+                rutaMostrada = archivo.absolutePath,
+                uri = Uri.fromFile(archivo)
+            )
+        }
+    } catch (_: Exception) {
+        ResultadoGuardadoPkm(false, "Documentos/CreadorFormularios/$nombreArchivo")
+    }
+}
+
+private fun abrirArchivoGuardado(context: Context, uri: Uri) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "text/plain")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(Intent.createChooser(intent, "Abrir archivo PKM"))
+    } catch (_: Exception) {
+        // Si no existe app para abrir el archivo, omitimos la acción.
     }
 }
