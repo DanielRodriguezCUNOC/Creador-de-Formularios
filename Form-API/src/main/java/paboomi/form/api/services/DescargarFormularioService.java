@@ -28,4 +28,12 @@ public class DescargarFormularioService {
     return formularioDbPort.obtenerFormularioPorId(idFormulario);
   }
 
+  public Optional<FormularioStored> obtenerPorNombre(String nombreFormulario) throws SQLException {
+    if (nombreFormulario == null || nombreFormulario.isBlank()) {
+      throw new IllegalArgumentException("El nombre del formulario es obligatorio.");
+    }
+
+    return formularioDbPort.obtenerFormularioPorNombre(nombreFormulario.trim());
+  }
+
 }

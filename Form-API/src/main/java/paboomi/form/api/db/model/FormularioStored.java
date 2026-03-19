@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public class FormularioStored {
 
   private long id;
+  private String nombreFormulario;
   private String autor;
   private LocalDateTime fechaCreacion;
   private byte[] contenido;
@@ -12,8 +13,10 @@ public class FormularioStored {
   public FormularioStored() {
   }
 
-  public FormularioStored(long id, String autor, LocalDateTime fechaCreacion, byte[] contenido) {
+  public FormularioStored(long id, String nombreFormulario, String autor, LocalDateTime fechaCreacion,
+      byte[] contenido) {
     this.id = id;
+    this.nombreFormulario = nombreFormulario;
     this.autor = autor;
     this.fechaCreacion = fechaCreacion;
     this.contenido = contenido;
@@ -25,6 +28,14 @@ public class FormularioStored {
 
   public void setId(long id) {
     this.id = id;
+  }
+
+  public String getNombreFormulario() {
+    return nombreFormulario;
+  }
+
+  public void setNombreFormulario(String nombreFormulario) {
+    this.nombreFormulario = nombreFormulario;
   }
 
   public String getAutor() {
@@ -52,6 +63,9 @@ public class FormularioStored {
   }
 
   public String buildFileName() {
-    return "formulario_" + id + ".pkm.txt";
+    if (nombreFormulario == null || nombreFormulario.isBlank()) {
+      return "formulario_" + id + ".pkm.txt";
+    }
+    return nombreFormulario + ".pkm.txt";
   }
 }

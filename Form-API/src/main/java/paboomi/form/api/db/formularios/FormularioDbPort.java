@@ -8,9 +8,11 @@ import paboomi.form.api.db.model.FormularioStored;
 
 public interface FormularioDbPort {
 
-  long guardarFormulario(String autor, byte[] formularioBytes) throws SQLException;
+  long guardarFormulario(String autor, String nombreFormulario, byte[] formularioBytes) throws SQLException;
 
   PaginatedFormulariosResponse obtenerPaginaFormularios(int page, int size) throws SQLException;
 
   Optional<FormularioStored> obtenerFormularioPorId(long idFormulario) throws SQLException;
+
+  Optional<FormularioStored> obtenerFormularioPorNombre(String nombreFormulario) throws SQLException;
 }

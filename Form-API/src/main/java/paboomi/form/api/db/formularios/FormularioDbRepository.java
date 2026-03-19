@@ -19,27 +19,33 @@ import paboomi.form.api.db.model.FormularioStored;
 public class FormularioDbRepository implements FormularioDbPort {
 
   private static final String INSERT_FORMULARIO_SQL = """
-      INSERT INTO formularios (autor, formulario)
-      VALUES (?, ?)
+      INSERT INTO formularios (autor, nombre_formulario, formulario)
+      VALUES (?, ?, ?)
       """;
 
   private static final String COUNT_FORMULARIOS_SQL = "SELECT COUNT(*) AS total FROM formularios";
 
   private static final String PAGE_FORMULARIOS_SQL = """
-      SELECT id, autor, TIMESTAMP(fecha_creacion, hora_creacion) AS fecha_hora, OCTET_LENGTH(formulario) AS tamanio
+      SELECT id, nombre_formulario, autor, TIMESTAMP(fecha_creacion, hora_creacion) AS fecha_hora, OCTET_LENGTH(formulario) AS tamanio
       FROM formularios
       ORDER BY id DESC
       LIMIT ? OFFSET ?
       """;
 
   private static final String FIND_BY_ID_SQL = """
-      SELECT id, autor, TIMESTAMP(fecha_creacion, hora_creacion) AS fecha_hora, formulario
+      SELECT id, nombre_formulario, autor, TIMESTAMP(fecha_creacion, hora_creacion) AS fecha_hora, formulario
       FROM formularios
       WHERE id = ?
       """;
 
+  private static final String FIND_BY_NAME_SQL = """
+      SELECT id, nombre_formulario, autor, TIMESTAMP(fecha_creacion, hora_creacion) AS fecha_hora, formulario
+      FROM formularios
+      WHERE nombre_formulario = ?
+      """;
+
   @Override
-  public long guardarFormulario(String autor, byte[] formularioBytes) throws SQLException {
+  public long guardarFormulario(String autor, String nombreFormulario, byte[] formularioBytes) throws SQLException {
     try (Connection connection = DBConnectionSingleton.getInstance().getConnection()) {
       if (connection == null) {
         throw new SQLException("No se pudo obtener conexion con la base de datos.");
@@ -49,7 +55,8 @@ public class FormularioDbRepository implements FormularioDbPort {
           INSERT_FORMULARIO_SQL,
           Statement.RETURN_GENERATED_KEYS)) {
         statement.setString(1, autor);
-        statement.setBytes(2, formularioBytes);
+        statement.setString(2, nombreFormulario);
+        statement.setBytes(3, formularioBytes);
         statement.executeUpdate();
 
         try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
@@ -96,11 +103,28 @@ public class FormularioDbRepository implements FormularioDbPort {
             return Optional.empty();
           }
 
-          return Optional.of(new FormularioStored(
-              rs.getLong("id"),
-              rs.getString("autor"),
-              mapFechaHora(rs.getTimestamp("fecha_hora")),
-              rs.getBytes("formulario")));
+          return Optional.of(mapFormularioStored(rs));
+        }
+      }
+    }
+  }
+
+  @Override
+  public Optional<FormularioStored> obtenerFormularioPorNombre(String nombreFormulario) throws SQLException {
+    try (Connection connection = DBConnectionSingleton.getInstance().getConnection()) {
+      if (connection == null) {
+        throw new SQLException("No se pudo obtener conexion con la base de datos.");
+      }
+
+      try (PreparedStatement statement = connection.prepareStatement(FIND_BY_NAME_SQL)) {
+        statement.setString(1, nombreFormulario);
+
+        try (ResultSet rs = statement.executeQuery()) {
+          if (!rs.next()) {
+            return Optional.empty();
+          }
+
+          return Optional.of(mapFormularioStored(rs));
         }
       }
     }
@@ -128,6 +152,7 @@ public class FormularioDbRepository implements FormularioDbPort {
         while (rs.next()) {
           result.add(new FormularioMetadataResponse(
               rs.getLong("id"),
+              rs.getString("nombre_formulario"),
               rs.getString("autor"),
               mapFechaHora(rs.getTimestamp("fecha_hora")),
               rs.getInt("tamanio")));
@@ -142,5 +167,14 @@ public class FormularioDbRepository implements FormularioDbPort {
       return null;
     }
     return timestamp.toLocalDateTime();
+  }
+
+  private FormularioStored mapFormularioStored(ResultSet rs) throws SQLException {
+    return new FormularioStored(
+        rs.getLong("id"),
+        rs.getString("nombre_formulario"),
+        rs.getString("autor"),
+        mapFechaHora(rs.getTimestamp("fecha_hora")),
+        rs.getBytes("formulario"));
   }
 }

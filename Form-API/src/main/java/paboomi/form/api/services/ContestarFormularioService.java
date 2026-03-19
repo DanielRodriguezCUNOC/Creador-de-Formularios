@@ -23,15 +23,7 @@ public class ContestarFormularioService {
       throw new IllegalArgumentException("El parametro 'nombreFormulario' es obligatorio.");
     }
 
-    long idFormulario;
-    try {
-      idFormulario = Long.parseLong(nombreFormulario.trim());
-    } catch (NumberFormatException e) {
-      throw new IllegalArgumentException(
-          "Con el mapeo actual de DB, 'nombreFormulario' debe ser el ID numerico del formulario.");
-    }
-
-    return descargarFormularioService.obtenerPorId(idFormulario);
+    return descargarFormularioService.obtenerPorNombre(nombreFormulario);
   }
 
 }

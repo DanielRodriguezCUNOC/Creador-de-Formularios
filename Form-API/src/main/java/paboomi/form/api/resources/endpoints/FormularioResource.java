@@ -1,6 +1,7 @@
 package paboomi.form.api.resources.endpoints;
 
 import java.io.IOException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.io.InputStream;
 import java.sql.SQLException;
 
@@ -66,6 +67,11 @@ public class FormularioResource {
       return badRequest(e.getMessage());
     } catch (IOException e) {
       return badRequest("No se pudo leer el archivo 'formulario'.");
+    } catch (SQLIntegrityConstraintViolationException e) {
+      return Response.status(Response.Status.CONFLICT)
+          .entity(new ApiErrorResponse("CONFLICT", "Ya existe un formulario con ese nombre.", e.getMessage()))
+          .type(MediaType.APPLICATION_JSON)
+          .build();
     } catch (SQLException e) {
       return internalError("No se pudo guardar el formulario en la DB.", e.getMessage());
     }

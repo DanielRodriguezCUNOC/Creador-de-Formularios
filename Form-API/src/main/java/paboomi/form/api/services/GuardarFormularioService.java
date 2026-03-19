@@ -17,7 +17,7 @@ public class GuardarFormularioService {
   public long guardar(String autor, String nombreFormulario, byte[] formularioBytes)
       throws SQLException {
     validarCampos(autor, nombreFormulario, formularioBytes);
-    return formularioDbPort.guardarFormulario(autor.trim(), formularioBytes);
+    return formularioDbPort.guardarFormulario(autor.trim(), nombreFormulario.trim(), formularioBytes);
   }
 
   private void validarCampos(String autor, String nombreFormulario, byte[] formularioBytes) {
