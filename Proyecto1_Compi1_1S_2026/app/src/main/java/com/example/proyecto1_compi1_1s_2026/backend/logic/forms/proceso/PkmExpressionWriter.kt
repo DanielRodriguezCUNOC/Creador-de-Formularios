@@ -3,6 +3,7 @@ package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.NodoAtributo
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoAccesoVariable
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoExpresion
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoListaExpresiones
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoLiteral
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoLlamadaApi
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoOperacionBinaria
@@ -32,6 +33,15 @@ class PkmExpressionWriter(private val sanitizer: PkmTextSanitizer) {
                 } else {
                     exp.valor.toString()
                 }
+            }
+            is NodoListaExpresiones -> {
+                // Genera (e1, e2, e3) para RGB o <e1, e2, e3> para HSL
+                val elementos = exp.elementos.map { elem ->
+                    if (elem is NodoExpresion) expresionComoTexto(elem) else elem.toString()
+                }
+                val contenido = elementos.joinToString(", ")
+                // Asumimos RGB usa paréntesis, HSL usa ángulos. Por ahora usamos paréntesis.
+                "($contenido)"
             }
             is NodoAccesoVariable -> exp.id
             is NodoOperacionBinaria -> {

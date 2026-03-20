@@ -11,6 +11,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.PreguntaSeleccionadaMultiple
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoAccesoVariable
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoExpresion
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoListaExpresiones
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoLiteral
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoLlamadaApi
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoOperacionBinaria
@@ -262,6 +263,10 @@ class GeneradorPkm(private val autorPorDefecto: String = "Sistema") : Visitor<Un
     }
 
     override fun visit(node: NodoLiteral) {}
+
+    override fun visit(node: NodoListaExpresiones): Unit {
+        // Evaluables: recursión en elementos (sin hacer nada específico para PKM)
+    }
 
     override fun visit(node: NodoOperacionBinaria) {}
 

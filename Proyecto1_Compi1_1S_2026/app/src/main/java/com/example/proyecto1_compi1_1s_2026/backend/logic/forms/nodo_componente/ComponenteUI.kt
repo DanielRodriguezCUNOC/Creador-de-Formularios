@@ -84,10 +84,16 @@ abstract class ComponenteUI(
         if (!tieneCorrect) return
 
         val correctAttr = NodoAtributo.valor(atributos, "correct")
+        
+        // Permitir comodines
+        if (correctAttr is NodoLiteral && correctAttr.tipo == "comodin") {
+            return // Los comodines se validan en tiempo de ejecución
+        }
+        
         val indice = extraerIndiceEntero(correctAttr)
         if (indice == null) {
             contexto.reportarError(
-                "$componente: 'correct' debe ser un número entero",
+                "$componente: 'correct' debe ser un número entero o un comodín (?)",
                 linea,
                 columna
             )
@@ -113,6 +119,11 @@ abstract class ComponenteUI(
             val indices = correctAttr as List<NodoExpresion>
 
             for ((idx, expr) in indices.withIndex()) {
+                // Permitir comodines en correct multiple
+                if (expr is NodoLiteral && expr.tipo == "comodin") {
+                    continue // Los comodines se validan en tiempo de ejecución
+                }
+                
                 if (expr !is NodoLiteral || expr.tipo != "number") {
                     val descripcion = when (expr) {
                         is NodoLiteral -> "literal de tipo '${expr.tipo}'"
@@ -121,7 +132,7 @@ abstract class ComponenteUI(
                         else -> "expresión inválida"
                     }
                     contexto.reportarError(
-                        "$componente: El índice correcto en posición $idx debe ser un número literal, pero es $descripcion",
+                        "$componente: El índice correcto en posición $idx debe ser un número literal o un comodín (?), pero es $descripcion",
                         linea,
                         columna
                     )

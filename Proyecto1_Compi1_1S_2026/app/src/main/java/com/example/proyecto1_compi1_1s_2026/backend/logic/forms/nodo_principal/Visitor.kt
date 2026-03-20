@@ -7,6 +7,7 @@ interface Visitor<T>{
 
     //* NodoExpresion
     fun visit(node: NodoLiteral):T
+    fun visit(node: NodoListaExpresiones):T
     fun visit(node: NodoOperacionBinaria):T
     fun visit(node: NodoAccesoVariable):T
     fun visit(node: NodoLlamadaApi):T

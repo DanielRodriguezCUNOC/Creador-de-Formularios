@@ -6,6 +6,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.N
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoExpresion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoLlamadaApi
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoLiteral
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoListaExpresiones
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoOperacionBinaria
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoOperacionUnaria
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_principal.Visitor
@@ -83,6 +84,11 @@ class NodoDraw(
             is NodoOperacionUnaria -> contarComodinesEnExpresion(expresion.expresion)
             is NodoLlamadaApi ->
                 contarComodinesEnExpresion(expresion.rangoInicio) + contarComodinesEnExpresion(expresion.rangoFin)
+            is NodoListaExpresiones ->
+                expresion.elementos.sumOf { elem -> 
+                    if (elem is NodoExpresion) contarComodinesEnExpresion(elem) 
+                    else contarComodinesEnValor(elem)
+                }
             is NodoAccesoVariable -> 0
             else -> 0
         }
