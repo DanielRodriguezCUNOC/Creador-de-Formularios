@@ -48,14 +48,18 @@ fun MainScreen(
     onFormularioActualChange: (Formulario?) -> Unit,
     onMostrarFormularioChange: (Boolean) -> Unit,
     onMenuClick: () -> Unit,
-    onFinalize: (Formulario) -> Unit = {},
+    onFinalize: (Formulario, String) -> Unit = { _, _ -> },
     onViewErrors: (List<ErrorInfo>) -> Unit = {},
+    onSubirPkmApi: suspend (String) -> Boolean = { false },
     onCodigoPkmGenerado: (String) -> Unit = {}
 ) {
     var erroresLexicos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
     var erroresSintacticos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
     var erroresSemanticos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
     var tipoMensaje by remember { mutableStateOf("") }
+    var mostrarDialogoGuardarDb by remember { mutableStateOf(false) }
+    var formularioPendienteFinalizar by remember { mutableStateOf<Formulario?>(null) }
+    var pkmPendienteFinalizar by remember { mutableStateOf("") }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -101,7 +105,9 @@ fun MainScreen(
             }
 
             if (navegarAlFormulario && resultado.formulario != null) {
-                onFinalize(resultado.formulario)
+                formularioPendienteFinalizar = resultado.formulario
+                pkmPendienteFinalizar = resultado.codigoPkm
+                mostrarDialogoGuardarDb = true
             }
             return
         }
@@ -291,6 +297,63 @@ fun MainScreen(
                 }
             }
         }
+    }
+
+    if (mostrarDialogoGuardarDb && formularioPendienteFinalizar != null) {
+        AlertDialog(
+            onDismissRequest = {
+                mostrarDialogoGuardarDb = false
+            },
+            title = { Text("Guardar PKM") },
+            text = { Text("Deseas subir el archivo PKM generado a la API para guardarlo en la base de datos?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val formulario = formularioPendienteFinalizar
+                        val codigo = pkmPendienteFinalizar
+                        mostrarDialogoGuardarDb = false
+                        formularioPendienteFinalizar = null
+                        pkmPendienteFinalizar = ""
+
+                        if (formulario == null || codigo.isBlank()) {
+                            return@TextButton
+                        }
+
+                        coroutineScope.launch {
+                            val guardado = onSubirPkmApi(codigo)
+                            snackbarHostState.showSnackbar(
+                                message = if (guardado) {
+                                    "PKM subido exitosamente a la API"
+                                } else {
+                                    "No se pudo subir PKM a la API. Revisa URL ngrok"
+                                },
+                                duration = SnackbarDuration.Short
+                            )
+                            onFinalize(formulario, codigo)
+                        }
+                    }
+                ) {
+                    Text("Subir")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        val formulario = formularioPendienteFinalizar
+                        val codigo = pkmPendienteFinalizar
+                        mostrarDialogoGuardarDb = false
+                        formularioPendienteFinalizar = null
+                        pkmPendienteFinalizar = ""
+
+                        if (formulario != null) {
+                            onFinalize(formulario, codigo)
+                        }
+                    }
+                ) {
+                    Text("Omitir")
+                }
+            }
+        )
     }
 }
 
