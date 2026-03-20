@@ -8,7 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import com.example.proyecto1_compi1_1s_2026.data.config.ApiConfigStore
-import com.example.proyecto1_compi1_1s_2026.data.remote.FormApiClient
+import com.example.proyecto1_compi1_1s_2026.data.remote.client.FormApiClient
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario
 import com.example.proyecto1_compi1_1s_2026.ui.screens.ErrorScreen

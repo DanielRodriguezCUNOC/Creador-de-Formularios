@@ -40,8 +40,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.proyecto1_compi1_1s_2026.data.remote.FormApiClient
-import com.example.proyecto1_compi1_1s_2026.data.remote.FormularioMetadataDto
+import com.example.proyecto1_compi1_1s_2026.data.remote.client.FormApiClient
+import com.example.proyecto1_compi1_1s_2026.data.remote.dto.FormularioMetadataDto
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
