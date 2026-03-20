@@ -50,7 +50,7 @@ fun MainScreen(
     onMenuClick: () -> Unit,
     onFinalize: (Formulario, String) -> Unit = { _, _ -> },
     onViewErrors: (List<ErrorInfo>) -> Unit = {},
-    onSubirPkmApi: suspend (String) -> Boolean = { false },
+    onSubirPkmApi: suspend (codigoPkm: String, autor: String, nombreFormulario: String) -> Boolean = { _, _, _ -> false },
     onCodigoPkmGenerado: (String) -> Unit = {}
 ) {
     var erroresLexicos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
@@ -60,6 +60,8 @@ fun MainScreen(
     var mostrarDialogoGuardarDb by remember { mutableStateOf(false) }
     var formularioPendienteFinalizar by remember { mutableStateOf<Formulario?>(null) }
     var pkmPendienteFinalizar by remember { mutableStateOf("") }
+    var autorInput by remember { mutableStateOf("") }
+    var nombreFormularioInput by remember { mutableStateOf("") }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -303,24 +305,58 @@ fun MainScreen(
         AlertDialog(
             onDismissRequest = {
                 mostrarDialogoGuardarDb = false
+                autorInput = ""
+                nombreFormularioInput = ""
             },
             title = { Text("Guardar PKM") },
-            text = { Text("Deseas subir el archivo PKM generado a la API para guardarlo en la base de datos?") },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text("Completa los datos para guardar el formulario:")
+                    
+                    OutlinedTextField(
+                        value = autorInput,
+                        onValueChange = { autorInput = it },
+                        label = { Text("Autor") },
+                        placeholder = { Text("Tu nombre o empresa") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    
+                    OutlinedTextField(
+                        value = nombreFormularioInput,
+                        onValueChange = { nombreFormularioInput = it },
+                        label = { Text("Nombre del Formulario") },
+                        placeholder = { Text("Ej: Formulario de Encuesta") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
                         val formulario = formularioPendienteFinalizar
                         val codigo = pkmPendienteFinalizar
+                        val autor = autorInput.ifBlank { "AndroidApp" }
+                        val nombre = nombreFormularioInput
+                        
                         mostrarDialogoGuardarDb = false
                         formularioPendienteFinalizar = null
                         pkmPendienteFinalizar = ""
+                        autorInput = ""
+                        nombreFormularioInput = ""
 
                         if (formulario == null || codigo.isBlank()) {
                             return@TextButton
                         }
 
                         coroutineScope.launch {
-                            val guardado = onSubirPkmApi(codigo)
+                            val guardado = onSubirPkmApi(codigo, autor, nombre)
                             snackbarHostState.showSnackbar(
                                 message = if (guardado) {
                                     "PKM subido exitosamente a la API"
@@ -344,6 +380,8 @@ fun MainScreen(
                         mostrarDialogoGuardarDb = false
                         formularioPendienteFinalizar = null
                         pkmPendienteFinalizar = ""
+                        autorInput = ""
+                        nombreFormularioInput = ""
 
                         if (formulario != null) {
                             onFinalize(formulario, codigo)

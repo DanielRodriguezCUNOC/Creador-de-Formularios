@@ -93,13 +93,18 @@ object FormApiClient {
     suspend fun subirPkm(
         baseUrl: String,
         codigoPkm: String,
-        autor: String = "AndroidApp"
+        autor: String = "AndroidApp",
+        nombreFormulario: String = ""
     ): Boolean {
         if (codigoPkm.isBlank()) return false
 
         val service = create(baseUrl)
-        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val nombre = "formulario_$timestamp"
+        val nombre = if (nombreFormulario.isBlank()) {
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            "formulario_$timestamp"
+        } else {
+            nombreFormulario
+        }
 
         val autorBody = autor.toRequestBody("text/plain".toMediaType())
         val nombreBody = nombre.toRequestBody("text/plain".toMediaType())

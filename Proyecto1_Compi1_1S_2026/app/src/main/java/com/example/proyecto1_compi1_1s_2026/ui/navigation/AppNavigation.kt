@@ -56,11 +56,11 @@ fun AppNavigation() {
                 erroresActuales = errores
                 currentScreen = Screen.Errors
             },
-            onSubirPkmApi = { codigo ->
+            onSubirPkmApi = { codigo, autor, nombreFormulario ->
                 if (apiBaseUrl.isBlank()) {
                     false
                 } else {
-                    FormApiClient.subirPkm(apiBaseUrl, codigo)
+                    FormApiClient.subirPkm(apiBaseUrl, codigo, autor, nombreFormulario)
                 }
             },
             onCodigoPkmGenerado = { codigo ->
