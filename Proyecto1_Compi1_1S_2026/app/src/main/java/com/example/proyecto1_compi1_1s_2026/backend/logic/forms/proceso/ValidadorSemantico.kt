@@ -24,6 +24,11 @@ class ValidadorSemantico(var entornoActual: TablaSimbolos) : Visitor<List<ErrorI
         return errores
     }
 
+    override fun visit(node: NodoListaExpresiones): List<ErrorInfo> {
+        node.validarSemantica(contexto)
+        return errores
+    }
+
     override fun visit(node: NodoOperacionBinaria): List<ErrorInfo> {
         node.validarSemantica(contexto)
         return errores

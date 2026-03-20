@@ -58,6 +58,18 @@ class Interprete(entornoActual: TablaSimbolos) : Visitor<Any?> {
 
     override fun visit(node: NodoLiteral): Any? = exprBuilder.construirLiteral(node)
 
+    override fun visit(node: NodoListaExpresiones): Any? {
+        // Evalúa cada elemento de la lista y retorna la lista evaluada
+        val evaluados = node.elementos.map { elem ->
+            if (elem is NodoExpresion) {
+                elem.accept(this)
+            } else {
+                elem
+            }
+        }
+        return evaluados
+    }
+
     override fun visit(node: NodoAccesoVariable): Any? {
         return exprBuilder.construirAccesoVariable(node)
     }

@@ -86,6 +86,11 @@ class ExecutionContext(
     private inner class ExpressionVisitor(private val builder: ExpressionNodeBuilder) : Visitor<Any?> {
         // Expresiones
         override fun visit(node: NodoLiteral): Any? = builder.construirLiteral(node)
+        override fun visit(node: NodoListaExpresiones): Any? {
+            return node.elementos.map { elem ->
+                if (elem is NodoExpresion) elem.accept(this) else elem
+            }
+        }
         override fun visit(node: NodoAccesoVariable): Any? = builder.construirAccesoVariable(node)
         override fun visit(node: NodoLlamadaApi): Any? = builder.construirLlamadaApi(node) { it.accept(this) }
         override fun visit(node: NodoOperacionUnaria): Any? = builder.construirOperacionUnaria(node) { it.accept(this) }

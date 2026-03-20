@@ -8,6 +8,8 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.PreguntaSeleccionUnica
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.PreguntaSeleccionadaMultiple
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoAccesoVariable
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoExpresion
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoListaExpresiones
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoLiteral
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoLlamadaApi
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoOperacionBinaria
@@ -41,6 +43,15 @@ class ValidadorEstructural : Visitor<List<ErrorInfo>> {
     }
 
     override fun visit(node: NodoLiteral): List<ErrorInfo> {
+        return errores
+    }
+
+    override fun visit(node: NodoListaExpresiones): List<ErrorInfo> {
+        node.elementos.forEach { elem ->
+            if (elem is NodoExpresion) {
+                elem.accept(this)
+            }
+        }
         return errores
     }
 
