@@ -11,6 +11,11 @@ class ApiConfigStore(context: Context) {
     fun setBaseUrl(value: String) {
         prefs.edit().putString(KEY_BASE_URL, value.trim()).apply()
     }
+    
+        fun getEndpoints(): ApiEndpoints? {
+            val baseUrl = getBaseUrl()
+            return if (baseUrl.isBlank()) null else ApiEndpoints(baseUrl)
+        }
 
     companion object {
         private const val PREFS_NAME = "api_config_prefs"

@@ -13,6 +13,8 @@ import java.util.Locale
 
 object FormApiClient {
 
+    private const val DEFAULT_API_PREFIX = "Form-API-1.0-SNAPSHOT/api/v1"
+
     private val httpClient = OkHttpClient.Builder().build()
 
     fun create(baseUrl: String): FormApiService {
@@ -31,7 +33,17 @@ object FormApiClient {
         require(trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
             "La URL debe iniciar con http:// o https://"
         }
-        return if (trimmed.endsWith("/")) trimmed else "$trimmed/"
+
+        val sinSlashFinal = trimmed.trimEnd('/')
+        val lower = sinSlashFinal.lowercase()
+
+        val completada = when {
+            lower.contains("/api/v1") -> sinSlashFinal
+            lower.contains("/form-api-1.0-snapshot") -> "$sinSlashFinal/api/v1"
+            else -> "$sinSlashFinal/$DEFAULT_API_PREFIX"
+        }
+
+        return "$completada/"
     }
 
     suspend fun subirPkm(
