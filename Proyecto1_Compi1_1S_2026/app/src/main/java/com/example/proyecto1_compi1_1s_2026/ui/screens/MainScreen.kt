@@ -48,14 +48,20 @@ fun MainScreen(
     onFormularioActualChange: (Formulario?) -> Unit,
     onMostrarFormularioChange: (Boolean) -> Unit,
     onMenuClick: () -> Unit,
-    onFinalize: (Formulario) -> Unit = {},
+    onFinalize: (Formulario, String) -> Unit = { _, _ -> },
     onViewErrors: (List<ErrorInfo>) -> Unit = {},
+    onSubirPkmApi: suspend (codigoPkm: String, autor: String, nombreFormulario: String) -> Boolean = { _, _, _ -> false },
     onCodigoPkmGenerado: (String) -> Unit = {}
 ) {
     var erroresLexicos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
     var erroresSintacticos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
     var erroresSemanticos by remember { mutableStateOf(emptyList<ErrorInfo>()) }
     var tipoMensaje by remember { mutableStateOf("") }
+    var mostrarDialogoGuardarDb by remember { mutableStateOf(false) }
+    var formularioPendienteFinalizar by remember { mutableStateOf<Formulario?>(null) }
+    var pkmPendienteFinalizar by remember { mutableStateOf("") }
+    var autorInput by remember { mutableStateOf("") }
+    var nombreFormularioInput by remember { mutableStateOf("") }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -101,7 +107,9 @@ fun MainScreen(
             }
 
             if (navegarAlFormulario && resultado.formulario != null) {
-                onFinalize(resultado.formulario)
+                formularioPendienteFinalizar = resultado.formulario
+                pkmPendienteFinalizar = resultado.codigoPkm
+                mostrarDialogoGuardarDb = true
             }
             return
         }
@@ -291,6 +299,99 @@ fun MainScreen(
                 }
             }
         }
+    }
+
+    if (mostrarDialogoGuardarDb && formularioPendienteFinalizar != null) {
+        AlertDialog(
+            onDismissRequest = {
+                mostrarDialogoGuardarDb = false
+                autorInput = ""
+                nombreFormularioInput = ""
+            },
+            title = { Text("Guardar PKM") },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text("Completa los datos para guardar el formulario:")
+                    
+                    OutlinedTextField(
+                        value = autorInput,
+                        onValueChange = { autorInput = it },
+                        label = { Text("Autor") },
+                        placeholder = { Text("Tu nombre o empresa") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    
+                    OutlinedTextField(
+                        value = nombreFormularioInput,
+                        onValueChange = { nombreFormularioInput = it },
+                        label = { Text("Nombre del Formulario") },
+                        placeholder = { Text("Ej: Formulario de Encuesta") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val formulario = formularioPendienteFinalizar
+                        val codigo = pkmPendienteFinalizar
+                        val autor = autorInput.ifBlank { "AndroidApp" }
+                        val nombre = nombreFormularioInput
+                        
+                        mostrarDialogoGuardarDb = false
+                        formularioPendienteFinalizar = null
+                        pkmPendienteFinalizar = ""
+                        autorInput = ""
+                        nombreFormularioInput = ""
+
+                        if (formulario == null || codigo.isBlank()) {
+                            return@TextButton
+                        }
+
+                        coroutineScope.launch {
+                            val guardado = onSubirPkmApi(codigo, autor, nombre)
+                            snackbarHostState.showSnackbar(
+                                message = if (guardado) {
+                                    "PKM subido exitosamente a la API"
+                                } else {
+                                    "No se pudo subir PKM a la API. Revisa URL ngrok"
+                                },
+                                duration = SnackbarDuration.Short
+                            )
+                            onFinalize(formulario, codigo)
+                        }
+                    }
+                ) {
+                    Text("Subir")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        val formulario = formularioPendienteFinalizar
+                        val codigo = pkmPendienteFinalizar
+                        mostrarDialogoGuardarDb = false
+                        formularioPendienteFinalizar = null
+                        pkmPendienteFinalizar = ""
+                        autorInput = ""
+                        nombreFormularioInput = ""
+
+                        if (formulario != null) {
+                            onFinalize(formulario, codigo)
+                        }
+                    }
+                ) {
+                    Text("Omitir")
+                }
+            }
+        )
     }
 }
 

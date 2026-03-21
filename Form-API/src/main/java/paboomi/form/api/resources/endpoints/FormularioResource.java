@@ -55,18 +55,19 @@ public class FormularioResource {
       }
 
       byte[] archivoBytes = formularioInputStream.readAllBytes();
-      long idFormulario = guardarFormularioService.guardar(autor, nombreFormulario, archivoBytes);
+      var resultadoGuardado = guardarFormularioService.guardar(autor, nombreFormulario, archivoBytes);
       String nombreOriginal = formularioFileMeta == null ? "sin_nombre" : formularioFileMeta.getFileName();
 
       return Response.status(Response.Status.CREATED)
           .entity(new ApiMessageResponse(
-              "Formulario guardado exitosamente: " + nombreOriginal,
-              idFormulario))
+              "Formulario guardado exitosamente: " + nombreOriginal
+                  + " | archivo servidor: " + resultadoGuardado.nombreArchivoServidor(),
+              resultadoGuardado.idFormulario()))
           .build();
     } catch (IllegalArgumentException e) {
       return badRequest(e.getMessage());
     } catch (IOException e) {
-      return badRequest("No se pudo leer el archivo 'formulario'.");
+      return internalError("No se pudo procesar el archivo del formulario.", e.getMessage());
     } catch (SQLIntegrityConstraintViolationException e) {
       return Response.status(Response.Status.CONFLICT)
           .entity(new ApiErrorResponse("CONFLICT", "Ya existe un formulario con ese nombre.", e.getMessage()))
