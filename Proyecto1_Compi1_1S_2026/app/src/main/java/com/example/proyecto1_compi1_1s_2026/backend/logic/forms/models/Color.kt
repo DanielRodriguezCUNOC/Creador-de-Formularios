@@ -69,6 +69,52 @@ data class Color(
                 null
             }
         }
+
+        /** Interpreta una cadena en formato hsl(h,s,l) o <h,s,l> */
+        fun desdeHsl(hslString: String): Color? {
+            return try {
+                val normalizado = hslString.trim().let {
+                    if (it.startsWith("<") && it.endsWith(">")) {
+                        "hsl(" + it.substring(1, it.length - 1) + ")"
+                    } else {
+                        it
+                    }
+                }
+
+                val match = Regex(
+                    """hsl\s*\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)"""
+                ).find(normalizado) ?: return null
+
+                val h = match.groupValues[1].toFloatOrNull() ?: return null
+                val sPct = match.groupValues[2].toFloatOrNull() ?: return null
+                val lPct = match.groupValues[3].toFloatOrNull() ?: return null
+
+                val hue = ((h % 360f) + 360f) % 360f
+                val s = (sPct / 100f).coerceIn(0f, 1f)
+                val l = (lPct / 100f).coerceIn(0f, 1f)
+
+                val c = (1f - kotlin.math.abs(2f * l - 1f)) * s
+                val x = c * (1f - kotlin.math.abs((hue / 60f) % 2f - 1f))
+                val m = l - c / 2f
+
+                val (r1, g1, b1) = when {
+                    hue < 60f -> Triple(c, x, 0f)
+                    hue < 120f -> Triple(x, c, 0f)
+                    hue < 180f -> Triple(0f, c, x)
+                    hue < 240f -> Triple(0f, x, c)
+                    hue < 300f -> Triple(x, 0f, c)
+                    else -> Triple(c, 0f, x)
+                }
+
+                val r = ((r1 + m) * 255f).toInt().coerceIn(0, 255)
+                val g = ((g1 + m) * 255f).toInt().coerceIn(0, 255)
+                val b = ((b1 + m) * 255f).toInt().coerceIn(0, 255)
+
+                Color(r, g, b, 255)
+            } catch (e: Exception) {
+                null
+            }
+        }
     }
 
     /** Convierte a representación hex #RRGGBB */

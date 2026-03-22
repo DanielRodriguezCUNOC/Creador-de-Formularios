@@ -260,3 +260,7 @@ ESPACIO = [ \t\r\n\f]+
         return symbol(sym.FIN_CADENA, "");
     }
 }
+
+%eofval{
+	return symbol(sym.EOF, "<EOF>");
+%eofval}

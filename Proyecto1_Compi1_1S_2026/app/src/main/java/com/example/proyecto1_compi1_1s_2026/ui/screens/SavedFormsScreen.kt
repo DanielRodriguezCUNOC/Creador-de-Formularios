@@ -51,6 +51,7 @@ import java.util.Locale
 @Composable
 fun SavedFormsScreen(
     apiBaseUrl: String,
+    onContestarFormulario: (nombre: String, contenidoPkm: String) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -140,6 +141,21 @@ fun SavedFormsScreen(
                 items(formularios, key = { it.id }) { formulario ->
                     FormularioGuardadoCard(
                         formulario = formulario,
+                        onContestar = {
+                            coroutineScope.launch {
+                                val contenido = descargarPkmDesdeApi(apiBaseUrl, formulario.id)
+                                if (contenido == null) {
+                                    snackbarHostState.showSnackbar(
+                                        message = "No se pudo cargar formulario id=${formulario.id}",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    return@launch
+                                }
+
+                                val nombre = formulario.nombreFormulario ?: "formulario_${formulario.id}"
+                                onContestarFormulario(nombre, contenido)
+                            }
+                        },
                         onDescargar = {
                             coroutineScope.launch {
                                 val contenido = descargarPkmDesdeApi(apiBaseUrl, formulario.id)
@@ -178,6 +194,7 @@ fun SavedFormsScreen(
 @Composable
 private fun FormularioGuardadoCard(
     formulario: FormularioMetadataDto,
+    onContestar: () -> Unit,
     onDescargar: () -> Unit
 ) {
     val fecha = remember(formulario.fechaCreacion) {
@@ -211,6 +228,9 @@ private fun FormularioGuardadoCard(
                 text = "Tamano: ${formulario.tamanioBytes} bytes",
                 style = MaterialTheme.typography.bodyMedium
             )
+            Button(onClick = onContestar) {
+                Text("Contestar")
+            }
             Button(onClick = onDescargar) {
                 Text("Descargar PKM")
             }
