@@ -774,8 +774,8 @@ atributoPreguntaDesplegable ::=
     | OPTIONS DOS_PUNTOS LLAVE_IZQ listaOpciones:opts LLAVE_DER
     {: RESULT = new NodoAtributo("options", opts); :}
 
-    //who_is_that_pokemon(NUMBER, 1, 10)
-    | FUNC_POKEMON:t PAREN_IZQ NUMBER COMA expresion:inicio COMA expresion:fin PAREN_DER
+    // options: who_is_that_pokemon(NUMBER, 1, 10)
+    | OPTIONS DOS_PUNTOS FUNC_POKEMON:t PAREN_IZQ NUMBER COMA expresion:inicio COMA expresion:fin PAREN_DER
     {:
         RESULT = new NodoAtributo("options", new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright));
     :}
@@ -813,8 +813,8 @@ atributoSeleccionUnica ::=
     | OPTIONS DOS_PUNTOS LLAVE_IZQ listaOpciones:opts LLAVE_DER
     {: RESULT = new NodoAtributo("options", opts); :}
 
-    //who_is_that_pokemon(NUMBER, 1, 10)
-    | FUNC_POKEMON:t PAREN_IZQ NUMBER COMA expresion:inicio COMA expresion:fin PAREN_DER
+    // options: who_is_that_pokemon(NUMBER, 1, 10)
+    | OPTIONS DOS_PUNTOS FUNC_POKEMON:t PAREN_IZQ NUMBER COMA expresion:inicio COMA expresion:fin PAREN_DER
     {:
         RESULT = new NodoAtributo("options", new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright));
     :}
@@ -827,7 +827,7 @@ atributoSeleccionUnica ::=
     ;
 
 //--- Atributos para MULTIPLE_QUESTION ---
-// MULTIPLE_QUESTION admite: width(opt), height(opt), options, correct:{n,n}(opt), styles(opt)
+// MULTIPLE_QUESTION admite: width(opt), height(opt), label(opt), options, correct:{n,n}(opt), styles(opt)
 atributosMultiple ::=
     atributosMultiple:list COMA atributoMultiple:a
     {: list.add(a); RESULT = list; :}
@@ -846,11 +846,14 @@ atributoMultiple ::=
     | HEIGHT DOS_PUNTOS expresion:v
     {: RESULT = new NodoAtributo("height", v); :}
 
+    | LABEL DOS_PUNTOS expresion:v
+    {: RESULT = new NodoAtributo("label", v); :}
+
     | OPTIONS DOS_PUNTOS LLAVE_IZQ listaOpciones:opts LLAVE_DER
     {: RESULT = new NodoAtributo("options", opts); :}
 
-    // who_is_that_pokemon(NUMBER, 1, 10)
-    | FUNC_POKEMON:t PAREN_IZQ NUMBER COMA expresion:inicio COMA expresion:fin PAREN_DER
+    // options: who_is_that_pokemon(NUMBER, 1, 10)
+    | OPTIONS DOS_PUNTOS FUNC_POKEMON:t PAREN_IZQ NUMBER COMA expresion:inicio COMA expresion:fin PAREN_DER
     {:
         RESULT = new NodoAtributo("options", new NodoLlamadaApi("pokemon", inicio, fin, tleft, tright));
     :}
