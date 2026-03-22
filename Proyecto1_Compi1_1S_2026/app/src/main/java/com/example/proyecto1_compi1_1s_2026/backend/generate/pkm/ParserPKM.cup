@@ -2,12 +2,10 @@ package com.example.proyecto1_compi1_1s_2026.backend.generate.pkm;
 
 import java_cup.runtime.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.ElementoFormulario;
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.BorderEstilo;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.EstiloElemento;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Orientacion;
@@ -18,7 +16,6 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.PreguntaS
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.SeccionFormulario;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.TablaFormulario;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.TextoFormulario;
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Color;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError;
 
@@ -27,6 +24,7 @@ parser code {:
 
     private List<ErrorInfo> erroresSintacticos = new ArrayList<>();
     private List<ErrorInfo> erroresSemanticos = new ArrayList<>();
+    private PkmParserExpert experto = new PkmParserExpert(erroresSemanticos);
 
     public List<ErrorInfo> getErroresSintacticos() {
         return erroresSintacticos;
@@ -41,156 +39,14 @@ parser code {:
         int columna = (s != null) ? s.right : 0;
         String encontrado = (s != null && s.value != null)
             ? s.value.toString()
-            : ((s != null) ? symbl_name_from_id(s.sym) : "EOF");
+            : ((s != null) ? ("token_" + s.sym) : "EOF");
 
         String mensaje = "Estructura PKM invalida cerca de: " + encontrado;
         erroresSintacticos.add(new ErrorInfo(TipoError.SINTACTICO, mensaje, linea, columna));
     }
 
     public void report_error(String message, Object info) { }
-
-    private EstiloElemento estiloDefault() {
-        Color colorTexto = new Color(0, 0, 0, 255);
-        Color colorFondo = new Color(255, 255, 255, 0);
-        return new EstiloElemento(colorTexto, colorFondo, "SANS_SERIF", 14f, null);
-    }
-
-    private float toFloat(Object value) {
-        if (value == null) return 0f;
-        return Float.parseFloat(value.toString());
-    }
-
-    private int toInt(Object value) {
-        if (value == null) return 0;
-        return Integer.parseInt(value.toString());
-    }
-
-    private Integer normalizarIndice(int indice, List opciones, String campo) {
-        if (indice < 0) return null;
-        if (opciones == null || indice >= opciones.size()) {
-            erroresSemanticos.add(new ErrorInfo(
-                TipoError.SEMANTICO,
-                "Indice fuera de rango en " + campo + ": " + indice,
-                0,
-                0
-            ));
-            return null;
-        }
-        return Integer.valueOf(indice);
-    }
-
-    private List filtrarIndicesValidos(List indices, List opciones, String campo) {
-        List validos = new ArrayList();
-        if (indices == null) return validos;
-
-        for (Object item : indices) {
-            Integer idx = normalizarIndice(toInt(item), opciones, campo);
-            if (idx != null) {
-                validos.add(idx);
-            }
-        }
-        return validos;
-    }
-
-    private List listaVacia() {
-        return new ArrayList();
-    }
-
-    private List listaSingleton(ElementoFormulario elemento) {
-        List lista = new ArrayList();
-        if (elemento != null) {
-            lista.add(elemento);
-        }
-        return lista;
-    }
-
-    private Map mapaVacio() {
-        return new HashMap();
-    }
-
-    private Map mapaAtributo(String key, Object value) {
-        Map mapa = new HashMap();
-        mapa.put(key, value);
-        return mapa;
-    }
-
-    private Map mapaBorde(Object width, Object tipo, Object color) {
-        Map mapa = new HashMap();
-        mapa.put("border_width", width);
-        mapa.put("border_type", tipo);
-        mapa.put("border_color", color);
-        return mapa;
-    }
-
-    private Color parseColor(Object value, Color fallback, String campo) {
-        if (value == null) return fallback;
-        String raw = value.toString().trim();
-
-        Color colorHex = Color.desdeHex(raw);
-        if (colorHex != null) return colorHex;
-
-        String rgbNormalizado = raw;
-        if (raw.startsWith("(") && raw.endsWith(")")) {
-            rgbNormalizado = "rgb" + raw;
-        }
-        Color colorRgb = Color.desdeRgb(rgbNormalizado);
-        if (colorRgb != null) return colorRgb;
-
-        erroresSemanticos.add(new ErrorInfo(
-            TipoError.SEMANTICO,
-            "Color invalido en " + campo + ": " + raw,
-            0,
-            0
-        ));
-        return fallback;
-    }
-
-    private EstiloElemento buildStyleFromMap(Map data) {
-        EstiloElemento base = estiloDefault();
-
-        Color colorTexto = base.getColor();
-        Color colorFondo = base.getBackgroundColor();
-        String font = base.getFontFamily();
-        float textSize = base.getTextSize();
-        BorderEstilo border = base.getBorder();
-
-        if (data != null) {
-            if (data.containsKey("color")) {
-                colorTexto = parseColor(data.get("color"), colorTexto, "color");
-            }
-            if (data.containsKey("background_color")) {
-                colorFondo = parseColor(data.get("background_color"), colorFondo, "background color");
-            }
-            if (data.containsKey("font_family")) {
-                font = String.valueOf(data.get("font_family"));
-            }
-            if (data.containsKey("text_size")) {
-                try {
-                    textSize = Float.parseFloat(String.valueOf(data.get("text_size")));
-                } catch (Exception e) {
-                    erroresSemanticos.add(new ErrorInfo(
-                        TipoError.SEMANTICO,
-                        "text size invalido: " + data.get("text_size"),
-                        0,
-                        0
-                    ));
-                }
-            }
-
-            boolean hasBorder = data.containsKey("border_width") && data.containsKey("border_type") && data.containsKey("border_color");
-            if (hasBorder) {
-                float width = toFloat(data.get("border_width"));
-                String type = String.valueOf(data.get("border_type"));
-                Color color = parseColor(data.get("border_color"), colorTexto, "border");
-                border = new BorderEstilo(width, type, color);
-            }
-        }
-
-        return new EstiloElemento(colorTexto, colorFondo, font, textSize, border);
-    }
 :};
-
-terminal EOF;
 
 terminal METADATA_DELIM, AUTHOR, FECHA, HORA, DESCRIPTION;
 terminal TOTAL_SECCIONES, TOTAL_PREGUNTAS, ABIERTAS, DESPLEGABLES, SELECCION, MULTIPLES;
@@ -217,6 +73,9 @@ non terminal ElementoFormulario table_block;
 non terminal List line_blocks_no_vacios, line_block, element_blocks_no_vacios;
 non terminal ElementoFormulario element_block, element_content_opt;
 non terminal ElementoFormulario open_block, drop_block, select_block, multiple_block;
+// table_rest representa el contenido interno de <table> despues de consumir "<table".
+// Se separa en otro no terminal para evitar conflictos entre tablas con y sin estilo.
+non terminal ElementoFormulario table_rest;
 non terminal Orientacion orientacion;
 non terminal Object valor_simple, lista_valores_opt, lista_valores;
 non terminal Object metadata_block, metadata_valor;
@@ -226,11 +85,15 @@ non terminal String cadena, cadena_partes_opt, cadena_parte;
 
 start with inicio;
 
+// Punto de entrada del parser PKM:
+// primero exige metadatos y luego una lista de bloques renderizables.
 inicio ::=
     metadata_block bloques_no_vacios:bloques
     {: RESULT = new Formulario(bloques); :}
     ;
 
+// Bloque de metadatos obligatorio al inicio del archivo.
+// Se parsea para validar formato, pero no se agrega al Formulario final.
 metadata_block ::=
     METADATA_DELIM
     AUTHOR COLON metadata_valor
@@ -258,6 +121,7 @@ metadata_valor ::=
     | NUMBER:n {: RESULT = n; :}
     ;
 
+// Concatena bloques top-level y mantiene solo elementos de UI validos.
 bloques_no_vacios ::=
     bloque:b
     {: RESULT = b; :}
@@ -265,37 +129,40 @@ bloques_no_vacios ::=
     {: lista.addAll(b); RESULT = lista; :}
     ;
 
+// Cada bloque top-level devuelve una lista para simplificar concatenacion.
+// style_block suelto no genera nodo visual directo, por eso regresa lista vacia.
 bloque ::=
     section_block:s
-    {: RESULT = listaSingleton(s); :}
+    {: RESULT = experto.listaConElementoSiNoNulo(s); :}
     | style_block
-    {: RESULT = listaVacia(); :}
+    {: RESULT = experto.listaVacia(); :}
     | content_block:c
     {: RESULT = c; :}
     | table_block:t
-    {: RESULT = listaSingleton(t); :}
+    {: RESULT = experto.listaConElementoSiNoNulo(t); :}
     | open_block:o
-    {: RESULT = listaSingleton(o); :}
+    {: RESULT = experto.listaConElementoSiNoNulo(o); :}
     | drop_block:d
-    {: RESULT = listaSingleton(d); :}
+    {: RESULT = experto.listaConElementoSiNoNulo(d); :}
     | select_block:s
-    {: RESULT = listaSingleton(s); :}
+    {: RESULT = experto.listaConElementoSiNoNulo(s); :}
     | multiple_block:m
-    {: RESULT = listaSingleton(m); :}
+    {: RESULT = experto.listaConElementoSiNoNulo(m); :}
     ;
 
+// Seccion con geometria (w,h,x,y), orientacion y contenido interno.
 section_block ::=
     LT SECTION EQUALS valor_simple:w COMMA valor_simple:h COMMA valor_simple:x COMMA valor_simple:y COMMA orientacion:o GT
     section_body_opt:hijos
     LT_SLASH SECTION GT
     {: RESULT = new SeccionFormulario(
-            Float.valueOf(toFloat(w)),
-            Float.valueOf(toFloat(h)),
-            toFloat(x),
-            toFloat(y),
+            Float.valueOf(experto.toFloat(w)),
+            Float.valueOf(experto.toFloat(h)),
+            experto.toFloat(x),
+            experto.toFloat(y),
             o,
             hijos,
-            estiloDefault()
+            experto.estiloDefault()
         );
     :}
     ;
@@ -304,16 +171,16 @@ section_body_opt ::=
     section_body_opt:lista section_item:item
     {: if (item != null) { lista.add(item); } RESULT = lista; :}
     | /* vacio */
-    {: RESULT = listaVacia(); :}
+    {: RESULT = experto.listaVacia(); :}
     ;
 
+// Dentro de section pueden venir items y tambien style suelto.
+// style suelto se ignora aqui porque no hay asignacion de estilo a nivel section aun.
 section_item ::=
     style_block
     {: RESULT = null; :}
     | content_item:c
     {: RESULT = c; :}
-    | table_block:t
-    {: RESULT = t; :}
     ;
 
 orientacion ::=
@@ -323,23 +190,25 @@ orientacion ::=
     {: RESULT = Orientacion.HORIZONTAL; :}
     ;
 
+// <style> ... </style> se transforma a EstiloElemento via el experto.
 style_block ::=
     LT STYLE GT style_items_opt:items LT_SLASH STYLE GT
-    {: RESULT = buildStyleFromMap(items); :}
+    {: RESULT = experto.buildStyleFromMap(items); :}
     ;
 
+// Atributos de style acumulados como mapa clave-valor.
 style_items_opt ::=
     style_items_opt:acum style_item:item
     {: acum.putAll(item); RESULT = acum; :}
     | /* vacio */
-    {: RESULT = mapaVacio(); :}
+    {: RESULT = experto.mapaVacio(); :}
     ;
 
 style_item ::=
     LT style_key:k EQUALS valor_simple:v SLASH_GT
-    {: RESULT = mapaAtributo(k, v); :}
+    {: RESULT = experto.mapaAtributo(k, v); :}
     | LT BORDER_KEY COMMA valor_simple:w COMMA valor_simple:t COMMA COLOR_KEY EQUALS valor_simple:c SLASH_GT
-    {: RESULT = mapaBorde(w, t, c); :}
+    {: RESULT = experto.mapaBorde(w, t, c); :}
     ;
 
 style_key ::=
@@ -364,9 +233,10 @@ content_items_opt ::=
     content_items_opt:lista content_item:item
     {: if (item != null) { lista.add(item); } RESULT = lista; :}
     | /* vacio */
-    {: RESULT = listaVacia(); :}
+    {: RESULT = experto.listaVacia(); :}
     ;
 
+// Puede contener preguntas y tambien tablas anidadas.
 content_item ::=
     open_block:o
     {: RESULT = o; :}
@@ -380,21 +250,36 @@ content_item ::=
     {: RESULT = t; :}
     ;
 
+// table_block consume la cabecera <table> y delega el resto a table_rest.
+// Esto deja explicito donde se decide: tabla con estilo interno o sin estilo.
 table_block ::=
     LT TABLE GT
-    style_opt:s
+    LT table_rest:t
+    {: RESULT = t; :}
+    ;
+
+// table_rest modela lo que puede ir dentro de <table>:
+// STYLE + CONTENT + cierre de table
+// CONTENT directo + cierre de table (usa estilo por defecto)
+// Se usa un no terminal separado para eliminar ambiguedad en CUP.
+table_rest ::=
+    STYLE GT style_items_opt:items LT_SLASH STYLE GT
     LT CONTENT GT line_blocks_no_vacios:filas LT_SLASH CONTENT GT
     LT_SLASH TABLE GT
-    {: RESULT = new TablaFormulario(null, null, 0f, 0f, filas, s); :}
+    {: RESULT = new TablaFormulario(null, null, 0f, 0f, filas, experto.buildStyleFromMap(items)); :}
+    | CONTENT GT line_blocks_no_vacios:filas LT_SLASH CONTENT GT
+    LT_SLASH TABLE GT
+    {: RESULT = new TablaFormulario(null, null, 0f, 0f, filas, experto.estiloDefault()); :}
     ;
 
 line_blocks_no_vacios ::=
     line_block:fila
-    {: List filas = listaVacia(); filas.add(fila); RESULT = filas; :}
+    {: List filas = experto.listaVacia(); filas.add(fila); RESULT = filas; :}
     | line_blocks_no_vacios:filas line_block:fila
     {: filas.add(fila); RESULT = filas; :}
     ;
 
+// Cada <line> produce una fila (lista de elementos).
 line_block ::=
     LT LINE GT element_blocks_no_vacios:elementos LT_SLASH LINE GT
     {: RESULT = elementos; :}
@@ -402,16 +287,18 @@ line_block ::=
 
 element_blocks_no_vacios ::=
     element_block:e
-    {: List elementos = listaVacia(); if (e != null) { elementos.add(e); } RESULT = elementos; :}
+    {: List elementos = experto.listaVacia(); if (e != null) { elementos.add(e); } RESULT = elementos; :}
     | element_blocks_no_vacios:lista element_block:e
     {: if (e != null) { lista.add(e); } RESULT = lista; :}
     ;
 
+// Cada <element> encapsula un item de contenido.
+// Si viene vacio, se crea un TextoFormulario vacio como placeholder visual.
 element_block ::=
     LT ELEMENT GT element_content_opt:contenido LT_SLASH ELEMENT GT
     {: RESULT = (contenido != null)
         ? contenido
-        : new TextoFormulario(null, null, "", estiloDefault());
+        : new TextoFormulario(null, null, "", experto.estiloDefault());
     :}
     ;
 
@@ -419,7 +306,7 @@ element_content_opt ::=
     content_item:c
     {: RESULT = c; :}
     | valor_simple:v
-    {: RESULT = new TextoFormulario(null, null, String.valueOf(v), estiloDefault()); :}
+    {: RESULT = new TextoFormulario(null, null, String.valueOf(v), experto.estiloDefault()); :}
     | /* vacio */
     {: RESULT = null; :}
     ;
@@ -430,7 +317,7 @@ open_block ::=
             Float.valueOf(w.floatValue()),
             Float.valueOf(h.floatValue()),
             label,
-            estiloDefault(),
+            experto.estiloDefault(),
             ""
         );
     :}
@@ -452,8 +339,8 @@ drop_block ::=
             Float.valueOf(h.floatValue()),
             label,
             opts,
-            normalizarIndice(toInt(correcta), opts, "drop.correcta"),
-            estiloDefault(),
+            experto.normalizarIndice(experto.toInt(correcta), opts, "drop.correcta"),
+            experto.estiloDefault(),
             -1
         );
     :}
@@ -463,7 +350,7 @@ drop_block ::=
             Float.valueOf(h.floatValue()),
             label,
             opts,
-            normalizarIndice(toInt(correcta), opts, "drop.correcta"),
+            experto.normalizarIndice(experto.toInt(correcta), opts, "drop.correcta"),
             s,
             -1
         );
@@ -477,8 +364,8 @@ select_block ::=
             Float.valueOf(h.floatValue()),
             label,
             opts,
-            normalizarIndice(toInt(correcta), opts, "select.correcta"),
-            estiloDefault(),
+            experto.normalizarIndice(experto.toInt(correcta), opts, "select.correcta"),
+            experto.estiloDefault(),
             -1
         );
     :}
@@ -488,7 +375,7 @@ select_block ::=
             Float.valueOf(h.floatValue()),
             label,
             opts,
-            normalizarIndice(toInt(correcta), opts, "select.correcta"),
+            experto.normalizarIndice(experto.toInt(correcta), opts, "select.correcta"),
             s,
             -1
         );
@@ -502,8 +389,8 @@ multiple_block ::=
             Float.valueOf(h.floatValue()),
             label,
             opts,
-            filtrarIndicesValidos(correctas, opts, "multiple.correctas"),
-            estiloDefault(),
+            experto.filtrarIndicesValidos(correctas, opts, "multiple.correctas"),
+            experto.estiloDefault(),
             new HashSet()
         );
     :}
@@ -513,44 +400,44 @@ multiple_block ::=
             Float.valueOf(h.floatValue()),
             label,
             opts,
-            filtrarIndicesValidos(correctas, opts, "multiple.correctas"),
+            experto.filtrarIndicesValidos(correctas, opts, "multiple.correctas"),
             s,
             new HashSet()
         );
     :}
     ;
 
-numero_entero ::= NUMBER:n {: RESULT = Integer.valueOf(toInt(n)); :};
+numero_entero ::= NUMBER:n {: RESULT = Integer.valueOf(experto.toInt(n)); :};
 
 lista_strings ::=
     LBRACE lista_cadenas:lista RBRACE
     {: RESULT = lista; :}
     | LBRACE RBRACE
-    {: RESULT = listaVacia(); :}
+    {: RESULT = experto.listaVacia(); :}
     ;
 
 lista_cadenas ::=
     cadena:c
-    {: List lista = listaVacia(); lista.add(c); RESULT = lista; :}
+    {: List lista = experto.listaVacia(); lista.add(c); RESULT = lista; :}
     | lista_cadenas:lista COMMA cadena:c
     {: lista.add(c); RESULT = lista; :}
     ;
 
 lista_enteros_opt ::=
-    /* vacio */ {: RESULT = listaVacia(); :}
+    /* vacio */ {: RESULT = experto.listaVacia(); :}
     | lista_enteros:lista {: RESULT = lista; :}
     ;
 
 lista_enteros ::=
-    NUMBER:n {: List lista = listaVacia(); lista.add(Integer.valueOf(toInt(n))); RESULT = lista; :}
-    | lista_enteros:lista COMMA NUMBER:n {: lista.add(Integer.valueOf(toInt(n))); RESULT = lista; :}
+    NUMBER:n {: List lista = experto.listaVacia(); lista.add(Integer.valueOf(experto.toInt(n))); RESULT = lista; :}
+    | lista_enteros:lista COMMA NUMBER:n {: lista.add(Integer.valueOf(experto.toInt(n))); RESULT = lista; :}
     ;
 
 style_opt ::=
     style_block:s
     {: RESULT = s; :}
     | /* vacio */
-    {: RESULT = estiloDefault(); :}
+    {: RESULT = experto.estiloDefault(); :}
     ;
 
 valor_simple ::=
@@ -586,14 +473,14 @@ lista_valores_opt ::=
     lista_valores:l
     {: RESULT = l; :}
     | /* vacio */
-    {: RESULT = listaVacia(); :}
+    {: RESULT = experto.listaVacia(); :}
     ;
 
 lista_valores ::=
     lista_valores:lista COMMA valor_simple:v
     {: lista.add(v); RESULT = lista; :}
     | valor_simple:v
-    {: List lista = listaVacia(); lista.add(v); RESULT = lista; :}
+    {: List lista = experto.listaVacia(); lista.add(v); RESULT = lista; :}
     ;
 
 cadena ::=
