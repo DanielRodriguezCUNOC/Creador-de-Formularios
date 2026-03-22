@@ -108,6 +108,10 @@ fun AppNavigation() {
             titulo = pkmTituloActual,
             codigoPkm = pkmSoloLecturaActual,
             onBack = { currentScreen = pantallaRetornoPkm },
+            onContestarExitoso = { formulario ->
+                formularioPreview = formulario
+                currentScreen = Screen.FillForm
+            },
             onViewErrors = { errores ->
                 erroresActuales = errores
                 pantallaRetornoErrores = Screen.PkmViewer

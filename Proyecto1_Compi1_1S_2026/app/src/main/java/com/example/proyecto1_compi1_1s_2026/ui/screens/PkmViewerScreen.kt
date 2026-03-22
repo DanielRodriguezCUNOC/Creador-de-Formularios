@@ -37,7 +37,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
+import com.example.proyecto1_compi1_1s_2026.ui.integration.PkmFormBuildService
 import com.example.proyecto1_compi1_1s_2026.ui.integration.PkmUiCoordinator
 import kotlinx.coroutines.launch
 
@@ -47,11 +49,13 @@ fun PkmViewerScreen(
     titulo: String,
     codigoPkm: String,
     onBack: () -> Unit,
+    onContestarExitoso: (Formulario) -> Unit,
     onViewErrors: (List<ErrorInfo>) -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val pkmCoordinator = remember { PkmUiCoordinator() }
+    val pkmBuilder = remember { PkmFormBuildService() }
 
     Scaffold(
         topBar = {
@@ -115,16 +119,24 @@ fun PkmViewerScreen(
                 Button(
                     onClick = {
                         val resultado = pkmCoordinator.analizar(codigoPkm)
-                        if (resultado.exitoso) {
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar(
-                                    message = "PKM valido. En esta fase solo se valida y muestra codigo.",
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
-                        } else {
+                        if (!resultado.exitoso) {
                             onViewErrors(resultado.errores)
+                            return@Button
                         }
+
+                        val resultadoBuild = pkmBuilder.construir(codigoPkm)
+                        if (!resultadoBuild.exitoso || resultadoBuild.formulario == null) {
+                            onViewErrors(resultadoBuild.erroresSemanticos)
+                            return@Button
+                        }
+
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "Formulario PKM cargado para contestar",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                        onContestarExitoso(resultadoBuild.formulario)
                     },
                     modifier = Modifier.weight(1f)
                 ) {
