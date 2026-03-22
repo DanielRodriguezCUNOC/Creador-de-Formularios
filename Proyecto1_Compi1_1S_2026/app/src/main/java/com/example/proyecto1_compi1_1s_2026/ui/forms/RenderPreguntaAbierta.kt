@@ -6,7 +6,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.PreguntaAbierta
 
 /**
@@ -19,7 +18,7 @@ fun RenderPreguntaAbierta(pregunta: PreguntaAbierta) {
 
     Column(
         modifier = Modifier
-            .fillMaxWidth()
+            .applyFormDimensions(pregunta.width, pregunta.height)
             .background(pregunta.estilos.backgroundColor.toComposeColor())
             .let { pregunta.estilos.applyBorder(it) }
             .padding(FormularioConstants.PADDING_INTERNO),

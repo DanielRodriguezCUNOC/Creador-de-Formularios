@@ -20,6 +20,26 @@ data class RespuestaFormulario(
     val valor: String
 )
 
+fun serializarRespuestasComoPkm(respuestas: List<RespuestaFormulario>): String {
+    val lineas = mutableListOf<String>()
+    lineas.add("<responses>")
+
+    respuestas.forEach { respuesta ->
+        val key = escaparXml(respuesta.key)
+        val tipo = escaparXml(respuesta.tipo)
+        val label = escaparXml(respuesta.label)
+        val valor = escaparXml(respuesta.valor)
+
+        lineas.add("  <response key=\"$key\" type=\"$tipo\">")
+        lineas.add("    <label>$label</label>")
+        lineas.add("    <value>$valor</value>")
+        lineas.add("  </response>")
+    }
+
+    lineas.add("</responses>")
+    return lineas.joinToString(separator = "\n")
+}
+
 fun recolectarRespuestas(formulario: Formulario): List<RespuestaFormulario> {
     val respuestas = mutableListOf<RespuestaFormulario>()
 
@@ -108,4 +128,13 @@ private fun recolectarElemento(
 
         else -> Unit
     }
+}
+
+private fun escaparXml(valor: String): String {
+    return valor
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&apos;")
 }

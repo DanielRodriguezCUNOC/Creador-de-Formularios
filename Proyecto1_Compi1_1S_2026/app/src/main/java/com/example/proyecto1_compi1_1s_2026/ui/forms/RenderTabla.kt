@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.TablaFormulario
 
 /**
@@ -12,18 +11,16 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.TablaForm
  */
 @Composable
 fun RenderTabla(tabla: TablaFormulario) {
-    // Aplicar escala a las dimensiones
-    val widthEscalado = FormularioConstants.escalarDimension(tabla.width)
-    val heightEscalado = FormularioConstants.escalarDimension(tabla.height)
-
     val modifier = Modifier
-        .then(if (widthEscalado != null) Modifier.width(widthEscalado.dp) else Modifier.fillMaxWidth())
-        .then(if (heightEscalado != null) Modifier.height(heightEscalado.dp) else Modifier.wrapContentHeight())
+        .applyFormDimensions(tabla.width, tabla.height)
         .background(tabla.estilos.backgroundColor.toComposeColor())
         .let { tabla.estilos.applyBorder(it) }
         .padding(FormularioConstants.PADDING_TABLA)
 
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(FormularioConstants.SPACING_VERTICAL)
+    ) {
         tabla.filas
             .flatMap { fila ->
                 if (fila.size <= FormularioConstants.MAX_COLUMNAS_MOVIL) {
@@ -38,7 +35,9 @@ fun RenderTabla(tabla: TablaFormulario) {
                     horizontalArrangement = Arrangement.spacedBy(FormularioConstants.SPACING_HORIZONTAL)
                 ) {
                     filaRender.forEach { celda ->
-                        Box(modifier = Modifier.weight(1f)) {
+                        Box(modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = FormularioConstants.MIN_ALTURA_CELDA_TABLA)) {
                             RenderElemento(celda)
                         }
                     }

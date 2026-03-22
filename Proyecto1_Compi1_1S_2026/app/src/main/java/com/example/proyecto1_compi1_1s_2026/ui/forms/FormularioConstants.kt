@@ -47,6 +47,11 @@ object FormularioConstants {
     const val MAX_COLUMNAS_MOVIL = 3
 
     /**
+     * Altura mínima para celdas de tabla para alineación visual uniforme
+     */
+    val MIN_ALTURA_CELDA_TABLA = 60.dp
+
+    /**
      * Convierte una dimensión del DSL a dp aplicando la escala
      */
     fun escalarDimension(valor: Float?): Float? {
