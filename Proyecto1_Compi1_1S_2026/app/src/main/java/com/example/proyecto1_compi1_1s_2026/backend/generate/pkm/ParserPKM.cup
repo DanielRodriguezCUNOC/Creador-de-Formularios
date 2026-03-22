@@ -34,12 +34,38 @@ parser code {:
         return erroresSemanticos;
     }
 
+    private String nombreToken(int id) {
+        if (id >= 0 && id < sym.terminalNames.length) {
+            return sym.terminalNames[id];
+        }
+        return "token_" + id;
+    }
+
+    private String descripcionToken(int id) {
+        switch (id) {
+            case sym.METADATA_DELIM: return "###";
+            case sym.LT: return "<";
+            case sym.GT: return ">";
+            case sym.LT_SLASH: return "</";
+            case sym.SLASH_GT: return "/>";
+            case sym.COLON: return ":";
+            case sym.COMMA: return ",";
+            case sym.SLASH: return "/";
+            default: return nombreToken(id);
+        }
+    }
+
     public void syntax_error(Symbol s) {
         int linea = (s != null) ? s.left : 0;
         int columna = (s != null) ? s.right : 0;
-        String encontrado = (s != null && s.value != null)
-            ? s.value.toString()
-            : ((s != null) ? ("token_" + s.sym) : "EOF");
+        String encontrado = "EOF";
+        if (s != null) {
+            if (s.value != null) {
+                encontrado = s.value.toString();
+            } else {
+                encontrado = descripcionToken(s.sym);
+            }
+        }
 
         String mensaje = "Estructura PKM invalida cerca de: " + encontrado;
         erroresSintacticos.add(new ErrorInfo(TipoError.SINTACTICO, mensaje, linea, columna));
@@ -175,6 +201,8 @@ section_block ::=
 section_body_opt ::=
     section_body_opt:lista section_item:item
     {: if (item != null) { lista.add(item); } RESULT = lista; :}
+    | section_body_opt:lista content_block:items
+    {: if (items != null) { lista.addAll(items); } RESULT = lista; :}
     | /* vacio */
     {: RESULT = experto.listaVacia(); :}
     ;

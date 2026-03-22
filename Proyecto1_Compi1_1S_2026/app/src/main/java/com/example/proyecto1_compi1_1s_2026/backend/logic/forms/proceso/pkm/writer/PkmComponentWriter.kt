@@ -30,7 +30,6 @@ class PkmComponentWriter(
         val orientacion = valorTexto(node.atributos, "orientation", PkmSerializationContract.DEFAULT_ORIENTATION)
 
         val nodos = mutableListOf<PkmTagNode>()
-        nodos.add(PkmTextNode(PkmSerializationContract.BLOQUE_DELIMITADOR))
 
         val hijosSeccion = mutableListOf<PkmTagNode>()
         val styleNode = styleWriter.crearBloqueStylesSiExiste(node.atributos)
@@ -46,7 +45,6 @@ class PkmComponentWriter(
                 hijos = hijosSeccion
             )
         )
-        nodos.add(PkmTextNode(PkmSerializationContract.BLOQUE_DELIMITADOR))
         return nodos
     }
 

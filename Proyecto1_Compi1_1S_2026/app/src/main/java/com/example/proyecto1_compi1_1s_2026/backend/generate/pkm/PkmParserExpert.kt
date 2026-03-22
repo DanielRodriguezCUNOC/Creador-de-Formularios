@@ -170,6 +170,8 @@ class PkmParserExpert(
         }
         Color.desdeRgb(rgbNormalizado)?.let { return it }
 
+        Color.desdeHsl(raw)?.let { return it }
+
         erroresSemanticos.add(
             ErrorInfo(
                 TipoError.SEMANTICO,
