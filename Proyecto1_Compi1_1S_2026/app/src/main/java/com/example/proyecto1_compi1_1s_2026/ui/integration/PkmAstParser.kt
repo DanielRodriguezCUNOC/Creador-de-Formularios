@@ -29,6 +29,19 @@ class PkmAstParser {
                 erroresSintacticos = erroresSintacticos
             )
         } catch (e: Exception) {
+            if (e is ClassNotFoundException) {
+                return ResultadoParseoPkm(
+                    erroresSemanticos = listOf(
+                        ErrorInfo(
+                            tipo = TipoError.SEMANTICO,
+                            mensaje = "No se encontraron LexerPKM/ParserPKM generados. Ejecuta generar_Lexer_&_Parser.sh",
+                            linea = 0,
+                            columna = 0
+                        )
+                    )
+                )
+            }
+
             val erroresLexicos = obtenerErrores(lexerInstance, "getLexicalErrors")
             val erroresSintacticos = obtenerErrores(parserInstance, "getErroresSintacticos")
 

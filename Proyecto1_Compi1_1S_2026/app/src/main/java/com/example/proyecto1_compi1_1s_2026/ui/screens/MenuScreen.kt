@@ -45,6 +45,7 @@ fun MenuScreen(
     apiBaseUrl: String,
     onApiBaseUrlChange: (String) -> Unit,
     onSavedFormsClick: () -> Unit,
+    onAbrirArchivoPkm: (nombre: String, contenido: String) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -63,6 +64,23 @@ fun MenuScreen(
         } else {
             Toast.makeText(context, "No se pudo guardar el archivo", Toast.LENGTH_LONG).show()
         }
+    }
+
+    val openDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri == null) {
+            return@rememberLauncherForActivityResult
+        }
+
+        val contenido = leerTextoDesdeUri(context, uri)
+        if (contenido.isNullOrBlank()) {
+            Toast.makeText(context, "No se pudo leer el archivo seleccionado", Toast.LENGTH_LONG).show()
+            return@rememberLauncherForActivityResult
+        }
+
+        val nombre = obtenerNombreArchivo(context, uri) ?: generarNombreArchivoPkm()
+        onAbrirArchivoPkm(nombre, contenido)
     }
 
     Scaffold(
@@ -110,7 +128,9 @@ fun MenuScreen(
             HorizontalDivider()
 
             MenuOptionButton(label = "Importar plantilla")   { /* TODO */ }
-            MenuOptionButton(label = "Abrir archivo")      { /* TODO */ }
+            MenuOptionButton(label = "Abrir archivo") {
+                openDocumentLauncher.launch(arrayOf("text/plain", "*/*"))
+            }
             MenuOptionButton(label = "Formularios guardados") { onSavedFormsClick() }
             MenuOptionButton(label = "Guardar") {
                 if (codigoPkmActual.isBlank()) {
@@ -182,6 +202,26 @@ private fun guardarTextoEnUri(context: Context, uri: Uri, contenido: String): Bo
         true
     } catch (_: Exception) {
         false
+    }
+}
+
+private fun leerTextoDesdeUri(context: Context, uri: Uri): String? {
+    return try {
+        context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private fun obtenerNombreArchivo(context: Context, uri: Uri): String? {
+    return try {
+        val cursor = context.contentResolver.query(uri, null, null, null, null) ?: return null
+        cursor.use {
+            val index = it.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
+            if (index >= 0 && it.moveToFirst()) it.getString(index) else null
+        }
+    } catch (_: Exception) {
+        null
     }
 }
 
