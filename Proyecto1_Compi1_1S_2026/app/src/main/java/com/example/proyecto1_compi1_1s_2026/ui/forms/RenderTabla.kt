@@ -24,17 +24,29 @@ fun RenderTabla(tabla: TablaFormulario) {
         .padding(FormularioConstants.PADDING_TABLA)
 
     Column(modifier = modifier) {
-        tabla.filas.forEach { fila ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(FormularioConstants.SPACING_HORIZONTAL)
-            ) {
-                fila.forEach { celda ->
-                    Box(modifier = Modifier.weight(1f)) {
-                        RenderElemento(celda)
+        tabla.filas
+            .flatMap { fila ->
+                if (fila.size <= FormularioConstants.MAX_COLUMNAS_MOVIL) {
+                    listOf(fila)
+                } else {
+                    fila.chunked(FormularioConstants.MAX_COLUMNAS_MOVIL)
+                }
+            }
+            .forEach { filaRender ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(FormularioConstants.SPACING_HORIZONTAL)
+                ) {
+                    filaRender.forEach { celda ->
+                        Box(modifier = Modifier.weight(1f)) {
+                            RenderElemento(celda)
+                        }
+                    }
+
+                    repeat(FormularioConstants.MAX_COLUMNAS_MOVIL - filaRender.size) {
+                        Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             }
-        }
     }
 }

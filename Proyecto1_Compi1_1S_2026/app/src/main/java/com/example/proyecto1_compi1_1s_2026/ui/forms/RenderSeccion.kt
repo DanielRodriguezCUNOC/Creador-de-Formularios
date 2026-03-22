@@ -22,15 +22,28 @@ fun RenderSeccion(seccion: SeccionFormulario) {
         .padding(FormularioConstants.PADDING_ELEMENTO)
 
     if (seccion.orientacion == Orientacion.HORIZONTAL) {
-        Row(
+        Column(
             modifier = modifier,
-            horizontalArrangement = Arrangement.spacedBy(FormularioConstants.SPACING_HORIZONTAL)
+            verticalArrangement = Arrangement.spacedBy(FormularioConstants.SPACING_VERTICAL)
         ) {
-            seccion.elementos.forEach { elemento ->
-                Box(modifier = Modifier.weight(1f)) {
-                    RenderElemento(elemento)
+            seccion.elementos
+                .chunked(FormularioConstants.MAX_COLUMNAS_MOVIL)
+                .forEach { fila ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(FormularioConstants.SPACING_HORIZONTAL)
+                    ) {
+                        fila.forEach { elemento ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                RenderElemento(elemento)
+                            }
+                        }
+
+                        repeat(FormularioConstants.MAX_COLUMNAS_MOVIL - fila.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
                 }
-            }
         }
     } else {
         Column(

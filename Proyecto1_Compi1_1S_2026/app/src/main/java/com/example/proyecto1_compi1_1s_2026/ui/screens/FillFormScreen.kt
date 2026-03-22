@@ -99,13 +99,16 @@ fun FillFormScreen(
             } else {
                 FormularioRenderer(
                     formulario = formulario,
-                    onEnviar = {
+                    onEnviarRespuestas = { respuestas ->
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar(
-                                message = "Formulario enviado",
+                                message = "Formulario enviado con ${respuestas.size} respuestas",
                                 duration = SnackbarDuration.Short
                             )
                         }
+                    },
+                    onEnviar = {
+                        // Punto de extension para enviar respuestas a API.
                     }
                 )
             }

@@ -41,6 +41,12 @@ object FormularioConstants {
     val SPACING_VERTICAL = 5.dp
 
     /**
+     * Limite recomendado para distribucion horizontal en telefono.
+     * Si hay mas elementos, se envuelven en filas nuevas.
+     */
+    const val MAX_COLUMNAS_MOVIL = 3
+
+    /**
      * Convierte una dimensión del DSL a dp aplicando la escala
      */
     fun escalarDimension(valor: Float?): Float? {

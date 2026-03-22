@@ -21,7 +21,8 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.*
 @Composable
 fun FormularioRenderer(
     formulario: Formulario,
-    onEnviar: () -> Unit = {}
+    onEnviar: () -> Unit = {},
+    onEnviarRespuestas: (List<RespuestaFormulario>) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -37,7 +38,10 @@ fun FormularioRenderer(
         // Botón de envío obligatorio por defecto
         Spacer(modifier = Modifier.height(FormularioConstants.PADDING_ELEMENTO))
         Button(
-            onClick  = onEnviar,
+            onClick = {
+                onEnviarRespuestas(recolectarRespuestas(formulario))
+                onEnviar()
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Enviar Formulario")
