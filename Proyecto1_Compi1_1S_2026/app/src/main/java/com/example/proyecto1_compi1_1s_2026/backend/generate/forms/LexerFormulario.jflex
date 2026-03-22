@@ -13,6 +13,10 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoErro
 %cup
 %line
 %column
+%state STRING
+%eofval{
+    return symbol(sym.EOF, "<EOF>");
+%eofval}
 
 %{
    //---------------------------------------------
@@ -191,8 +195,8 @@ ESPACIO = [ \t\r\n\f]+
 
     // --- FORMATOS DE COLOR ---
 
-    {COLOR_RGB}         { return symbol(sym.COLOR_RGB, yytext()); }
-    {COLOR_HSL}         { return symbol(sym.COLOR_HSL, yytext()); }
+    //{COLOR_RGB}         { return symbol(sym.COLOR_RGB, yytext()); }
+    //{COLOR_HSL}         { return symbol(sym.COLOR_HSL, yytext()); }
     {COLOR_HEX}         { return symbol(sym.COLOR_HEX, yytext()); }
 
     // --- LITERALES NUMÉRICOS E IDENTIFICADORES ---
@@ -260,7 +264,3 @@ ESPACIO = [ \t\r\n\f]+
         return symbol(sym.FIN_CADENA, "");
     }
 }
-
-%eofval{
-	return symbol(sym.EOF, "<EOF>");
-%eofval}
