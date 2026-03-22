@@ -46,7 +46,9 @@ object PkmSerializationContract {
     }
 
     fun tagSectionOpen(width: String, height: String, pointX: String, pointY: String, orientation: String): String {
-        return "<section=$width,$height,$pointX,$pointY,$orientation>"
+        val cleanOrientation = orientation.trim().removeSurrounding("\"").uppercase()
+        val normalizedOrientation = if (cleanOrientation == "HORIZONTAL") "HORIZONTAL" else "VERTICAL"
+        return "<section=$width,$height,$pointX,$pointY,$normalizedOrientation>"
     }
 
     fun tagSectionClose(): String = "</section>"

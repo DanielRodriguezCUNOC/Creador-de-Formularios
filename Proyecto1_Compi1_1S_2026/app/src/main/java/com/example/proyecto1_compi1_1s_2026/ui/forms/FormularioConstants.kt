@@ -8,7 +8,7 @@ import androidx.compose.ui.unit.dp
  */
 object FormularioConstants {
     
-    const val ESCALA_DIMENSION = 20f
+    const val ESCALA_DIMENSION = 1f
 
     /**
      * Espaciado vertical estándar entre elementos principales

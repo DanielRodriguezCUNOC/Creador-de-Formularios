@@ -488,6 +488,8 @@ valor_simple ::=
     {: RESULT = c; :}
     | BORDER_STYLE:b
     {: RESULT = b; :}
+    | LINE
+    {: RESULT = "LINE"; :}
     | MONO
     {: RESULT = "MONO"; :}
     | SANS_SERIF

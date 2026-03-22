@@ -50,7 +50,10 @@ class GeneradorPkm(private val autorPorDefecto: String = "Sistema") : Visitor<Un
     private val tagTreeWriter = PkmTagTreeWriter()
     private val componentWriter = PkmComponentWriter(
         expressionWriter = expressionWriter,
-        stats = statsCollector
+        stats = statsCollector,
+        reportarErrorSemantico = { mensaje, linea, columna ->
+            errores.add(ErrorInfo(TipoError.SEMANTICO, mensaje, linea, columna))
+        }
     )
 
     fun generar(instrucciones: List<NodoInstruccion>, autor: String? = null): ResultadoGeneracionPkm {
@@ -147,7 +150,9 @@ class GeneradorPkm(private val autorPorDefecto: String = "Sistema") : Visitor<Un
 
     private fun materializarValor(valor: Any?): Any? {
         return when (valor) {
-            is NodoExpresion -> evaluarExpresion(valor)
+            // Si una expresion no se puede evaluar a escalar, se conserva el nodo
+            // para que el escritor PKM la serialice sin perder contenido.
+            is NodoExpresion -> evaluarExpresion(valor) ?: valor
             is NodoAtributo -> NodoAtributo(valor.nombre, materializarValor(valor.valor) ?: "")
             is List<*> -> valor.map { item -> materializarValor(item) ?: "" }
             else -> valor

@@ -6,6 +6,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.PreguntaSeleccionMultiple
 
 /**
@@ -17,34 +19,38 @@ fun RenderSeleccionMultiple(pregunta: PreguntaSeleccionMultiple) {
 
     Column(
         modifier = Modifier
-            .applyFormDimensions(pregunta.width, pregunta.height)
+            .applyFormDimensions(pregunta.width, pregunta.height, fillWidthByDefault = true)
             .background(pregunta.estilos.backgroundColor.toComposeColor())
             .let { pregunta.estilos.applyBorder(it) }
             .padding(FormularioConstants.PADDING_INTERNO),
-        verticalArrangement = Arrangement.spacedBy(FormularioConstants.SPACING_VERTICAL)
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Text(
             text  = pregunta.label,
-            style = pregunta.estilos.toTextStyle()
+            style = pregunta.estilos.toTextStyle(),
+            modifier = Modifier.padding(bottom = 2.dp)
         )
-        pregunta.opciones.forEachIndexed { index, opcion ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier         = Modifier.fillMaxWidth()
-            ) {
-                Checkbox(
-                    checked        = seleccionadas.contains(index),
-                    onCheckedChange = { isChecked ->
-                        if (isChecked) {
-                            seleccionadas.add(index)
-                            pregunta.seleccionadas.add(index)
-                        } else {
-                            seleccionadas.remove(index)
-                            pregunta.seleccionadas.remove(index)
+        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+            pregunta.opciones.forEachIndexed { index, opcion ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier         = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                ) {
+                    Checkbox(
+                        checked        = seleccionadas.contains(index),
+                        onCheckedChange = { isChecked ->
+                            if (isChecked) {
+                                seleccionadas.add(index)
+                                pregunta.seleccionadas.add(index)
+                            } else {
+                                seleccionadas.remove(index)
+                                pregunta.seleccionadas.remove(index)
+                            }
                         }
-                    }
-                )
-                Text(text = opcion)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = opcion)
+                }
             }
         }
     }
