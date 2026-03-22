@@ -29,8 +29,9 @@ class PkmAstParser {
 
             val erroresLexicos = obtenerErrores(lexerInstance, "getLexicalErrors")
             val erroresSintacticos = obtenerErrores(parserInstance, "getErroresSintacticos")
+            val erroresSemanticos = obtenerErrores(parserInstance, "getErroresSemanticos")
 
-            if (erroresLexicos.isEmpty() && erroresSintacticos.isEmpty() && formulario == null) {
+            if (erroresLexicos.isEmpty() && erroresSintacticos.isEmpty() && erroresSemanticos.isEmpty() && formulario == null) {
                 return ResultadoParseoPkm(
                     erroresSemanticos = listOf(
                         ErrorInfo(
@@ -46,7 +47,8 @@ class PkmAstParser {
             ResultadoParseoPkm(
                 formulario = formulario,
                 erroresLexicos = erroresLexicos,
-                erroresSintacticos = erroresSintacticos
+                erroresSintacticos = erroresSintacticos,
+                erroresSemanticos = erroresSemanticos
             )
         } catch (e: Exception) {
             if (e is ClassNotFoundException) {

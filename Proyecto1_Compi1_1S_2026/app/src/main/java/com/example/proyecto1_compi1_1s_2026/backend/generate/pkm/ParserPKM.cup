@@ -2,9 +2,12 @@ package com.example.proyecto1_compi1_1s_2026.backend.generate.pkm;
 
 import java_cup.runtime.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.ElementoFormulario;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.BorderEstilo;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.EstiloElemento;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Orientacion;
@@ -23,9 +26,14 @@ parser code {:
     public int error_sync_size() { return 1; }
 
     private List<ErrorInfo> erroresSintacticos = new ArrayList<>();
+    private List<ErrorInfo> erroresSemanticos = new ArrayList<>();
 
     public List<ErrorInfo> getErroresSintacticos() {
         return erroresSintacticos;
+    }
+
+    public List<ErrorInfo> getErroresSemanticos() {
+        return erroresSemanticos;
     }
 
     public void syntax_error(Symbol s) {
@@ -57,11 +65,31 @@ parser code {:
         return Integer.parseInt(value.toString());
     }
 
-    private Integer normalizarIndice(int indice, List opciones) {
+    private Integer normalizarIndice(int indice, List opciones, String campo) {
         if (indice < 0) return null;
-        if (opciones == null) return null;
-        if (indice >= opciones.size()) return null;
+        if (opciones == null || indice >= opciones.size()) {
+            erroresSemanticos.add(new ErrorInfo(
+                TipoError.SEMANTICO,
+                "Indice fuera de rango en " + campo + ": " + indice,
+                0,
+                0
+            ));
+            return null;
+        }
         return Integer.valueOf(indice);
+    }
+
+    private List filtrarIndicesValidos(List indices, List opciones, String campo) {
+        List validos = new ArrayList();
+        if (indices == null) return validos;
+
+        for (Object item : indices) {
+            Integer idx = normalizarIndice(toInt(item), opciones, campo);
+            if (idx != null) {
+                validos.add(idx);
+            }
+        }
+        return validos;
     }
 
     private List listaVacia() {
@@ -74,6 +102,91 @@ parser code {:
             lista.add(elemento);
         }
         return lista;
+    }
+
+    private Map mapaVacio() {
+        return new HashMap();
+    }
+
+    private Map mapaAtributo(String key, Object value) {
+        Map mapa = new HashMap();
+        mapa.put(key, value);
+        return mapa;
+    }
+
+    private Map mapaBorde(Object width, Object tipo, Object color) {
+        Map mapa = new HashMap();
+        mapa.put("border_width", width);
+        mapa.put("border_type", tipo);
+        mapa.put("border_color", color);
+        return mapa;
+    }
+
+    private Color parseColor(Object value, Color fallback, String campo) {
+        if (value == null) return fallback;
+        String raw = value.toString().trim();
+
+        Color colorHex = Color.desdeHex(raw);
+        if (colorHex != null) return colorHex;
+
+        String rgbNormalizado = raw;
+        if (raw.startsWith("(") && raw.endsWith(")")) {
+            rgbNormalizado = "rgb" + raw;
+        }
+        Color colorRgb = Color.desdeRgb(rgbNormalizado);
+        if (colorRgb != null) return colorRgb;
+
+        erroresSemanticos.add(new ErrorInfo(
+            TipoError.SEMANTICO,
+            "Color invalido en " + campo + ": " + raw,
+            0,
+            0
+        ));
+        return fallback;
+    }
+
+    private EstiloElemento buildStyleFromMap(Map data) {
+        EstiloElemento base = estiloDefault();
+
+        Color colorTexto = base.getColor();
+        Color colorFondo = base.getBackgroundColor();
+        String font = base.getFontFamily();
+        float textSize = base.getTextSize();
+        BorderEstilo border = base.getBorder();
+
+        if (data != null) {
+            if (data.containsKey("color")) {
+                colorTexto = parseColor(data.get("color"), colorTexto, "color");
+            }
+            if (data.containsKey("background_color")) {
+                colorFondo = parseColor(data.get("background_color"), colorFondo, "background color");
+            }
+            if (data.containsKey("font_family")) {
+                font = String.valueOf(data.get("font_family"));
+            }
+            if (data.containsKey("text_size")) {
+                try {
+                    textSize = Float.parseFloat(String.valueOf(data.get("text_size")));
+                } catch (Exception e) {
+                    erroresSemanticos.add(new ErrorInfo(
+                        TipoError.SEMANTICO,
+                        "text size invalido: " + data.get("text_size"),
+                        0,
+                        0
+                    ));
+                }
+            }
+
+            boolean hasBorder = data.containsKey("border_width") && data.containsKey("border_type") && data.containsKey("border_color");
+            if (hasBorder) {
+                float width = toFloat(data.get("border_width"));
+                String type = String.valueOf(data.get("border_type"));
+                Color color = parseColor(data.get("border_color"), colorTexto, "border");
+                border = new BorderEstilo(width, type, color);
+            }
+        }
+
+        return new EstiloElemento(colorTexto, colorFondo, font, textSize, border);
     }
 :};
 
@@ -95,7 +208,9 @@ non terminal Formulario inicio;
 non terminal List bloques_no_vacios, bloque;
 non terminal ElementoFormulario section_block, section_item;
 non terminal List section_body_opt;
-non terminal Object style_block, style_items_opt, style_item, style_key, style_opt;
+non terminal EstiloElemento style_block, style_opt;
+non terminal Map style_items_opt, style_item;
+non terminal String style_key;
 non terminal List content_block, content_items_opt;
 non terminal ElementoFormulario content_item;
 non terminal ElementoFormulario table_block;
@@ -209,35 +324,35 @@ orientacion ::=
     ;
 
 style_block ::=
-    LT STYLE GT style_items_opt LT_SLASH STYLE GT
-    {: RESULT = null; :}
+    LT STYLE GT style_items_opt:items LT_SLASH STYLE GT
+    {: RESULT = buildStyleFromMap(items); :}
     ;
 
 style_items_opt ::=
-    style_items_opt style_item
-    {: RESULT = null; :}
+    style_items_opt:acum style_item:item
+    {: acum.putAll(item); RESULT = acum; :}
     | /* vacio */
-    {: RESULT = null; :}
+    {: RESULT = mapaVacio(); :}
     ;
 
 style_item ::=
-    LT style_key EQUALS valor_simple SLASH_GT
-    {: RESULT = null; :}
-    | LT BORDER_KEY COMMA valor_simple COMMA valor_simple COMMA COLOR_KEY EQUALS valor_simple SLASH_GT
-    {: RESULT = null; :}
+    LT style_key:k EQUALS valor_simple:v SLASH_GT
+    {: RESULT = mapaAtributo(k, v); :}
+    | LT BORDER_KEY COMMA valor_simple:w COMMA valor_simple:t COMMA COLOR_KEY EQUALS valor_simple:c SLASH_GT
+    {: RESULT = mapaBorde(w, t, c); :}
     ;
 
 style_key ::=
     COLOR_KEY
-    {: RESULT = null; :}
+    {: RESULT = "color"; :}
     | BACKGROUND_COLOR_KEY
-    {: RESULT = null; :}
+    {: RESULT = "background_color"; :}
     | FONT_FAMILY_KEY
-    {: RESULT = null; :}
+    {: RESULT = "font_family"; :}
     | TEXT_SIZE_KEY
-    {: RESULT = null; :}
+    {: RESULT = "text_size"; :}
     | BORDER_KEY
-    {: RESULT = null; :}
+    {: RESULT = "border"; :}
     ;
 
 content_block ::=
@@ -267,10 +382,10 @@ content_item ::=
 
 table_block ::=
     LT TABLE GT
-    style_opt
+    style_opt:s
     LT CONTENT GT line_blocks_no_vacios:filas LT_SLASH CONTENT GT
     LT_SLASH TABLE GT
-    {: RESULT = new TablaFormulario(null, null, 0f, 0f, filas, estiloDefault()); :}
+    {: RESULT = new TablaFormulario(null, null, 0f, 0f, filas, s); :}
     ;
 
 line_blocks_no_vacios ::=
@@ -319,12 +434,12 @@ open_block ::=
             ""
         );
     :}
-    | LT OPEN EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label GT style_opt LT_SLASH OPEN GT
+    | LT OPEN EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label GT style_opt:s LT_SLASH OPEN GT
     {: RESULT = new PreguntaAbierta(
             Float.valueOf(w.floatValue()),
             Float.valueOf(h.floatValue()),
             label,
-            estiloDefault(),
+            s,
             ""
         );
     :}
@@ -337,19 +452,19 @@ drop_block ::=
             Float.valueOf(h.floatValue()),
             label,
             opts,
-            normalizarIndice(toInt(correcta), opts),
+            normalizarIndice(toInt(correcta), opts, "drop.correcta"),
             estiloDefault(),
             -1
         );
     :}
-    | LT DROP EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA NUMBER:correcta GT style_opt LT_SLASH DROP GT
+    | LT DROP EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA NUMBER:correcta GT style_opt:s LT_SLASH DROP GT
     {: RESULT = new PreguntaDesplegable(
             Float.valueOf(w.floatValue()),
             Float.valueOf(h.floatValue()),
             label,
             opts,
-            normalizarIndice(toInt(correcta), opts),
-            estiloDefault(),
+            normalizarIndice(toInt(correcta), opts, "drop.correcta"),
+            s,
             -1
         );
     :}
@@ -362,19 +477,19 @@ select_block ::=
             Float.valueOf(h.floatValue()),
             label,
             opts,
-            normalizarIndice(toInt(correcta), opts),
+            normalizarIndice(toInt(correcta), opts, "select.correcta"),
             estiloDefault(),
             -1
         );
     :}
-    | LT SELECT EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA NUMBER:correcta GT style_opt LT_SLASH SELECT GT
+    | LT SELECT EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA NUMBER:correcta GT style_opt:s LT_SLASH SELECT GT
     {: RESULT = new PreguntaSeleccionUnica(
             Float.valueOf(w.floatValue()),
             Float.valueOf(h.floatValue()),
             label,
             opts,
-            normalizarIndice(toInt(correcta), opts),
-            estiloDefault(),
+            normalizarIndice(toInt(correcta), opts, "select.correcta"),
+            s,
             -1
         );
     :}
@@ -387,19 +502,19 @@ multiple_block ::=
             Float.valueOf(h.floatValue()),
             label,
             opts,
-            correctas,
+            filtrarIndicesValidos(correctas, opts, "multiple.correctas"),
             estiloDefault(),
             new HashSet()
         );
     :}
-    | LT MULTIPLE EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA LBRACE lista_enteros_opt:correctas RBRACE GT style_opt LT_SLASH MULTIPLE GT
+    | LT MULTIPLE EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA LBRACE lista_enteros_opt:correctas RBRACE GT style_opt:s LT_SLASH MULTIPLE GT
     {: RESULT = new PreguntaSeleccionMultiple(
             Float.valueOf(w.floatValue()),
             Float.valueOf(h.floatValue()),
             label,
             opts,
-            correctas,
-            estiloDefault(),
+            filtrarIndicesValidos(correctas, opts, "multiple.correctas"),
+            s,
             new HashSet()
         );
     :}
@@ -432,10 +547,10 @@ lista_enteros ::=
     ;
 
 style_opt ::=
-    style_block
-    {: RESULT = null; :}
+    style_block:s
+    {: RESULT = s; :}
     | /* vacio */
-    {: RESULT = null; :}
+    {: RESULT = estiloDefault(); :}
     ;
 
 valor_simple ::=
