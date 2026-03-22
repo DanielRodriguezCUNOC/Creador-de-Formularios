@@ -62,7 +62,7 @@ ESPACIO = [ \t\r\n\f]+
 
 // Formatos de color admitidos.
 COLOR_HEX_RE = #[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?
-COMP_COLOR = ([0-9]{1,3}|\?)
+COMP_COLOR = ({NUMERO}|\?)
 COLOR_RGB_RE = \({COMP_COLOR}[ ]*,[ ]*{COMP_COLOR}[ ]*,[ ]*{COMP_COLOR}\)
 COLOR_HSL_RE = \<{COMP_COLOR}[ ]*,[ ]*{COMP_COLOR}[ ]*,[ ]*{COMP_COLOR}\>
 

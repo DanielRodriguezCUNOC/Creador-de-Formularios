@@ -3,9 +3,6 @@ package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models
 /**
  * Modelo de color agnóstico a la UI.
  * Representa un color en formato RGB/Hex sin dependencia de framework.
- *
- * GRASP Experto: El modelo Color es experto en representarse a sí mismo
- * de manera independiente del framework empleado en la presentación.
  */
 data class Color(
     val rojo: Int = 0,
@@ -14,14 +11,44 @@ data class Color(
     val alfa: Int = 255
 ) {
     companion object {
+        private val COLORES_PREDEFINIDOS = mapOf(
+            "BLACK" to Color(0, 0, 0),
+            "WHITE" to Color(255, 255, 255),
+            "RED" to Color(255, 0, 0),
+            "GREEN" to Color(0, 255, 0),
+            "BLUE" to Color(0, 0, 255),
+            "YELLOW" to Color(255, 255, 0),
+            "CYAN" to Color(0, 255, 255),
+            "MAGENTA" to Color(255, 0, 255),
+            "GRAY" to Color(128, 128, 128),
+            "LIGHT_GRAY" to Color(192, 192, 192),
+            "DARK_GRAY" to Color(64, 64, 64),
+            "ORANGE" to Color(255, 165, 0),
+            "PINK" to Color(255, 192, 203),
+            "PURPLE" to Color(128, 0, 128),
+            "BROWN" to Color(165, 42, 42),
+            "SKY" to Color(135, 206, 235)
+        )
+
         /** Color predeterminado: negro */
         fun defecto(): Color = Color(0, 0, 0, 255)
+
+        /** Interpreta un nombre de color (ej. BLACK) */
+        fun desdeNombre(nombre: String): Color? {
+            return COLORES_PREDEFINIDOS[nombre.uppercase()]
+        }
 
         /** Interpreta una cadena hex en Color. Soporta #RRGGBB o #RRGGBBAA */
         fun desdeHex(hexString: String): Color? {
             return try {
                 val hex = hexString.removePrefix("#")
                 when (hex.length) {
+                    3 -> { // Soporte corto #RGB
+                        val r = hex.substring(0, 1).repeat(2).toInt(16)
+                        val g = hex.substring(1, 2).repeat(2).toInt(16)
+                        val b = hex.substring(2, 3).repeat(2).toInt(16)
+                        Color(r, g, b, 255)
+                    }
                     6 -> {
                         val r = hex.substring(0, 2).toInt(16)
                         val g = hex.substring(2, 4).toInt(16)
@@ -42,22 +69,29 @@ data class Color(
             }
         }
 
-        /** Interpreta una cadena en formato rgb(r,g,b) o rgba(r,g,b,a) */
+        /** Interpreta una cadena en formato rgb(r,g,b) o rgba(r,g,b,a) o (r,g,b) */
         fun desdeRgb(rgbString: String): Color? {
             return try {
-                val match = if (rgbString.startsWith("rgba")) {
-                    Regex("""rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)""").find(rgbString)
+                // Soporte para (r,g,b) sin el prefijo "rgb"
+                val input = if (rgbString.startsWith("(") && !rgbString.contains("rgb")) {
+                    "rgb$rgbString"
                 } else {
-                    Regex("""rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)""").find(rgbString)
+                    rgbString
+                }
+
+                val match = if (input.startsWith("rgba")) {
+                    Regex("""rgba\s*\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)""").find(input)
+                } else {
+                    Regex("""rgb\s*\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)""").find(input)
                 }
 
                 if (match != null) {
                     val groups = match.groupValues
-                    val r = groups.getOrNull(1)?.toIntOrNull() ?: 0
-                    val g = groups.getOrNull(2)?.toIntOrNull() ?: 0
-                    val b = groups.getOrNull(3)?.toIntOrNull() ?: 0
-                    val a = if (rgbString.startsWith("rgba")) {
-                        (groups.getOrNull(4)?.toFloatOrNull() ?: 1.0f * 255).toInt()
+                    val r = groups[1].toFloat().toInt().coerceIn(0, 255)
+                    val g = groups[2].toFloat().toInt().coerceIn(0, 255)
+                    val b = groups[3].toFloat().toInt().coerceIn(0, 255)
+                    val a = if (input.startsWith("rgba")) {
+                        (groups[4].toFloat() * 255).toInt().coerceIn(0, 255)
                     } else {
                         255
                     }
@@ -85,9 +119,9 @@ data class Color(
                     """hsl\s*\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)"""
                 ).find(normalizado) ?: return null
 
-                val h = match.groupValues[1].toFloatOrNull() ?: return null
-                val sPct = match.groupValues[2].toFloatOrNull() ?: return null
-                val lPct = match.groupValues[3].toFloatOrNull() ?: return null
+                val h = match.groupValues[1].toFloat()
+                val sPct = match.groupValues[2].toFloat()
+                val lPct = match.groupValues[3].toFloat()
 
                 val hue = ((h % 360f) + 360f) % 360f
                 val s = (sPct / 100f).coerceIn(0f, 1f)

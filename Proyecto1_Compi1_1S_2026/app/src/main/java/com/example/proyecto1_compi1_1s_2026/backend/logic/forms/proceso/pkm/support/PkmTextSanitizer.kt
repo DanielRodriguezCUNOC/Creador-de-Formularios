@@ -11,6 +11,10 @@ class PkmTextSanitizer {
         return texto.replace("\\", "\\\\").replace("\"", "\\\"")
     }
 
+    fun desescaparCadena(texto: String): String {
+        return texto.replace("\\\"", "\"").replace("\\\\", "\\")
+    }
+
     fun normalizarEmojisParaGuardado(texto: String): String {
         var out = texto
         out = out.replace("😄", "@[:smile:]")
@@ -18,6 +22,27 @@ class PkmTextSanitizer {
         out = out.replace("😐", "@[:serious:]")
         out = out.replace("❤️", "@[:heart:]")
         out = out.replace("😺", "@[:cat:]")
+        out = out.replace("⭐", "@[:star:]")
+        return out
+    }
+
+    fun restaurarEmojisDesdePkm(texto: String): String {
+        var out = texto
+        out = out.replace("@[:smile:]", "😄")
+        out = out.replace("@[:sad:]", "😢")
+        out = out.replace("@[:serious:]", "😐")
+        out = out.replace("@[:heart:]", "❤️")
+        out = out.replace("@[:<3]", "❤️")
+        out = out.replace("@[:cat:]", "😺")
+
+        // Soporte para estrellas con multiplicador ej @[:star:3:] -> ⭐⭐⭐
+        val regexStar = Regex("""@\[:star:(\d+):]""")
+        out = regexStar.replace(out) { match ->
+            val cant = match.groupValues[1].toIntOrNull() ?: 1
+            "⭐".repeat(cant)
+        }
+        out = out.replace("@[:star:]", "⭐")
+
         return out
     }
 
@@ -34,7 +59,7 @@ class PkmTextSanitizer {
 
         return try {
             val reparado = String(texto.toByteArray(charsetGbk), Charsets.UTF_8)
-            if (reparado.contains('�')) texto else reparado
+            if (reparado.contains('\uFFFD')) texto else reparado
         } catch (_: Exception) {
             texto
         }

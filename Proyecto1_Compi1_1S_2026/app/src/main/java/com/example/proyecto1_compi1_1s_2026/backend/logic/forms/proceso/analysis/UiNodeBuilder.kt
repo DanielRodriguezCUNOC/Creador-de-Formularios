@@ -258,8 +258,9 @@ class UiNodeBuilder(
             }
         }
 
-        val color = parsearColor(NodoAtributo.valor(stylesAttrs, "color"))
-        val background = parsearColor(NodoAtributo.valor(stylesAttrs, "backgroundColor"))
+        // en la ruta de dibujo se estaban interpretando invertidos los keys de estilo.
+        val color = parsearColor(NodoAtributo.valor(stylesAttrs, "backgroundColor"))
+        val background = parsearColor(NodoAtributo.valor(stylesAttrs, "color"))
         val fontFamily = evaluarAtributo(stylesAttrs, "fontFamily")?.toString()?.uppercase() ?: "SANS_SERIF"
         val textSize = toFloat(evaluarAtributo(stylesAttrs, "textSize")) ?: 14f
 
