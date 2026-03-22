@@ -46,10 +46,6 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.diagnost
 	}
 %}
 
-%eofval{
-	return symbol(sym.EOF, "<EOF>");
-%eofval}
-
 // Expresiones base.
 LETRA = [:jletter:]
 DIGITO = [0-9]
@@ -92,10 +88,13 @@ K_TEXT_SIZE = "text"[ ]+"size"
 	{K_TOTAL_PREGUNTAS} { return symbol(sym.TOTAL_PREGUNTAS); }
 	"Abiertas" { return symbol(sym.ABIERTAS); }
 	"Desplegables" { return symbol(sym.DESPLEGABLES); }
-	"Seleccion" { return symbol(sym.SELECCION); }
 	"Selección" { return symbol(sym.SELECCION); }
 	"Múltiples" { return symbol(sym.MULTIPLES); }
-	"Multiples" { return symbol(sym.MULTIPLES); }
+	"Total de Componentes" { return symbol(sym.TOTAL_COMPONENTES); }
+	"Textos"               { return symbol(sym.TEXTOS); }
+	"Tablas"               { return symbol(sym.TABLAS); }
+	"Con estilos"          { return symbol(sym.CON_ESTILOS); }
+	"Draws ejecutados"     { return symbol(sym.DRAWS_EJECUTADOS); }
 
 	// Nombres de etiquetas.
 	"section" { return symbol(sym.SECTION); }
@@ -136,7 +135,6 @@ K_TEXT_SIZE = "text"[ ]+"size"
 	"/>" { return symbol(sym.SLASH_GT); }
 	"<" { return symbol(sym.LT); }
 	">" { return symbol(sym.GT); }
-	"/" { return symbol(sym.SLASH); }
 	"=" { return symbol(sym.EQUALS); }
 	"," { return symbol(sym.COMMA); }
 	":" { return symbol(sym.COLON); }
@@ -153,11 +151,15 @@ K_TEXT_SIZE = "text"[ ]+"size"
 	[^] {
 		addLexicalError("Caracter no reconocido '" + yytext() + "'");
 	}
-}
+	}
 
 <STRING> {
 	// Fin de cadena.
 	\" { yybegin(YYINITIAL); return symbol(sym.STRING_END, yytext()); }
+
+	[\x{1F300}-\x{1FAFF}] {
+    addLexicalError("Emoji unicode no permitido; use notacion @[...]");
+}
 
 	// Notacion emoji tipo @[...].
 	@\[[^\]\n]+\] { return symbol(sym.EMOJI_SPEC, yytext()); }
@@ -171,7 +173,11 @@ K_TEXT_SIZE = "text"[ ]+"size"
 
 	\n {
 		yybegin(YYINITIAL);
-		addLexicalError("Cadena sin cerrar en linea " + (yyline + 1));
+		addLexicalError("Cadena sin cerrar en linea " + (yyline));
 		return symbol(sym.STRING_END, "");
 	}
 }
+
+%eofval{
+	return symbol(sym.EOF, "<EOF>");
+%eofval}

@@ -7,8 +7,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.diagnost
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.diagnostics.TipoError;
 
 // ================================================
-// Parser PKM minimo
-// Objetivo: validar estructura general del archivo
+// Validar estructura general del archivo PKM
 // ================================================
 
 parser code {:
@@ -34,19 +33,21 @@ parser code {:
         erroresSintacticos.add(new ErrorInfo(TipoError.SINTACTICO, mensaje, linea, columna));
     }
 
-    // Evita duplicar logs; ya registramos en syntax_error.
+    // Evita duplicar logs, ya registrados en syntax_error.
     public void report_error(String message, Object info) { }
 :};
 
 // ================================================
-// Terminales (tokens que entrega LexerPKM)
+// Terminales o Tokens
 // ================================================
 
-terminal EOF;
+terminal EOF; //* Fin de archivo
 
 // Metadatos.
 terminal METADATA_DELIM, AUTHOR, FECHA, HORA, DESCRIPTION;
 terminal TOTAL_SECCIONES, TOTAL_PREGUNTAS, ABIERTAS, DESPLEGABLES, SELECCION, MULTIPLES;
+terminal TOTAL_COMPONENTES, TEXTOS, TABLAS, CON_ESTILOS, DRAWS_EJECUTADOS;
+
 
 // Etiquetas principales.
 terminal SECTION, STYLE, CONTENT, TABLE, LINE, ELEMENT, OPEN, DROP, SELECT, MULTIPLE;
@@ -62,7 +63,7 @@ terminal String BORDER_STYLE, BOOLEAN;
 terminal String COLOR_HEX, COLOR_RGB, COLOR_HSL, NUMBER, IDENTIFIER;
 
 // Signos estructurales.
-terminal LT, GT, LT_SLASH, SLASH_GT, SLASH, EQUALS, COMMA, COLON, LBRACE, RBRACE;
+terminal LT, GT, LT_SLASH, SLASH_GT, EQUALS, COMMA, COLON, LBRACE, RBRACE;
 
 // Cadenas con partes (texto + emojis).
 terminal String STRING_START, STRING_END, STRING_TEXT, EMOJI_SPEC;
@@ -73,18 +74,24 @@ terminal String STRING_START, STRING_END, STRING_TEXT, EMOJI_SPEC;
 
 // Usamos Object para mantener parser minimo y desacoplado del AST final.
 non terminal Object inicio;
-non terminal Object metadata_opt, metadata_payload, metadata_token;
-non terminal Object bloques_opt, bloque;
+non terminal Object bloque;
+non terminal Object bloques_no_vacios;
 non terminal Object section_block, section_body_opt, section_item;
 non terminal Object style_block, style_items_opt, style_item, style_key;
 non terminal Object content_block, content_items_opt, content_item;
-non terminal Object table_block, line_blocks_opt, line_block;
-non terminal Object element_blocks_opt, element_block, element_content_opt;
+non terminal Object table_block, line_block;
+non terminal Object element_block, element_content_opt;
+non terminal Object line_blocks_no_vacios, element_blocks_no_vacios;
 non terminal Object open_block, drop_block, select_block, multiple_block;
 non terminal Object style_opt;
 non terminal Object orientacion;
 non terminal Object valor_simple, lista_valores_opt, lista_valores;
 non terminal Object cadena, cadena_partes_opt, cadena_parte;
+non terminal Object metadata_block;
+non terminal Object metadata_valor;
+non terminal Object numero_entero, lista_strings, lista_enteros_opt;
+
+
 
 // ================================================
 // Produccion inicial
@@ -94,7 +101,7 @@ start with inicio;
 
 // Documento PKM: metadatos opcionales + bloques de contenido.
 inicio ::=
-    metadata_opt bloques_opt
+    metadata_block bloques_no_vacios
     {: RESULT = null; :}
     ;
 
@@ -102,40 +109,43 @@ inicio ::=
 // Metadatos
 // ================================================
 
-// El bloque va entre ### ... ###.
-metadata_opt ::=
-    METADATA_DELIM metadata_payload METADATA_DELIM
-    {: RESULT = null; :}
-    | /* vacio */
-    {: RESULT = null; :}
-    ;
-
-// Consumimos metadatos de forma flexible para tolerar campos extra.
-metadata_payload ::=
-    metadata_payload metadata_token
-    {: RESULT = null; :}
-    | metadata_token
-    {: RESULT = null; :}
-    ;
-
-// Token permitido dentro de metadatos.
-metadata_token ::=
-    AUTHOR | FECHA | HORA | DESCRIPTION
-    | TOTAL_SECCIONES | TOTAL_PREGUNTAS | ABIERTAS | DESPLEGABLES | SELECCION | MULTIPLES
-    | IDENTIFIER | NUMBER | COLON | COMMA
-    | cadena
-    {: RESULT = null; :}
-    ;
-
 // ================================================
 // Bloques de alto nivel
 // ================================================
 
-// Lista de bloques consecutivos.
-bloques_opt ::=
-    bloques_opt bloque
+// Metadata obligatoria al inicio del archivo.
+metadata_block ::=
+    METADATA_DELIM
+    AUTHOR COLON metadata_valor
+    FECHA COLON metadata_valor
+    HORA COLON metadata_valor
+    DESCRIPTION COLON metadata_valor
+    TOTAL_SECCIONES COLON NUMBER
+    TOTAL_PREGUNTAS COLON NUMBER
+    ABIERTAS COLON NUMBER
+    DESPLEGABLES COLON NUMBER
+    SELECCION COLON NUMBER
+    MULTIPLES COLON NUMBER
+    TOTAL_COMPONENTES COLON NUMBER
+    TEXTOS COLON NUMBER
+    TABLAS COLON NUMBER
+    CON_ESTILOS COLON NUMBER
+    DRAWS_EJECUTADOS COLON NUMBER
+    METADATA_DELIM
     {: RESULT = null; :}
-    | /* vacio */
+    ;
+
+metadata_valor ::=
+    cadena {: RESULT = null; :}
+    | IDENTIFIER {: RESULT = null; :}
+    | NUMBER {: RESULT = null; :}
+    ;
+
+//Bloques que no pueden estar vacios
+bloques_no_vacios ::=
+    bloque
+    {: RESULT = null; :}
+    | bloques_no_vacios bloque
     {: RESULT = null; :}
     ;
 
@@ -243,8 +253,6 @@ style_key ::=
     {: RESULT = null; :}
     | BORDER_KEY
     {: RESULT = null; :}
-    | IDENTIFIER
-    {: RESULT = null; :}
     ;
 
 // ================================================
@@ -284,29 +292,32 @@ content_item ::=
 
 // <table> (lineas) </table>
 table_block ::=
-    LT TABLE GT line_blocks_opt LT_SLASH TABLE GT
+    LT TABLE GT 
+    style_opt
+    LT CONTENT GT line_blocks_no_vacios LT_SLASH CONTENT GT
+    LT_SLASH TABLE GT
     {: RESULT = null; :}
     ;
 
 // Filas de la tabla.
-line_blocks_opt ::=
-    line_blocks_opt line_block
+    line_blocks_no_vacios ::=
+    line_block
     {: RESULT = null; :}
-    | /* vacio */
+    | line_blocks_no_vacios line_block
     {: RESULT = null; :}
     ;
 
 // <line> (element) </line>
 line_block ::=
-    LT LINE GT element_blocks_opt LT_SLASH LINE GT
+    LT LINE GT element_blocks_no_vacios LT_SLASH LINE GT
     {: RESULT = null; :}
     ;
 
 // Celdas de la fila.
-element_blocks_opt ::=
-    element_blocks_opt element_block
+    element_blocks_no_vacios ::=
+    element_block
     {: RESULT = null; :}
-    | /* vacio */
+    | element_blocks_no_vacios element_block
     {: RESULT = null; :}
     ;
 
@@ -330,36 +341,50 @@ element_content_opt ::=
 // Componentes open/drop/select/multiple
 // ================================================
 
-// open autocierre o bloque con style opcional.
+// open: width,height,string
 open_block ::=
-    LT OPEN EQUALS valor_simple COMMA valor_simple COMMA valor_simple SLASH_GT
+    LT OPEN EQUALS numero_entero COMMA numero_entero COMMA cadena SLASH_GT
     {: RESULT = null; :}
-    | LT OPEN EQUALS valor_simple COMMA valor_simple COMMA valor_simple GT style_opt LT_SLASH OPEN GT
+    | LT OPEN EQUALS numero_entero COMMA numero_entero COMMA cadena GT style_opt LT_SLASH OPEN GT
     {: RESULT = null; :}
     ;
 
-// drop autocierre o bloque con style opcional.
+// drop/select: options como lista de strings; correct entero o -1.
 drop_block ::=
-    LT DROP EQUALS valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple SLASH_GT
+    LT DROP EQUALS numero_entero COMMA numero_entero COMMA cadena COMMA lista_strings COMMA NUMBER SLASH_GT
     {: RESULT = null; :}
-    | LT DROP EQUALS valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple GT style_opt LT_SLASH DROP GT
+    | LT DROP EQUALS numero_entero COMMA numero_entero COMMA cadena COMMA lista_strings COMMA NUMBER GT style_opt LT_SLASH DROP GT
     {: RESULT = null; :}
     ;
 
-// select autocierre o bloque con style opcional.
 select_block ::=
-    LT SELECT EQUALS valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple SLASH_GT
+    LT SELECT EQUALS numero_entero COMMA numero_entero COMMA cadena COMMA lista_strings COMMA NUMBER SLASH_GT
     {: RESULT = null; :}
-    | LT SELECT EQUALS valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple GT style_opt LT_SLASH SELECT GT
+    | LT SELECT EQUALS numero_entero COMMA numero_entero COMMA cadena COMMA lista_strings COMMA NUMBER GT style_opt LT_SLASH SELECT GT
     {: RESULT = null; :}
     ;
 
 // multiple autocierre o bloque con style opcional.
 multiple_block ::=
-    LT MULTIPLE EQUALS valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple SLASH_GT
+    LT MULTIPLE EQUALS numero_entero COMMA numero_entero COMMA cadena COMMA lista_strings COMMA LBRACE lista_enteros_opt RBRACE SLASH_GT
     {: RESULT = null; :}
-    | LT MULTIPLE EQUALS valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple GT style_opt LT_SLASH MULTIPLE GT
+    | LT MULTIPLE EQUALS numero_entero COMMA numero_entero COMMA cadena COMMA lista_strings COMMA LBRACE lista_enteros_opt RBRACE GT style_opt LT_SLASH MULTIPLE GT
     {: RESULT = null; :}
+    ;
+
+numero_entero ::= NUMBER {: RESULT = null; :};
+
+lista_strings ::=
+    LBRACE cadena COMMA cadena RBRACE
+    {: RESULT = null; :}
+    | LBRACE lista_strings COMMA cadena RBRACE
+    {: RESULT = null; :}
+    ;
+
+lista_enteros_opt ::=
+    /* vacio */ {: RESULT = null; :}
+    | NUMBER {: RESULT = null; :}
+    | lista_enteros_opt COMMA NUMBER {: RESULT = null; :}
     ;
 
 // style opcional dentro de pregunta/texto.
