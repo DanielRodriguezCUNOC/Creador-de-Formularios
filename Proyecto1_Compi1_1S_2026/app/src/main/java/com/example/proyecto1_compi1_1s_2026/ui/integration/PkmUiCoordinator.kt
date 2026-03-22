@@ -1,7 +1,5 @@
 package com.example.proyecto1_compi1_1s_2026.ui.integration
 
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
-
 /**
  * Solo valida errores de analisis (lexico/sintactico) y
  * deja lista la misma estructura de salida usada por la UI.
@@ -21,7 +19,6 @@ class PkmUiCoordinator(
             )
         }
 
-        // Se retorna exito de analisis sin errores.
-        return ResultadoAnalisisPkm()
+        return ResultadoAnalisisPkm(formulario = resultadoParseo.formulario)
     }
 }

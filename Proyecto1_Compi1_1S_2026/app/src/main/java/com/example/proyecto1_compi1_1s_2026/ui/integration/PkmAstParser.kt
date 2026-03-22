@@ -1,5 +1,6 @@
 package com.example.proyecto1_compi1_1s_2026.ui.integration
 
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError
 import java.io.StringReader
@@ -19,12 +20,31 @@ class PkmAstParser {
             parserInstance = parserClass.getConstructor(java_cup.runtime.Scanner::class.java)
                 .newInstance(lexerInstance)
 
-            parserClass.getMethod("parse").invoke(parserInstance)
+            val symbolResultado = parserClass.getMethod("parse").invoke(parserInstance) as? java_cup.runtime.Symbol
+            val formulario = if (symbolResultado?.value is Formulario) {
+                symbolResultado.value as Formulario
+            } else {
+                null
+            }
 
             val erroresLexicos = obtenerErrores(lexerInstance, "getLexicalErrors")
             val erroresSintacticos = obtenerErrores(parserInstance, "getErroresSintacticos")
 
+            if (erroresLexicos.isEmpty() && erroresSintacticos.isEmpty() && formulario == null) {
+                return ResultadoParseoPkm(
+                    erroresSemanticos = listOf(
+                        ErrorInfo(
+                            tipo = TipoError.SEMANTICO,
+                            mensaje = "El parser PKM no devolvio un Formulario valido",
+                            linea = 0,
+                            columna = 0
+                        )
+                    )
+                )
+            }
+
             ResultadoParseoPkm(
+                formulario = formulario,
                 erroresLexicos = erroresLexicos,
                 erroresSintacticos = erroresSintacticos
             )

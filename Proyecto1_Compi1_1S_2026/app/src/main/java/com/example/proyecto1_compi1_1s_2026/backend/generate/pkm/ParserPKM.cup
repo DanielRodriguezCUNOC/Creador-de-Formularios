@@ -2,26 +2,32 @@ package com.example.proyecto1_compi1_1s_2026.backend.generate.pkm;
 
 import java_cup.runtime.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.ElementoFormulario;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.EstiloElemento;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Orientacion;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.PreguntaAbierta;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.PreguntaDesplegable;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.PreguntaSeleccionMultiple;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.PreguntaSeleccionUnica;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.SeccionFormulario;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.TablaFormulario;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.TextoFormulario;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Color;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError;
 
-// ================================================
-// Validar estructura general del archivo PKM
-// ================================================
-
 parser code {:
-    // Con 1 token de avance el parser intenta recuperarse y continuar.
     public int error_sync_size() { return 1; }
 
-    // Lista publica para que la capa superior consulte errores sintacticos.
     private List<ErrorInfo> erroresSintacticos = new ArrayList<>();
 
     public List<ErrorInfo> getErroresSintacticos() {
         return erroresSintacticos;
     }
 
-    // Error sintactico principal con mensaje simple y ubicacion.
     public void syntax_error(Symbol s) {
         int linea = (s != null) ? s.left : 0;
         int columna = (s != null) ? s.right : 0;
@@ -33,87 +39,83 @@ parser code {:
         erroresSintacticos.add(new ErrorInfo(TipoError.SINTACTICO, mensaje, linea, columna));
     }
 
-    // Evita duplicar logs, ya registrados en syntax_error.
     public void report_error(String message, Object info) { }
+
+    private EstiloElemento estiloDefault() {
+        Color colorTexto = new Color(0, 0, 0, 255);
+        Color colorFondo = new Color(255, 255, 255, 0);
+        return new EstiloElemento(colorTexto, colorFondo, "SANS_SERIF", 14f, null);
+    }
+
+    private float toFloat(Object value) {
+        if (value == null) return 0f;
+        return Float.parseFloat(value.toString());
+    }
+
+    private int toInt(Object value) {
+        if (value == null) return 0;
+        return Integer.parseInt(value.toString());
+    }
+
+    private Integer normalizarIndice(int indice, List opciones) {
+        if (indice < 0) return null;
+        if (opciones == null) return null;
+        if (indice >= opciones.size()) return null;
+        return Integer.valueOf(indice);
+    }
+
+    private List listaVacia() {
+        return new ArrayList();
+    }
+
+    private List listaSingleton(ElementoFormulario elemento) {
+        List lista = new ArrayList();
+        if (elemento != null) {
+            lista.add(elemento);
+        }
+        return lista;
+    }
 :};
 
-// ================================================
-// Terminales o Tokens
-// ================================================
+terminal EOF;
 
-terminal EOF; //* Fin de archivo
-
-// Metadatos.
 terminal METADATA_DELIM, AUTHOR, FECHA, HORA, DESCRIPTION;
 terminal TOTAL_SECCIONES, TOTAL_PREGUNTAS, ABIERTAS, DESPLEGABLES, SELECCION, MULTIPLES;
 terminal TOTAL_COMPONENTES, TEXTOS, TABLAS, CON_ESTILOS, DRAWS_EJECUTADOS;
 
-
-// Etiquetas principales.
 terminal SECTION, STYLE, CONTENT, TABLE, LINE, ELEMENT, OPEN, DROP, SELECT, MULTIPLE;
-
-// Claves de estilo.
 terminal COLOR_KEY, BACKGROUND_COLOR_KEY, FONT_FAMILY_KEY, TEXT_SIZE_KEY, BORDER_KEY;
-
-// Valores reservados.
 terminal VERTICAL, HORIZONTAL, MONO, SANS_SERIF, CURSIVE;
 terminal String BORDER_STYLE, BOOLEAN;
-
-// Literales.
 terminal String COLOR_HEX, COLOR_RGB, COLOR_HSL, NUMBER, IDENTIFIER;
-
-// Signos estructurales.
 terminal LT, GT, LT_SLASH, SLASH_GT, EQUALS, COMMA, COLON, LBRACE, RBRACE;
-
-// Cadenas con partes (texto + emojis).
 terminal String STRING_START, STRING_END, STRING_TEXT, EMOJI_SPEC;
 
-// ================================================
-// No terminales
-// ================================================
-
-// Usamos Object para mantener parser minimo y desacoplado del AST final.
-non terminal Object inicio;
-non terminal Object bloque;
-non terminal Object bloques_no_vacios;
-non terminal Object section_block, section_body_opt, section_item;
-non terminal Object style_block, style_items_opt, style_item, style_key;
-non terminal Object content_block, content_items_opt, content_item;
-non terminal Object table_block, line_block;
-non terminal Object element_block, element_content_opt;
-non terminal Object line_blocks_no_vacios, element_blocks_no_vacios;
-non terminal Object open_block, drop_block, select_block, multiple_block;
-non terminal Object style_opt;
-non terminal Object orientacion;
+non terminal Formulario inicio;
+non terminal List bloques_no_vacios, bloque;
+non terminal ElementoFormulario section_block, section_item;
+non terminal List section_body_opt;
+non terminal Object style_block, style_items_opt, style_item, style_key, style_opt;
+non terminal List content_block, content_items_opt;
+non terminal ElementoFormulario content_item;
+non terminal ElementoFormulario table_block;
+non terminal List line_blocks_no_vacios, line_block, element_blocks_no_vacios;
+non terminal ElementoFormulario element_block, element_content_opt;
+non terminal ElementoFormulario open_block, drop_block, select_block, multiple_block;
+non terminal Orientacion orientacion;
 non terminal Object valor_simple, lista_valores_opt, lista_valores;
-non terminal Object cadena, cadena_partes_opt, cadena_parte;
-non terminal Object metadata_block;
-non terminal Object metadata_valor;
-non terminal Object numero_entero, lista_strings, lista_enteros_opt;
-
-
-
-// ================================================
-// Produccion inicial
-// ================================================
+non terminal Object metadata_block, metadata_valor;
+non terminal Integer numero_entero;
+non terminal List lista_strings, lista_cadenas, lista_enteros_opt, lista_enteros;
+non terminal String cadena, cadena_partes_opt, cadena_parte;
 
 start with inicio;
 
-// Documento PKM: metadatos opcionales + bloques de contenido.
 inicio ::=
-    metadata_block bloques_no_vacios
-    {: RESULT = null; :}
+    metadata_block bloques_no_vacios:bloques
+    {: RESULT = new Formulario(bloques); :}
     ;
 
-// ================================================
-// Metadatos
-// ================================================
-
-// ================================================
-// Bloques de alto nivel
-// ================================================
-
-// Metadata obligatoria al inicio del archivo.
 metadata_block ::=
     METADATA_DELIM
     AUTHOR COLON metadata_valor
@@ -136,95 +138,81 @@ metadata_block ::=
     ;
 
 metadata_valor ::=
-    cadena {: RESULT = null; :}
-    | IDENTIFIER {: RESULT = null; :}
-    | NUMBER {: RESULT = null; :}
+    cadena:c {: RESULT = c; :}
+    | IDENTIFIER:i {: RESULT = i; :}
+    | NUMBER:n {: RESULT = n; :}
     ;
 
-//Bloques que no pueden estar vacios
 bloques_no_vacios ::=
-    bloque
-    {: RESULT = null; :}
-    | bloques_no_vacios bloque
-    {: RESULT = null; :}
+    bloque:b
+    {: RESULT = b; :}
+    | bloques_no_vacios:lista bloque:b
+    {: lista.addAll(b); RESULT = lista; :}
     ;
 
-// Bloques permitidos en el cuerpo del archivo.
 bloque ::=
-    section_block
-    {: RESULT = null; :}
+    section_block:s
+    {: RESULT = listaSingleton(s); :}
     | style_block
-    {: RESULT = null; :}
-    | content_block
-    {: RESULT = null; :}
-    | table_block
-    {: RESULT = null; :}
-    | open_block
-    {: RESULT = null; :}
-    | drop_block
-    {: RESULT = null; :}
-    | select_block
-    {: RESULT = null; :}
-    | multiple_block
-    {: RESULT = null; :}
+    {: RESULT = listaVacia(); :}
+    | content_block:c
+    {: RESULT = c; :}
+    | table_block:t
+    {: RESULT = listaSingleton(t); :}
+    | open_block:o
+    {: RESULT = listaSingleton(o); :}
+    | drop_block:d
+    {: RESULT = listaSingleton(d); :}
+    | select_block:s
+    {: RESULT = listaSingleton(s); :}
+    | multiple_block:m
+    {: RESULT = listaSingleton(m); :}
     ;
 
-// ================================================
-// Seccion
-// ================================================
-
-// <section=w,h,x,y,orient> ... </section>
 section_block ::=
-    LT SECTION EQUALS valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple COMMA orientacion GT
-    section_body_opt
+    LT SECTION EQUALS valor_simple:w COMMA valor_simple:h COMMA valor_simple:x COMMA valor_simple:y COMMA orientacion:o GT
+    section_body_opt:hijos
     LT_SLASH SECTION GT
-    {: RESULT = null; :}
+    {: RESULT = new SeccionFormulario(
+            Float.valueOf(toFloat(w)),
+            Float.valueOf(toFloat(h)),
+            toFloat(x),
+            toFloat(y),
+            o,
+            hijos,
+            estiloDefault()
+        );
+    :}
     ;
 
-// Contenido permitido dentro de section.
 section_body_opt ::=
-    section_body_opt section_item
-    {: RESULT = null; :}
+    section_body_opt:lista section_item:item
+    {: if (item != null) { lista.add(item); } RESULT = lista; :}
     | /* vacio */
-    {: RESULT = null; :}
+    {: RESULT = listaVacia(); :}
     ;
 
 section_item ::=
     style_block
     {: RESULT = null; :}
-    | content_block
-    {: RESULT = null; :}
-    | table_block
-    {: RESULT = null; :}
-    | open_block
-    {: RESULT = null; :}
-    | drop_block
-    {: RESULT = null; :}
-    | select_block
-    {: RESULT = null; :}
-    | multiple_block
-    {: RESULT = null; :}
+    | content_item:c
+    {: RESULT = c; :}
+    | table_block:t
+    {: RESULT = t; :}
     ;
 
-// Orientacion valida de seccion.
 orientacion ::=
     VERTICAL
-    {: RESULT = null; :}
+    {: RESULT = Orientacion.VERTICAL; :}
     | HORIZONTAL
-    {: RESULT = null; :}
+    {: RESULT = Orientacion.HORIZONTAL; :}
     ;
 
-// ================================================
-// Bloque style
-// ================================================
-
-// <style> (items) </style>
 style_block ::=
     LT STYLE GT style_items_opt LT_SLASH STYLE GT
     {: RESULT = null; :}
     ;
 
-// Lista opcional de estilos autocerrados.
 style_items_opt ::=
     style_items_opt style_item
     {: RESULT = null; :}
@@ -232,16 +220,13 @@ style_items_opt ::=
     {: RESULT = null; :}
     ;
 
-// Formato flexible de item: <clave=valor/>.
 style_item ::=
     LT style_key EQUALS valor_simple SLASH_GT
     {: RESULT = null; :}
-    // Variante compacta de borde: <border,ancho,tipo,color=valor/>.
     | LT BORDER_KEY COMMA valor_simple COMMA valor_simple COMMA COLOR_KEY EQUALS valor_simple SLASH_GT
     {: RESULT = null; :}
     ;
 
-// Claves admitidas para estilo.
 style_key ::=
     COLOR_KEY
     {: RESULT = null; :}
@@ -255,139 +240,197 @@ style_key ::=
     {: RESULT = null; :}
     ;
 
-// ================================================
-// Bloque content
-// ================================================
-
-// <content> ... </content>
 content_block ::=
-    LT CONTENT GT content_items_opt LT_SLASH CONTENT GT
-    {: RESULT = null; :}
+    LT CONTENT GT content_items_opt:items LT_SLASH CONTENT GT
+    {: RESULT = items; :}
     ;
 
-// Dentro de content se aceptan componentes y tabla.
 content_items_opt ::=
-    content_items_opt content_item
-    {: RESULT = null; :}
+    content_items_opt:lista content_item:item
+    {: if (item != null) { lista.add(item); } RESULT = lista; :}
     | /* vacio */
-    {: RESULT = null; :}
+    {: RESULT = listaVacia(); :}
     ;
 
 content_item ::=
-    open_block
-    {: RESULT = null; :}
-    | drop_block
-    {: RESULT = null; :}
-    | select_block
-    {: RESULT = null; :}
-    | multiple_block
-    {: RESULT = null; :}
-    | table_block
-    {: RESULT = null; :}
+    open_block:o
+    {: RESULT = o; :}
+    | drop_block:d
+    {: RESULT = d; :}
+    | select_block:s
+    {: RESULT = s; :}
+    | multiple_block:m
+    {: RESULT = m; :}
+    | table_block:t
+    {: RESULT = t; :}
     ;
 
-// ================================================
-// Tabla
-// ================================================
-
-// <table> (lineas) </table>
 table_block ::=
-    LT TABLE GT 
+    LT TABLE GT
     style_opt
-    LT CONTENT GT line_blocks_no_vacios LT_SLASH CONTENT GT
+    LT CONTENT GT line_blocks_no_vacios:filas LT_SLASH CONTENT GT
     LT_SLASH TABLE GT
-    {: RESULT = null; :}
+    {: RESULT = new TablaFormulario(null, null, 0f, 0f, filas, estiloDefault()); :}
     ;
 
-// Filas de la tabla.
-    line_blocks_no_vacios ::=
-    line_block
-    {: RESULT = null; :}
-    | line_blocks_no_vacios line_block
-    {: RESULT = null; :}
+line_blocks_no_vacios ::=
+    line_block:fila
+    {: List filas = listaVacia(); filas.add(fila); RESULT = filas; :}
+    | line_blocks_no_vacios:filas line_block:fila
+    {: filas.add(fila); RESULT = filas; :}
     ;
 
-// <line> (element) </line>
 line_block ::=
-    LT LINE GT element_blocks_no_vacios LT_SLASH LINE GT
-    {: RESULT = null; :}
+    LT LINE GT element_blocks_no_vacios:elementos LT_SLASH LINE GT
+    {: RESULT = elementos; :}
     ;
 
-// Celdas de la fila.
-    element_blocks_no_vacios ::=
-    element_block
-    {: RESULT = null; :}
-    | element_blocks_no_vacios element_block
-    {: RESULT = null; :}
+element_blocks_no_vacios ::=
+    element_block:e
+    {: List elementos = listaVacia(); if (e != null) { elementos.add(e); } RESULT = elementos; :}
+    | element_blocks_no_vacios:lista element_block:e
+    {: if (e != null) { lista.add(e); } RESULT = lista; :}
     ;
 
-// <element> contenido opcional </element>
 element_block ::=
-    LT ELEMENT GT element_content_opt LT_SLASH ELEMENT GT
-    {: RESULT = null; :}
+    LT ELEMENT GT element_content_opt:contenido LT_SLASH ELEMENT GT
+    {: RESULT = (contenido != null)
+        ? contenido
+        : new TextoFormulario(null, null, "", estiloDefault());
+    :}
     ;
 
-// El elemento puede contener componentes o texto simple.
 element_content_opt ::=
-    element_content_opt content_item
-    {: RESULT = null; :}
-    | valor_simple
-    {: RESULT = null; :}
+    content_item:c
+    {: RESULT = c; :}
+    | valor_simple:v
+    {: RESULT = new TextoFormulario(null, null, String.valueOf(v), estiloDefault()); :}
     | /* vacio */
     {: RESULT = null; :}
     ;
 
-// ================================================
-// Componentes open/drop/select/multiple
-// ================================================
-
-// open: width,height,string
 open_block ::=
-    LT OPEN EQUALS numero_entero COMMA numero_entero COMMA cadena SLASH_GT
-    {: RESULT = null; :}
-    | LT OPEN EQUALS numero_entero COMMA numero_entero COMMA cadena GT style_opt LT_SLASH OPEN GT
-    {: RESULT = null; :}
+    LT OPEN EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label SLASH_GT
+    {: RESULT = new PreguntaAbierta(
+            Float.valueOf(w.floatValue()),
+            Float.valueOf(h.floatValue()),
+            label,
+            estiloDefault(),
+            ""
+        );
+    :}
+    | LT OPEN EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label GT style_opt LT_SLASH OPEN GT
+    {: RESULT = new PreguntaAbierta(
+            Float.valueOf(w.floatValue()),
+            Float.valueOf(h.floatValue()),
+            label,
+            estiloDefault(),
+            ""
+        );
+    :}
     ;
 
-// drop/select: options como lista de strings; correct entero o -1.
 drop_block ::=
-    LT DROP EQUALS numero_entero COMMA numero_entero COMMA cadena COMMA lista_strings COMMA NUMBER SLASH_GT
-    {: RESULT = null; :}
-    | LT DROP EQUALS numero_entero COMMA numero_entero COMMA cadena COMMA lista_strings COMMA NUMBER GT style_opt LT_SLASH DROP GT
-    {: RESULT = null; :}
+    LT DROP EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA NUMBER:correcta SLASH_GT
+    {: RESULT = new PreguntaDesplegable(
+            Float.valueOf(w.floatValue()),
+            Float.valueOf(h.floatValue()),
+            label,
+            opts,
+            normalizarIndice(toInt(correcta), opts),
+            estiloDefault(),
+            -1
+        );
+    :}
+    | LT DROP EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA NUMBER:correcta GT style_opt LT_SLASH DROP GT
+    {: RESULT = new PreguntaDesplegable(
+            Float.valueOf(w.floatValue()),
+            Float.valueOf(h.floatValue()),
+            label,
+            opts,
+            normalizarIndice(toInt(correcta), opts),
+            estiloDefault(),
+            -1
+        );
+    :}
     ;
 
 select_block ::=
-    LT SELECT EQUALS numero_entero COMMA numero_entero COMMA cadena COMMA lista_strings COMMA NUMBER SLASH_GT
-    {: RESULT = null; :}
-    | LT SELECT EQUALS numero_entero COMMA numero_entero COMMA cadena COMMA lista_strings COMMA NUMBER GT style_opt LT_SLASH SELECT GT
-    {: RESULT = null; :}
+    LT SELECT EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA NUMBER:correcta SLASH_GT
+    {: RESULT = new PreguntaSeleccionUnica(
+            Float.valueOf(w.floatValue()),
+            Float.valueOf(h.floatValue()),
+            label,
+            opts,
+            normalizarIndice(toInt(correcta), opts),
+            estiloDefault(),
+            -1
+        );
+    :}
+    | LT SELECT EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA NUMBER:correcta GT style_opt LT_SLASH SELECT GT
+    {: RESULT = new PreguntaSeleccionUnica(
+            Float.valueOf(w.floatValue()),
+            Float.valueOf(h.floatValue()),
+            label,
+            opts,
+            normalizarIndice(toInt(correcta), opts),
+            estiloDefault(),
+            -1
+        );
+    :}
     ;
 
-// multiple autocierre o bloque con style opcional.
 multiple_block ::=
-    LT MULTIPLE EQUALS numero_entero COMMA numero_entero COMMA cadena COMMA lista_strings COMMA LBRACE lista_enteros_opt RBRACE SLASH_GT
-    {: RESULT = null; :}
-    | LT MULTIPLE EQUALS numero_entero COMMA numero_entero COMMA cadena COMMA lista_strings COMMA LBRACE lista_enteros_opt RBRACE GT style_opt LT_SLASH MULTIPLE GT
-    {: RESULT = null; :}
+    LT MULTIPLE EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA LBRACE lista_enteros_opt:correctas RBRACE SLASH_GT
+    {: RESULT = new PreguntaSeleccionMultiple(
+            Float.valueOf(w.floatValue()),
+            Float.valueOf(h.floatValue()),
+            label,
+            opts,
+            correctas,
+            estiloDefault(),
+            new HashSet()
+        );
+    :}
+    | LT MULTIPLE EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA LBRACE lista_enteros_opt:correctas RBRACE GT style_opt LT_SLASH MULTIPLE GT
+    {: RESULT = new PreguntaSeleccionMultiple(
+            Float.valueOf(w.floatValue()),
+            Float.valueOf(h.floatValue()),
+            label,
+            opts,
+            correctas,
+            estiloDefault(),
+            new HashSet()
+        );
+    :}
     ;
 
-numero_entero ::= NUMBER {: RESULT = null; :};
+numero_entero ::= NUMBER:n {: RESULT = Integer.valueOf(toInt(n)); :};
 
 lista_strings ::=
-    LBRACE cadena COMMA cadena RBRACE
-    {: RESULT = null; :}
-    | LBRACE lista_strings COMMA cadena RBRACE
-    {: RESULT = null; :}
+    LBRACE lista_cadenas:lista RBRACE
+    {: RESULT = lista; :}
+    | LBRACE RBRACE
+    {: RESULT = listaVacia(); :}
+    ;
+
+lista_cadenas ::=
+    cadena:c
+    {: List lista = listaVacia(); lista.add(c); RESULT = lista; :}
+    | lista_cadenas:lista COMMA cadena:c
+    {: lista.add(c); RESULT = lista; :}
     ;
 
 lista_enteros_opt ::=
-    /* vacio */ {: RESULT = null; :}
-    | NUMBER {: RESULT = null; :}
-    | lista_enteros_opt COMMA NUMBER {: RESULT = null; :}
+    /* vacio */ {: RESULT = listaVacia(); :}
+    | lista_enteros:lista {: RESULT = lista; :}
     ;
 
-// style opcional dentro de pregunta/texto.
+lista_enteros ::=
+    NUMBER:n {: List lista = listaVacia(); lista.add(Integer.valueOf(toInt(n))); RESULT = lista; :}
+    | lista_enteros:lista COMMA NUMBER:n {: lista.add(Integer.valueOf(toInt(n))); RESULT = lista; :}
+    ;
+
 style_opt ::=
     style_block
     {: RESULT = null; :}
@@ -395,74 +438,64 @@ style_opt ::=
     {: RESULT = null; :}
     ;
 
-// ================================================
-// Valores
-// ================================================
-
-// Valor unitario permitido en atributos.
 valor_simple ::=
-    NUMBER
-    {: RESULT = null; :}
-    | IDENTIFIER
-    {: RESULT = null; :}
-    | BOOLEAN
-    {: RESULT = null; :}
-    | COLOR_HEX
-    {: RESULT = null; :}
-    | COLOR_RGB
-    {: RESULT = null; :}
-    | COLOR_HSL
-    {: RESULT = null; :}
-    | BORDER_STYLE
-    {: RESULT = null; :}
+    NUMBER:n
+    {: RESULT = n; :}
+    | IDENTIFIER:i
+    {: RESULT = i; :}
+    | BOOLEAN:b
+    {: RESULT = b; :}
+    | COLOR_HEX:c
+    {: RESULT = c; :}
+    | COLOR_RGB:c
+    {: RESULT = c; :}
+    | COLOR_HSL:c
+    {: RESULT = c; :}
+    | BORDER_STYLE:b
+    {: RESULT = b; :}
     | MONO
-    {: RESULT = null; :}
+    {: RESULT = "MONO"; :}
     | SANS_SERIF
-    {: RESULT = null; :}
+    {: RESULT = "SANS_SERIF"; :}
     | CURSIVE
-    {: RESULT = null; :}
-    | orientacion
-    {: RESULT = null; :}
-    | cadena
-    {: RESULT = null; :}
-    | LBRACE lista_valores_opt RBRACE
-    {: RESULT = null; :}
+    {: RESULT = "CURSIVE"; :}
+    | orientacion:o
+    {: RESULT = o.toString(); :}
+    | cadena:c
+    {: RESULT = c; :}
+    | LBRACE lista_valores_opt:v RBRACE
+    {: RESULT = v; :}
     ;
 
-// Lista opcional de valores entre llaves.
 lista_valores_opt ::=
-    lista_valores
-    {: RESULT = null; :}
+    lista_valores:l
+    {: RESULT = l; :}
     | /* vacio */
-    {: RESULT = null; :}
+    {: RESULT = listaVacia(); :}
     ;
 
-// Lista separada por comas: v1, v2, v3.
 lista_valores ::=
-    lista_valores COMMA valor_simple
-    {: RESULT = null; :}
-    | valor_simple
-    {: RESULT = null; :}
+    lista_valores:lista COMMA valor_simple:v
+    {: lista.add(v); RESULT = lista; :}
+    | valor_simple:v
+    {: List lista = listaVacia(); lista.add(v); RESULT = lista; :}
     ;
 
-// Cadena segmentada para conservar emojis como tokens propios.
 cadena ::=
-    STRING_START cadena_partes_opt STRING_END
-    {: RESULT = null; :}
+    STRING_START cadena_partes_opt:partes STRING_END
+    {: RESULT = partes; :}
     ;
 
-// Partes opcionales dentro de comillas.
 cadena_partes_opt ::=
-    cadena_partes_opt cadena_parte
-    {: RESULT = null; :}
+    cadena_partes_opt:acumulado cadena_parte:parte
+    {: RESULT = acumulado + parte; :}
     | /* vacio */
-    {: RESULT = null; :}
+    {: RESULT = ""; :}
     ;
 
-// Cada parte puede ser texto normal o notacion emoji.
 cadena_parte ::=
-    STRING_TEXT
-    {: RESULT = null; :}
-    | EMOJI_SPEC
-    {: RESULT = null; :}
+    STRING_TEXT:t
+    {: RESULT = t; :}
+    | EMOJI_SPEC:e
+    {: RESULT = e; :}
     ;

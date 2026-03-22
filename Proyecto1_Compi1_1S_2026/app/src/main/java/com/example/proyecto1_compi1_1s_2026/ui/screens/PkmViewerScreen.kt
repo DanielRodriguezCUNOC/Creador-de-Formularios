@@ -39,7 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
-import com.example.proyecto1_compi1_1s_2026.ui.integration.PkmFormBuildService
 import com.example.proyecto1_compi1_1s_2026.ui.integration.PkmUiCoordinator
 import kotlinx.coroutines.launch
 
@@ -55,7 +54,6 @@ fun PkmViewerScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val pkmCoordinator = remember { PkmUiCoordinator() }
-    val pkmBuilder = remember { PkmFormBuildService() }
 
     Scaffold(
         topBar = {
@@ -119,14 +117,8 @@ fun PkmViewerScreen(
                 Button(
                     onClick = {
                         val resultado = pkmCoordinator.analizar(codigoPkm)
-                        if (!resultado.exitoso) {
+                        if (!resultado.exitoso || resultado.formulario == null) {
                             onViewErrors(resultado.errores)
-                            return@Button
-                        }
-
-                        val resultadoBuild = pkmBuilder.construir(codigoPkm)
-                        if (!resultadoBuild.exitoso || resultadoBuild.formulario == null) {
-                            onViewErrors(resultadoBuild.erroresSemanticos)
                             return@Button
                         }
 
@@ -136,7 +128,7 @@ fun PkmViewerScreen(
                                 duration = SnackbarDuration.Short
                             )
                         }
-                        onContestarExitoso(resultadoBuild.formulario)
+                        onContestarExitoso(resultado.formulario)
                     },
                     modifier = Modifier.weight(1f)
                 ) {
