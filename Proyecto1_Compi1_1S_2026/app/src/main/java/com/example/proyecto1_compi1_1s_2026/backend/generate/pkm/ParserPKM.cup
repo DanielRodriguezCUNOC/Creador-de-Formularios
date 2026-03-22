@@ -1,0 +1,443 @@
+package com.example.proyecto1_compi1_1s_2026.backend.generate.pkm;
+
+import java_cup.runtime.*;
+import java.util.ArrayList;
+import java.util.List;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.diagnostics.ErrorInfo;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.diagnostics.TipoError;
+
+// ================================================
+// Parser PKM minimo
+// Objetivo: validar estructura general del archivo
+// ================================================
+
+parser code {:
+    // Con 1 token de avance el parser intenta recuperarse y continuar.
+    public int error_sync_size() { return 1; }
+
+    // Lista publica para que la capa superior consulte errores sintacticos.
+    private List<ErrorInfo> erroresSintacticos = new ArrayList<>();
+
+    public List<ErrorInfo> getErroresSintacticos() {
+        return erroresSintacticos;
+    }
+
+    // Error sintactico principal con mensaje simple y ubicacion.
+    public void syntax_error(Symbol s) {
+        int linea = (s != null) ? s.left : 0;
+        int columna = (s != null) ? s.right : 0;
+        String encontrado = (s != null && s.value != null)
+            ? s.value.toString()
+            : ((s != null) ? symbl_name_from_id(s.sym) : "EOF");
+
+        String mensaje = "Estructura PKM invalida cerca de: " + encontrado;
+        erroresSintacticos.add(new ErrorInfo(TipoError.SINTACTICO, mensaje, linea, columna));
+    }
+
+    // Evita duplicar logs; ya registramos en syntax_error.
+    public void report_error(String message, Object info) { }
+:};
+
+// ================================================
+// Terminales (tokens que entrega LexerPKM)
+// ================================================
+
+terminal EOF;
+
+// Metadatos.
+terminal METADATA_DELIM, AUTHOR, FECHA, HORA, DESCRIPTION;
+terminal TOTAL_SECCIONES, TOTAL_PREGUNTAS, ABIERTAS, DESPLEGABLES, SELECCION, MULTIPLES;
+
+// Etiquetas principales.
+terminal SECTION, STYLE, CONTENT, TABLE, LINE, ELEMENT, OPEN, DROP, SELECT, MULTIPLE;
+
+// Claves de estilo.
+terminal COLOR_KEY, BACKGROUND_COLOR_KEY, FONT_FAMILY_KEY, TEXT_SIZE_KEY, BORDER_KEY;
+
+// Valores reservados.
+terminal VERTICAL, HORIZONTAL, MONO, SANS_SERIF, CURSIVE;
+terminal String BORDER_STYLE, BOOLEAN;
+
+// Literales.
+terminal String COLOR_HEX, COLOR_RGB, COLOR_HSL, NUMBER, IDENTIFIER;
+
+// Signos estructurales.
+terminal LT, GT, LT_SLASH, SLASH_GT, SLASH, EQUALS, COMMA, COLON, LBRACE, RBRACE;
+
+// Cadenas con partes (texto + emojis).
+terminal String STRING_START, STRING_END, STRING_TEXT, EMOJI_SPEC;
+
+// ================================================
+// No terminales
+// ================================================
+
+// Usamos Object para mantener parser minimo y desacoplado del AST final.
+non terminal Object inicio;
+non terminal Object metadata_opt, metadata_payload, metadata_token;
+non terminal Object bloques_opt, bloque;
+non terminal Object section_block, section_body_opt, section_item;
+non terminal Object style_block, style_items_opt, style_item, style_key;
+non terminal Object content_block, content_items_opt, content_item;
+non terminal Object table_block, line_blocks_opt, line_block;
+non terminal Object element_blocks_opt, element_block, element_content_opt;
+non terminal Object open_block, drop_block, select_block, multiple_block;
+non terminal Object style_opt;
+non terminal Object orientacion;
+non terminal Object valor_simple, lista_valores_opt, lista_valores;
+non terminal Object cadena, cadena_partes_opt, cadena_parte;
+
+// ================================================
+// Produccion inicial
+// ================================================
+
+start with inicio;
+
+// Documento PKM: metadatos opcionales + bloques de contenido.
+inicio ::=
+    metadata_opt bloques_opt
+    {: RESULT = null; :}
+    ;
+
+// ================================================
+// Metadatos
+// ================================================
+
+// El bloque va entre ### ... ###.
+metadata_opt ::=
+    METADATA_DELIM metadata_payload METADATA_DELIM
+    {: RESULT = null; :}
+    | /* vacio */
+    {: RESULT = null; :}
+    ;
+
+// Consumimos metadatos de forma flexible para tolerar campos extra.
+metadata_payload ::=
+    metadata_payload metadata_token
+    {: RESULT = null; :}
+    | metadata_token
+    {: RESULT = null; :}
+    ;
+
+// Token permitido dentro de metadatos.
+metadata_token ::=
+    AUTHOR | FECHA | HORA | DESCRIPTION
+    | TOTAL_SECCIONES | TOTAL_PREGUNTAS | ABIERTAS | DESPLEGABLES | SELECCION | MULTIPLES
+    | IDENTIFIER | NUMBER | COLON | COMMA
+    | cadena
+    {: RESULT = null; :}
+    ;
+
+// ================================================
+// Bloques de alto nivel
+// ================================================
+
+// Lista de bloques consecutivos.
+bloques_opt ::=
+    bloques_opt bloque
+    {: RESULT = null; :}
+    | /* vacio */
+    {: RESULT = null; :}
+    ;
+
+// Bloques permitidos en el cuerpo del archivo.
+bloque ::=
+    section_block
+    {: RESULT = null; :}
+    | style_block
+    {: RESULT = null; :}
+    | content_block
+    {: RESULT = null; :}
+    | table_block
+    {: RESULT = null; :}
+    | open_block
+    {: RESULT = null; :}
+    | drop_block
+    {: RESULT = null; :}
+    | select_block
+    {: RESULT = null; :}
+    | multiple_block
+    {: RESULT = null; :}
+    ;
+
+// ================================================
+// Seccion
+// ================================================
+
+// <section=w,h,x,y,orient> ... </section>
+section_block ::=
+    LT SECTION EQUALS valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple COMMA orientacion GT
+    section_body_opt
+    LT_SLASH SECTION GT
+    {: RESULT = null; :}
+    ;
+
+// Contenido permitido dentro de section.
+section_body_opt ::=
+    section_body_opt section_item
+    {: RESULT = null; :}
+    | /* vacio */
+    {: RESULT = null; :}
+    ;
+
+section_item ::=
+    style_block
+    {: RESULT = null; :}
+    | content_block
+    {: RESULT = null; :}
+    | table_block
+    {: RESULT = null; :}
+    | open_block
+    {: RESULT = null; :}
+    | drop_block
+    {: RESULT = null; :}
+    | select_block
+    {: RESULT = null; :}
+    | multiple_block
+    {: RESULT = null; :}
+    ;
+
+// Orientacion valida de seccion.
+orientacion ::=
+    VERTICAL
+    {: RESULT = null; :}
+    | HORIZONTAL
+    {: RESULT = null; :}
+    ;
+
+// ================================================
+// Bloque style
+// ================================================
+
+// <style> (items) </style>
+style_block ::=
+    LT STYLE GT style_items_opt LT_SLASH STYLE GT
+    {: RESULT = null; :}
+    ;
+
+// Lista opcional de estilos autocerrados.
+style_items_opt ::=
+    style_items_opt style_item
+    {: RESULT = null; :}
+    | /* vacio */
+    {: RESULT = null; :}
+    ;
+
+// Formato flexible de item: <clave=valor/>.
+style_item ::=
+    LT style_key EQUALS valor_simple SLASH_GT
+    {: RESULT = null; :}
+    // Variante compacta de borde: <border,ancho,tipo,color=valor/>.
+    | LT BORDER_KEY COMMA valor_simple COMMA valor_simple COMMA COLOR_KEY EQUALS valor_simple SLASH_GT
+    {: RESULT = null; :}
+    ;
+
+// Claves admitidas para estilo.
+style_key ::=
+    COLOR_KEY
+    {: RESULT = null; :}
+    | BACKGROUND_COLOR_KEY
+    {: RESULT = null; :}
+    | FONT_FAMILY_KEY
+    {: RESULT = null; :}
+    | TEXT_SIZE_KEY
+    {: RESULT = null; :}
+    | BORDER_KEY
+    {: RESULT = null; :}
+    | IDENTIFIER
+    {: RESULT = null; :}
+    ;
+
+// ================================================
+// Bloque content
+// ================================================
+
+// <content> ... </content>
+content_block ::=
+    LT CONTENT GT content_items_opt LT_SLASH CONTENT GT
+    {: RESULT = null; :}
+    ;
+
+// Dentro de content se aceptan componentes y tabla.
+content_items_opt ::=
+    content_items_opt content_item
+    {: RESULT = null; :}
+    | /* vacio */
+    {: RESULT = null; :}
+    ;
+
+content_item ::=
+    open_block
+    {: RESULT = null; :}
+    | drop_block
+    {: RESULT = null; :}
+    | select_block
+    {: RESULT = null; :}
+    | multiple_block
+    {: RESULT = null; :}
+    | table_block
+    {: RESULT = null; :}
+    ;
+
+// ================================================
+// Tabla
+// ================================================
+
+// <table> (lineas) </table>
+table_block ::=
+    LT TABLE GT line_blocks_opt LT_SLASH TABLE GT
+    {: RESULT = null; :}
+    ;
+
+// Filas de la tabla.
+line_blocks_opt ::=
+    line_blocks_opt line_block
+    {: RESULT = null; :}
+    | /* vacio */
+    {: RESULT = null; :}
+    ;
+
+// <line> (element) </line>
+line_block ::=
+    LT LINE GT element_blocks_opt LT_SLASH LINE GT
+    {: RESULT = null; :}
+    ;
+
+// Celdas de la fila.
+element_blocks_opt ::=
+    element_blocks_opt element_block
+    {: RESULT = null; :}
+    | /* vacio */
+    {: RESULT = null; :}
+    ;
+
+// <element> contenido opcional </element>
+element_block ::=
+    LT ELEMENT GT element_content_opt LT_SLASH ELEMENT GT
+    {: RESULT = null; :}
+    ;
+
+// El elemento puede contener componentes o texto simple.
+element_content_opt ::=
+    element_content_opt content_item
+    {: RESULT = null; :}
+    | valor_simple
+    {: RESULT = null; :}
+    | /* vacio */
+    {: RESULT = null; :}
+    ;
+
+// ================================================
+// Componentes open/drop/select/multiple
+// ================================================
+
+// open autocierre o bloque con style opcional.
+open_block ::=
+    LT OPEN EQUALS valor_simple COMMA valor_simple COMMA valor_simple SLASH_GT
+    {: RESULT = null; :}
+    | LT OPEN EQUALS valor_simple COMMA valor_simple COMMA valor_simple GT style_opt LT_SLASH OPEN GT
+    {: RESULT = null; :}
+    ;
+
+// drop autocierre o bloque con style opcional.
+drop_block ::=
+    LT DROP EQUALS valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple SLASH_GT
+    {: RESULT = null; :}
+    | LT DROP EQUALS valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple GT style_opt LT_SLASH DROP GT
+    {: RESULT = null; :}
+    ;
+
+// select autocierre o bloque con style opcional.
+select_block ::=
+    LT SELECT EQUALS valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple SLASH_GT
+    {: RESULT = null; :}
+    | LT SELECT EQUALS valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple GT style_opt LT_SLASH SELECT GT
+    {: RESULT = null; :}
+    ;
+
+// multiple autocierre o bloque con style opcional.
+multiple_block ::=
+    LT MULTIPLE EQUALS valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple SLASH_GT
+    {: RESULT = null; :}
+    | LT MULTIPLE EQUALS valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple COMMA valor_simple GT style_opt LT_SLASH MULTIPLE GT
+    {: RESULT = null; :}
+    ;
+
+// style opcional dentro de pregunta/texto.
+style_opt ::=
+    style_block
+    {: RESULT = null; :}
+    | /* vacio */
+    {: RESULT = null; :}
+    ;
+
+// ================================================
+// Valores
+// ================================================
+
+// Valor unitario permitido en atributos.
+valor_simple ::=
+    NUMBER
+    {: RESULT = null; :}
+    | IDENTIFIER
+    {: RESULT = null; :}
+    | BOOLEAN
+    {: RESULT = null; :}
+    | COLOR_HEX
+    {: RESULT = null; :}
+    | COLOR_RGB
+    {: RESULT = null; :}
+    | COLOR_HSL
+    {: RESULT = null; :}
+    | BORDER_STYLE
+    {: RESULT = null; :}
+    | MONO
+    {: RESULT = null; :}
+    | SANS_SERIF
+    {: RESULT = null; :}
+    | CURSIVE
+    {: RESULT = null; :}
+    | orientacion
+    {: RESULT = null; :}
+    | cadena
+    {: RESULT = null; :}
+    | LBRACE lista_valores_opt RBRACE
+    {: RESULT = null; :}
+    ;
+
+// Lista opcional de valores entre llaves.
+lista_valores_opt ::=
+    lista_valores
+    {: RESULT = null; :}
+    | /* vacio */
+    {: RESULT = null; :}
+    ;
+
+// Lista separada por comas: v1, v2, v3.
+lista_valores ::=
+    lista_valores COMMA valor_simple
+    {: RESULT = null; :}
+    | valor_simple
+    {: RESULT = null; :}
+    ;
+
+// Cadena segmentada para conservar emojis como tokens propios.
+cadena ::=
+    STRING_START cadena_partes_opt STRING_END
+    {: RESULT = null; :}
+    ;
+
+// Partes opcionales dentro de comillas.
+cadena_partes_opt ::=
+    cadena_partes_opt cadena_parte
+    {: RESULT = null; :}
+    | /* vacio */
+    {: RESULT = null; :}
+    ;
+
+// Cada parte puede ser texto normal o notacion emoji.
+cadena_parte ::=
+    STRING_TEXT
+    {: RESULT = null; :}
+    | EMOJI_SPEC
+    {: RESULT = null; :}
+    ;
