@@ -3,8 +3,8 @@ package com.example.proyecto1_compi1_1s_2026.backend.generate.pkm;
 import java_cup.runtime.*;
 import java.util.ArrayList;
 import java.util.List;
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.diagnostics.ErrorInfo;
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.diagnostics.TipoError;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo;
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError;
 
 // ================================================
 // Validar estructura general del archivo PKM
