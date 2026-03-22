@@ -4,6 +4,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulari
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError
 import java.io.StringReader
+import java.lang.reflect.InvocationTargetException
 
 class PkmAstParser {
 
@@ -73,11 +74,13 @@ class PkmAstParser {
                     erroresSintacticos = erroresSintacticos
                 )
             } else {
+                val causaRaiz = (e as? InvocationTargetException)?.targetException ?: e
+                val detalle = causaRaiz.message ?: causaRaiz.javaClass.simpleName
                 ResultadoParseoPkm(
                     erroresSemanticos = listOf(
                         ErrorInfo(
                             tipo = TipoError.SEMANTICO,
-                            mensaje = "Excepcion inesperada al analizar PKM: ${e.message}",
+                            mensaje = "Excepcion inesperada al analizar PKM: $detalle",
                             linea = 0,
                             columna = 0
                         )

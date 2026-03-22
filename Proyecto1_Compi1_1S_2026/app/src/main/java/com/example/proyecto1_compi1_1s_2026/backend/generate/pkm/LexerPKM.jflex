@@ -15,6 +15,9 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoErro
 %column
 %ignorecase
 %state STRING
+%eofval{
+	return symbol(sym.EOF, "<EOF>");
+%eofval}
 
 %{
 	// Lista de errores lexicos detectados.
@@ -49,7 +52,9 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoErro
 // Expresiones base.
 LETRA = [:jletter:]
 DIGITO = [0-9]
-IDENT = {LETRA}({LETRA}|{DIGITO}|_|-)*
+// Incluye marcas combinadas para soportar tildes en forma Unicode descompuesta.
+MARCA_COMBINADA = [\u0300-\u036F]
+IDENT = {LETRA}({LETRA}|{DIGITO}|{MARCA_COMBINADA}|_|-)*
 ENTERO = {DIGITO}+
 NUMERO = -?{ENTERO}(\.{ENTERO})?
 
@@ -133,6 +138,7 @@ K_TEXT_SIZE = "text"[ ]+"size"
 	// Delimitadores y signos.
 	"</" { return symbol(sym.LT_SLASH); }
 	"/>" { return symbol(sym.SLASH_GT); }
+	"/" { return symbol(sym.SLASH); }
 	"<" { return symbol(sym.LT); }
 	">" { return symbol(sym.GT); }
 	"=" { return symbol(sym.EQUALS); }
@@ -157,9 +163,10 @@ K_TEXT_SIZE = "text"[ ]+"size"
 	// Fin de cadena.
 	\" { yybegin(YYINITIAL); return symbol(sym.STRING_END, yytext()); }
 
-	[\x{1F300}-\x{1FAFF}] {
-    addLexicalError("Emoji unicode no permitido; use notacion @[...]");
-}
+	// Detecta emojis unicode (astral plane) como pares sustitutos UTF-16.
+	[\uD83C-\uDBFF][\uDC00-\uDFFF] {
+		addLexicalError("Emoji unicode no permitido; use notacion @[...]");
+	}
 
 	// Notacion emoji tipo @[...].
 	@\[[^\]\n]+\] { return symbol(sym.EMOJI_SPEC, yytext()); }
@@ -177,7 +184,3 @@ K_TEXT_SIZE = "text"[ ]+"size"
 		return symbol(sym.STRING_END, "");
 	}
 }
-
-%eofval{
-	return symbol(sym.EOF, "<EOF>");
-%eofval}

@@ -2,6 +2,7 @@ package com.example.proyecto1_compi1_1s_2026.ui.screens
 
 import android.content.Context
 import android.net.Uri
+import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts

@@ -57,7 +57,7 @@ terminal COLOR_KEY, BACKGROUND_COLOR_KEY, FONT_FAMILY_KEY, TEXT_SIZE_KEY, BORDER
 terminal VERTICAL, HORIZONTAL, MONO, SANS_SERIF, CURSIVE;
 terminal String BORDER_STYLE, BOOLEAN;
 terminal String COLOR_HEX, COLOR_RGB, COLOR_HSL, NUMBER, IDENTIFIER;
-terminal LT, GT, LT_SLASH, SLASH_GT, EQUALS, COMMA, COLON, LBRACE, RBRACE;
+terminal LT, GT, LT_SLASH, SLASH_GT, EQUALS, COMMA, COLON, SLASH, LBRACE, RBRACE;
 terminal String STRING_START, STRING_END, STRING_TEXT, EMOJI_SPEC;
 
 non terminal Formulario inicio;
@@ -77,7 +77,8 @@ non terminal ElementoFormulario open_block, drop_block, select_block, multiple_b
 // Se separa en otro no terminal para evitar conflictos entre tablas con y sin estilo.
 non terminal ElementoFormulario table_rest;
 non terminal Orientacion orientacion;
-non terminal Object valor_simple, lista_valores_opt, lista_valores;
+non terminal Object valor_simple;
+non terminal List lista_valores_opt, lista_valores;
 non terminal Object metadata_block, metadata_valor;
 non terminal Integer numero_entero;
 non terminal List lista_strings, lista_cadenas, lista_enteros_opt, lista_enteros;
@@ -119,6 +120,10 @@ metadata_valor ::=
     cadena:c {: RESULT = c; :}
     | IDENTIFIER:i {: RESULT = i; :}
     | NUMBER:n {: RESULT = n; :}
+    | NUMBER:d1 SLASH NUMBER:d2 SLASH NUMBER:d3 {: RESULT = d1 + "/" + d2 + "/" + d3; :}
+    | NUMBER:h COLON NUMBER:m {: RESULT = h + ":" + m; :}
+    | metadata_valor:base IDENTIFIER:i {: RESULT = String.valueOf(base) + " " + i; :}
+    | metadata_valor:base NUMBER:n {: RESULT = String.valueOf(base) + " " + n; :}
     ;
 
 // Concatena bloques top-level y mantiene solo elementos de UI validos.

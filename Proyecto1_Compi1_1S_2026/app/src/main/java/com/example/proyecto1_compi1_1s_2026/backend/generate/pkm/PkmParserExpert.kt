@@ -22,12 +22,36 @@ class PkmParserExpert(
 
     fun toFloat(value: Any?): Float {
         if (value == null) return 0f
-        return value.toString().toFloat()
+        return value.toString().toFloatOrNull() ?: run {
+            erroresSemanticos.add(
+                ErrorInfo(
+                    TipoError.SEMANTICO,
+                    "Valor numerico invalido (float): ${value}",
+                    0,
+                    0
+                )
+            )
+            0f
+        }
     }
 
     fun toInt(value: Any?): Int {
         if (value == null) return 0
-        return value.toString().toInt()
+        val raw = value.toString()
+        raw.toIntOrNull()?.let { return it }
+
+        // Soporta numeros como "15.2" para no romper el parseo.
+        raw.toFloatOrNull()?.let { return it.toInt() }
+
+        erroresSemanticos.add(
+            ErrorInfo(
+                TipoError.SEMANTICO,
+                "Valor numerico invalido (int): ${value}",
+                0,
+                0
+            )
+        )
+        return 0
     }
 
     fun normalizarIndice(indice: Int, opciones: List<*>?, campo: String): Int? {
