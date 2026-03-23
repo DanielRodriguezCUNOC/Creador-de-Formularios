@@ -66,9 +66,6 @@ COMENTARIO_LINEA = \$[^\n\r]*
 
 // Colores hexadecimales (#RRGGBB o #RGB)
 COLOR_HEX = #[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{3}
-COMP_COLOR = ([0-9]{1,3}|\?)
-COLOR_RGB = \({COMP_COLOR}[ ]*,[ ]*{COMP_COLOR}[ ]*,[ ]*{COMP_COLOR}\)
-COLOR_HSL = \<{COMP_COLOR}[ ]*,[ ]*{COMP_COLOR}[ ]*,[ ]*{COMP_COLOR}\>
 
 // Espacios en blanco
 ESPACIO = [ \t\r\n\f]+
@@ -195,8 +192,6 @@ ESPACIO = [ \t\r\n\f]+
 
     // --- FORMATOS DE COLOR ---
 
-    //{COLOR_RGB}         { return symbol(sym.COLOR_RGB, yytext()); }
-    //{COLOR_HSL}         { return symbol(sym.COLOR_HSL, yytext()); }
     {COLOR_HEX}         { return symbol(sym.COLOR_HEX, yytext()); }
 
     // --- LITERALES NUMÉRICOS E IDENTIFICADORES ---

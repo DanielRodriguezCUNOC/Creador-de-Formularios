@@ -2,6 +2,7 @@ package com.example.proyecto1_compi1_1s_2026.ui.integration
 
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError
 
 data class ResultadoAnalisisUi(
     val formulario: Formulario? = null,
@@ -27,28 +28,41 @@ class FormularioUiCoordinator(
 ) {
 
     fun analizar(codigoFuente: String): ResultadoAnalisisUi {
-        val resultadoParseo = parser.parsear(codigoFuente)
-        if (!resultadoParseo.exitoso) {
-            return ResultadoAnalisisUi(
-                erroresLexicos = resultadoParseo.erroresLexicos,
-                erroresSintacticos = resultadoParseo.erroresSintacticos,
-                erroresSemanticos = resultadoParseo.erroresSemanticos
+        return try {
+            val resultadoParseo = parser.parsear(codigoFuente)
+            if (!resultadoParseo.exitoso) {
+                return ResultadoAnalisisUi(
+                    erroresLexicos = resultadoParseo.erroresLexicos,
+                    erroresSintacticos = resultadoParseo.erroresSintacticos,
+                    erroresSemanticos = resultadoParseo.erroresSemanticos
+                )
+            }
+
+            val resultadoValidacion = validator.validar(resultadoParseo.instrucciones)
+            if (!resultadoValidacion.exitoso) {
+                return ResultadoAnalisisUi(erroresSemanticos = resultadoValidacion.erroresSemanticos)
+            }
+
+            val resultadoConstruccion = builder.construir(resultadoValidacion.instrucciones)
+            if (!resultadoConstruccion.exitoso) {
+                return ResultadoAnalisisUi(erroresSemanticos = resultadoConstruccion.erroresSemanticos)
+            }
+
+            ResultadoAnalisisUi(
+                formulario = resultadoConstruccion.formulario,
+                codigoPkm = resultadoConstruccion.codigoPkm
+            )
+        } catch (e: Exception) {
+            ResultadoAnalisisUi(
+                erroresSemanticos = listOf(
+                    ErrorInfo(
+                        TipoError.SEMANTICO,
+                        "Error inesperado durante el análisis: ${e.localizedMessage ?: e.javaClass.simpleName}",
+                        0,
+                        0
+                    )
+                )
             )
         }
-
-        val resultadoValidacion = validator.validar(resultadoParseo.instrucciones)
-        if (!resultadoValidacion.exitoso) {
-            return ResultadoAnalisisUi(erroresSemanticos = resultadoValidacion.erroresSemanticos)
-        }
-
-        val resultadoConstruccion = builder.construir(resultadoValidacion.instrucciones)
-        if (!resultadoConstruccion.exitoso) {
-            return ResultadoAnalisisUi(erroresSemanticos = resultadoConstruccion.erroresSemanticos)
-        }
-
-        return ResultadoAnalisisUi(
-            formulario = resultadoConstruccion.formulario,
-            codigoPkm = resultadoConstruccion.codigoPkm
-        )
     }
 }

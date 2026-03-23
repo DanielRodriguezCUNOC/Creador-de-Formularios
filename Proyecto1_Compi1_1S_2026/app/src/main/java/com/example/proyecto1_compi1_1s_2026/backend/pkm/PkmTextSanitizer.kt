@@ -36,7 +36,8 @@ class PkmTextSanitizer {
         out = out.replace("@[:cat:]", "😺")
 
         // Soporte para estrellas con multiplicador ej @[:star:3:] -> ⭐⭐⭐
-        val regexStar = Regex("""@\[:star[:-](\d+):]""")
+        // Se escapan los corchetes y dos puntos correctamente para evitar errores Unicode.
+        val regexStar = Regex("""@\[:star:(\d+):]""")
         out = regexStar.replace(out) { match ->
             val cant = match.groupValues[1].toIntOrNull() ?: 1
             "⭐".repeat(cant)

@@ -30,7 +30,9 @@ public class sym {
   public static final int DOUBLE = 35;
   public static final int BACKGROUND_COLOR = 17;
   public static final int NOT = 75;
+  public static final int EMOJI_STAR = 86;
   public static final int TEXT = 4;
+  public static final int EMOJI_CAT = 85;
   public static final int DOS_PUNTOS = 57;
   public static final int WIDTH = 9;
   public static final int NUMBER_LITERAL = 77;
@@ -178,7 +180,9 @@ public class sym {
   "EMOJI_SMILE",
   "EMOJI_SAD",
   "EMOJI_SERIOUS",
-  "EMOJI_HEART"
+  "EMOJI_HEART",
+  "EMOJI_CAT",
+  "EMOJI_STAR"
   };
 }
 

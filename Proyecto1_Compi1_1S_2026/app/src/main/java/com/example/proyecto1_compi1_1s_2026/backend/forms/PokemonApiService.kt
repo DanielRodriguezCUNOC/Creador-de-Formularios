@@ -23,17 +23,21 @@ object PokemonApiService {
     fun obtenerNombresEnRango(inicio: Int, fin: Int): List<String> {
         val resultado = mutableListOf<String>()
 
-        Log.d(TAG, "Solicitando rango PokéAPI: $inicio..$fin")
 
-        if (inicio > fin) {
-            Log.w(TAG, "Rango inválido: inicio > fin ($inicio > $fin)")
-            return resultado
+        var realInicio = inicio
+        var realFin = fin
+        if (realInicio > realFin) {
+            Log.w(TAG, "Rango invertido: $realInicio > $realFin. Intercambiando valores.")
+            val tmp = realInicio
+            realInicio = realFin
+            realFin = tmp
         }
+        Log.d(TAG, "Solicitando rango PokéAPI: $realInicio..$realFin")
 
         // Ejecutar el trabajo de red en un hilo aparte.
         val hilo = Thread {
-            var id = inicio
-            while (id <= fin) {
+            var id = realInicio
+            while (id <= realFin) {
                 val nombre = obtenerNombrePorId(id)
                 if (nombre != null && nombre.isNotBlank()) {
                     resultado.add(nombre)
