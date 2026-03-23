@@ -2,6 +2,7 @@ package com.example.proyecto1_compi1_1s_2026.ui.forms
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -15,6 +16,8 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.PreguntaA
 @Composable
 fun RenderPreguntaAbierta(pregunta: PreguntaAbierta) {
     var respuesta by remember { mutableStateOf(pregunta.respuesta) }
+    val textColor = pregunta.estilos.color.toComposeColor()
+    val backgroundColor = pregunta.estilos.backgroundColor.toComposeColor()
 
     Column(
         modifier = Modifier
@@ -35,9 +38,21 @@ fun RenderPreguntaAbierta(pregunta: PreguntaAbierta) {
                 pregunta.respuesta = it
             },
             modifier    = Modifier.fillMaxWidth(),
-            placeholder = { Text("Escribe tu respuesta...") },
+            textStyle   = pregunta.estilos.toTextStyle(),
+            placeholder = { Text("Escribe tu respuesta...", color = textColor.copy(alpha = 0.6f)) },
             singleLine  = false,
-            minLines    = 2
+            minLines    = 2,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = textColor,
+                unfocusedTextColor = textColor,
+                focusedContainerColor = backgroundColor,
+                unfocusedContainerColor = backgroundColor,
+                focusedBorderColor = textColor,
+                unfocusedBorderColor = textColor,
+                cursorColor = textColor,
+                focusedPlaceholderColor = textColor.copy(alpha = 0.6f),
+                unfocusedPlaceholderColor = textColor.copy(alpha = 0.6f)
+            )
         )
     }
 }

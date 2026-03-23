@@ -16,6 +16,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.PreguntaS
 @Composable
 fun RenderSeleccionUnica(pregunta: PreguntaSeleccionUnica) {
     var seleccionada by remember { mutableIntStateOf(pregunta.seleccionada) }
+    val textColor = pregunta.estilos.color.toComposeColor()
 
     Column(
         modifier = Modifier
@@ -41,10 +42,14 @@ fun RenderSeleccionUnica(pregunta: PreguntaSeleccionUnica) {
                         onClick       = {
                             seleccionada          = index
                             pregunta.seleccionada = index
-                        }
+                        },
+                        colors = RadioButtonDefaults.colors(
+                            selectedColor = textColor,
+                            unselectedColor = textColor
+                        )
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = opcion)
+                    Text(text = opcion, style = pregunta.estilos.toTextStyle())
                 }
             }
         }

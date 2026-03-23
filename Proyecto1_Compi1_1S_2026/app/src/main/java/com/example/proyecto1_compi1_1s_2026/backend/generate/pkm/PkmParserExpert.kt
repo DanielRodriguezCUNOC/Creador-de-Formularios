@@ -18,7 +18,7 @@ class PkmParserExpert(
 
     fun estiloDefault(): EstiloElemento {
         val colorTexto = Color(0, 0, 0, 255)
-        val colorFondo = Color(255, 255, 255, 0)
+        val colorFondo = Color(255, 255, 255, 255)
         return EstiloElemento(colorTexto, colorFondo, "SANS_SERIF", 14f, null)
     }
 
@@ -65,7 +65,8 @@ class PkmParserExpert(
         if (texto == null) return ""
         val raw = texto.toString()
         val desescapado = sanitizer.desescaparCadena(raw)
-        return sanitizer.restaurarEmojisDesdePkm(desescapado)
+        val reparado = sanitizer.normalizarMojibake(desescapado)
+        return sanitizer.restaurarEmojisDesdePkm(reparado)
     }
 
     fun normalizarIndice(indice: Int, opciones: List<*>?, campo: String): Int? {

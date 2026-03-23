@@ -16,6 +16,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.PreguntaS
 @Composable
 fun RenderSeleccionMultiple(pregunta: PreguntaSeleccionMultiple) {
     val seleccionadas = remember { mutableStateListOf<Int>().apply { addAll(pregunta.seleccionadas) } }
+    val textColor = pregunta.estilos.color.toComposeColor()
 
     Column(
         modifier = Modifier
@@ -46,10 +47,15 @@ fun RenderSeleccionMultiple(pregunta: PreguntaSeleccionMultiple) {
                                 seleccionadas.remove(index)
                                 pregunta.seleccionadas.remove(index)
                             }
-                        }
+                        },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = textColor,
+                            uncheckedColor = textColor,
+                            checkmarkColor = pregunta.estilos.backgroundColor.toComposeColor()
+                        )
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = opcion)
+                    Text(text = opcion, style = pregunta.estilos.toTextStyle())
                 }
             }
         }

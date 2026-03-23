@@ -21,6 +21,11 @@ class NodoOperacionBinaria(
 
         when (operador) {
             "+", "-", "*", "/", "%", "^" -> {
+                // '+' permite concatenación cuando alguno de los operandos es string.
+                if (operador == "+" && (tipoIzq == "string" || tipoDer == "string")) {
+                    return
+                }
+
                 if (tipoIzq != "number" || tipoDer != "number") {
                     contexto.reportarError(
                         "Operación aritmética requiere números, pero obtuvo $tipoIzq y $tipoDer",
@@ -56,6 +61,15 @@ class NodoOperacionBinaria(
                         columna
                     )
                 }
+
+                // Regla del lenguaje: '!!' no se usa para lógica booleana.
+                if (operador == "!!" && tipoIzq == "boolean" && tipoDer == "boolean") {
+                    contexto.reportarError(
+                        "No se permite usar '!!' entre booleanos; utiliza operadores lógicos (&& o ||)",
+                        linea,
+                        columna
+                    )
+                }
             }
         }
     }
@@ -73,6 +87,11 @@ class NodoOperacionBinaria(
     override fun inferirTipo(contexto: ContextoSemantico): String {
         return when (operador) {
             "==", "!!", "<", ">", "<=", ">=", "&&", "||" -> "boolean"
+            "+" -> {
+                val tipoIzq = izq.inferirTipo(contexto)
+                val tipoDer = der.inferirTipo(contexto)
+                if (tipoIzq == "string" || tipoDer == "string") "string" else "number"
+            }
             else -> "number"
         }
     }

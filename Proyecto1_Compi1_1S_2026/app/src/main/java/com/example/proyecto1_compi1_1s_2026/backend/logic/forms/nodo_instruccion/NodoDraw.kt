@@ -42,9 +42,11 @@ class NodoDraw(
 
         val comodinesEnVariable = contarComodinesEnComponente(valorEspecial)
 
-        if (parametrosEnDraw != comodinesEnVariable) {
+        // La ejecución real permite menos parámetros; los comodines restantes conservan '?'.
+        // Solo reportamos error cuando sobran parámetros (no hay dónde aplicarlos).
+        if (parametrosEnDraw > comodinesEnVariable) {
             contexto.reportarError(
-                "Variable especial '$idVariableEspecial': Esperaba $comodinesEnVariable parámetro(s) en .draw(), pero se proporcionaron $parametrosEnDraw",
+                "Variable especial '$idVariableEspecial': Esperaba como máximo $comodinesEnVariable parámetro(s) en .draw(), pero se proporcionaron $parametrosEnDraw",
                 linea,
                 columna
             )
