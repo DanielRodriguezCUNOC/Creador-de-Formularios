@@ -5,6 +5,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Color
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.ElementoFormulario
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.EstiloElemento
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.PkmTextSanitizer
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError
 
 /**
@@ -13,10 +14,11 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoErro
 class PkmParserExpert(
     private val erroresSemanticos: MutableList<ErrorInfo>
 ) {
+    private val sanitizer = PkmTextSanitizer()
 
     fun estiloDefault(): EstiloElemento {
         val colorTexto = Color(0, 0, 0, 255)
-        val colorFondo = Color(255, 255, 255, 0)
+        val colorFondo = Color(255, 255, 255, 255)
         return EstiloElemento(colorTexto, colorFondo, "SANS_SERIF", 14f, null)
     }
 
@@ -52,6 +54,19 @@ class PkmParserExpert(
             )
         )
         return 0
+    }
+
+    /**
+     * Procesa una cadena de texto proveniente del PKM:
+     * Desescapa caracteres especiales.
+     * Restaura los emojis de la notacion @[...] a caracteres reales.
+     */
+    fun procesarTexto(texto: Any?): String {
+        if (texto == null) return ""
+        val raw = texto.toString()
+        val desescapado = sanitizer.desescaparCadena(raw)
+        val reparado = sanitizer.normalizarMojibake(desescapado)
+        return sanitizer.restaurarEmojisDesdePkm(reparado)
     }
 
     fun normalizarIndice(indice: Int, opciones: List<*>?, campo: String): Int? {
@@ -162,14 +177,20 @@ class PkmParserExpert(
         if (value == null) return fallback
         val raw = value.toString().trim()
 
+        // 1. Intento por nombre (ej: BLACK, WHITE, SKY)
+        Color.desdeNombre(raw)?.let { return it }
+
+        // 2. Intento por Hexadecimal
         Color.desdeHex(raw)?.let { return it }
 
+        // 3. Intento por RGB
         var rgbNormalizado = raw
         if (raw.startsWith("(") && raw.endsWith(")")) {
             rgbNormalizado = "rgb$raw"
         }
         Color.desdeRgb(rgbNormalizado)?.let { return it }
 
+        // 4. Intento por HSL
         Color.desdeHsl(raw)?.let { return it }
 
         erroresSemanticos.add(

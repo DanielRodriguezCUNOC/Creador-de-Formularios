@@ -2,7 +2,6 @@ package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso
 
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.*
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Color
-import kotlin.math.abs
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.ComponenteSeccion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.ComponenteTabla
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.ComponenteTexto
@@ -298,88 +297,20 @@ class UiNodeBuilder(
 
         val s = str.trim()
 
-        // --- RGB: (r, g, b) ---
-        if (s.startsWith("(") && s.endsWith(")")) {
-            return try {
-                val partes = s.substring(1, s.length - 1).split(",")
-                val r = partes[0].trim().toInt().coerceIn(0, 255)
-                val g = partes[1].trim().toInt().coerceIn(0, 255)
-                val b = partes[2].trim().toInt().coerceIn(0, 255)
-                Color(r, g, b)
-            } catch (_: Exception) { Color.defecto() }
-        }
+        // Nombre de color (BLACK, PURPLE, SKY, etc.)
+        Color.desdeNombre(s)?.let { return it }
 
-        // --- HSL: <h, s, l> ---
-        if (s.startsWith("<") && s.endsWith(">")) {
-            return try {
-                val partes = s.substring(1, s.length - 1).split(",")
-                val h = partes[0].trim().toInt()
-                val sl = partes[1].trim().toInt()
-                val l = partes[2].trim().toInt()
-                hslToRgb(h, sl, l)
-            } catch (_: Exception) { Color.defecto() }
-        }
+        // Hexadecimal (#RGB, #RRGGBB, #RRGGBBAA)
+        Color.desdeHex(s)?.let { return it }
 
-        // --- HEX: #RRGGBB o #RGB ---
-        return try {
-            val hex = s.trimStart('#')
-            when (hex.length) {
-                6 -> {
-                    val argb = (0xFF000000L or hex.toLong(16)).toInt()
-                    val r = (argb shr 16) and 0xFF
-                    val g = (argb shr 8) and 0xFF
-                    val b = argb and 0xFF
-                    Color(r, g, b)
-                }
-                8 -> {
-                    val argb = hex.toLong(16).toInt()
-                    val a = (argb shr 24) and 0xFF
-                    val r = (argb shr 16) and 0xFF
-                    val g = (argb shr 8) and 0xFF
-                    val b = argb and 0xFF
-                    Color(r, g, b, a)
-                }
-                else -> Color.defecto()
-            }
-        } catch (_: Exception) {
-            when (s.lowercase()) {
-                "red" -> Color(255, 0, 0)
-                "blue" -> Color(0, 0, 255)
-                "green" -> Color(0, 128, 0)
-                "white" -> Color(255, 255, 255)
-                "black" -> Color(0, 0, 0)
-                "yellow" -> Color(255, 255, 0)
-                "cyan" -> Color(0, 255, 255)
-                "magenta" -> Color(255, 0, 255)
-                "gray", "grey" -> Color(128, 128, 128)
-                "transparent" -> Color(0, 0, 0, 0)
-                else -> Color.defecto()
-            }
-        }
-    }
+        // RGB/RGBA y variante corta (r,g,b)
+        val rgbNormalizado = if (s.startsWith("(") && s.endsWith(")")) "rgb$s" else s
+        Color.desdeRgb(rgbNormalizado)?.let { return it }
 
-    private fun hslToRgb(h: Int, s: Int, l: Int): Color {
-        val hf = h.toFloat()
-        val sf = s.toFloat() / 100f
-        val lf = l.toFloat() / 100f
-        val c = (1f - abs(2f * lf - 1f)) * sf
-        val x = c * (1f - abs((hf / 60f) % 2f - 1f))
-        val m = lf - c / 2f
-        var r1: Float
-        var g1: Float
-        var b1: Float
-        when {
-            hf < 60f -> { r1 = c; g1 = x; b1 = 0f }
-            hf < 120f -> { r1 = x; g1 = c; b1 = 0f }
-            hf < 180f -> { r1 = 0f; g1 = c; b1 = x }
-            hf < 240f -> { r1 = 0f; g1 = x; b1 = c }
-            hf < 300f -> { r1 = x; g1 = 0f; b1 = c }
-            else -> { r1 = c; g1 = 0f; b1 = x }
-        }
-        val r = ((r1 + m) * 255f).toInt().coerceIn(0, 255)
-        val g = ((g1 + m) * 255f).toInt().coerceIn(0, 255)
-        val b = ((b1 + m) * 255f).toInt().coerceIn(0, 255)
-        return Color(r, g, b)
+        // HSL (hsl(h,s,l) o <h,s,l>)
+        Color.desdeHsl(s)?.let { return it }
+
+        return Color.defecto()
     }
 
     private fun toDouble(v: Any?): Double? {

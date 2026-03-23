@@ -29,6 +29,9 @@ class PkmQuestionWriter(
 
         return crearConStyleOpcional(
             attrs = node.atributos,
+            contexto = "DROP_QUESTION",
+            linea = node.linea,
+            columna = node.columna,
             apertura = PkmSerializationContract.tagDropOpen(width, height, label, options, correct),
             cierre = PkmSerializationContract.tagDropClose(),
             autocierre = PkmSerializationContract.tagDropSelf(width, height, label, options, correct)
@@ -50,6 +53,9 @@ class PkmQuestionWriter(
 
         return crearConStyleOpcional(
             attrs = node.atributos,
+            contexto = "SELECT_QUESTION",
+            linea = node.linea,
+            columna = node.columna,
             apertura = PkmSerializationContract.tagSelectOpen(width, height, label, options, correct),
             cierre = PkmSerializationContract.tagSelectClose(),
             autocierre = PkmSerializationContract.tagSelectSelf(width, height, label, options, correct)
@@ -71,6 +77,9 @@ class PkmQuestionWriter(
 
         return crearConStyleOpcional(
             attrs = node.atributos,
+            contexto = "MULTIPLE_QUESTION",
+            linea = node.linea,
+            columna = node.columna,
             apertura = PkmSerializationContract.tagMultipleOpen(width, height, label, options, correct),
             cierre = PkmSerializationContract.tagMultipleClose(),
             autocierre = PkmSerializationContract.tagMultipleSelf(width, height, label, options, correct)
@@ -85,6 +94,9 @@ class PkmQuestionWriter(
 
         return crearConStyleOpcional(
             attrs = node.atributos,
+            contexto = "OPEN_QUESTION",
+            linea = node.linea,
+            columna = node.columna,
             apertura = PkmSerializationContract.tagOpenTextOpen(width, height, label),
             cierre = PkmSerializationContract.tagOpenTextClose(),
             autocierre = PkmSerializationContract.tagOpenTextSelf(width, height, label)
@@ -93,12 +105,15 @@ class PkmQuestionWriter(
 
     private fun crearConStyleOpcional(
         attrs: List<NodoAtributo>,
+        contexto: String,
+        linea: Int,
+        columna: Int,
         apertura: String,
         cierre: String,
         autocierre: String
     ): PkmTagNode {
         val hijos = mutableListOf<PkmTagNode>()
-        val styleNode = styleWriter.crearBloqueStylesSiExiste(attrs)
+        val styleNode = styleWriter.crearBloqueStylesSiExiste(attrs, contexto, linea, columna)
         if (styleNode != null) {
             hijos.add(styleNode)
         }

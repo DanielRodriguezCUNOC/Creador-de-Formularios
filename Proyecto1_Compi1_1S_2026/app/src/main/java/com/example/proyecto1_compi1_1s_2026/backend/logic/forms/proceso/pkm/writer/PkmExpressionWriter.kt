@@ -30,6 +30,8 @@ class PkmExpressionWriter(private val sanitizer: PkmTextSanitizer) {
             is NodoLiteral -> {
                 if (exp.tipo == "string") {
                     sanitizer.cadenaEntreComillas(exp.valor.toString())
+                } else if (exp.valor is Number) {
+                    numeroComoTexto(exp.valor as Number)
                 } else {
                     exp.valor.toString()
                 }
@@ -37,7 +39,7 @@ class PkmExpressionWriter(private val sanitizer: PkmTextSanitizer) {
             is NodoListaExpresiones -> {
                 // Genera (e1, e2, e3) para RGB o <e1, e2, e3> para HSL
                 val elementos = exp.elementos.map { elem ->
-                    if (elem is NodoExpresion) expresionComoTexto(elem) else elem.toString()
+                    valorComoTexto(elem)
                 }
                 val contenido = elementos.joinToString(", ")
                 // Asumimos RGB usa paréntesis, HSL usa ángulos. Por ahora usamos paréntesis.
@@ -81,7 +83,8 @@ class PkmExpressionWriter(private val sanitizer: PkmTextSanitizer) {
 
     private fun numeroComoTexto(n: Number): String {
         val d = n.toDouble()
-        val i = d.toInt().toDouble()
-        return if (d == i) i.toInt().toString() else d.toString()
+        val i = Math.round(d).toDouble()
+        // Si es muy cercano a un entero, lo tratamos como entero para evitar .0
+        return if (Math.abs(d - i) < 0.000001) i.toLong().toString() else d.toString()
     }
 }

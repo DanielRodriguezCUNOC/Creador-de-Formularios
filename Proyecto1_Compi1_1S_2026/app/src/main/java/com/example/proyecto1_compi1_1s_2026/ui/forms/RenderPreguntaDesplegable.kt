@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.PreguntaDesplegable
 
 /**
@@ -17,10 +16,12 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.PreguntaD
 fun RenderPreguntaDesplegable(pregunta: PreguntaDesplegable) {
     var expanded    by remember { mutableStateOf(false) }
     var seleccionada by remember { mutableIntStateOf(pregunta.seleccionada) }
+    val textColor = pregunta.estilos.color.toComposeColor()
+    val backgroundColor = pregunta.estilos.backgroundColor.toComposeColor()
 
     Column(
         modifier = Modifier
-            .fillMaxWidth()
+            .applyFormDimensions(pregunta.width, pregunta.height)
             .background(pregunta.estilos.backgroundColor.toComposeColor())
             .let { pregunta.estilos.applyBorder(it) }
             .padding(FormularioConstants.PADDING_INTERNO),
@@ -39,18 +40,33 @@ fun RenderPreguntaDesplegable(pregunta: PreguntaDesplegable) {
                 value         = if (seleccionada >= 0) pregunta.opciones[seleccionada] else "Selecciona una opción...",
                 onValueChange = {},
                 readOnly      = true,
+                textStyle     = pregunta.estilos.toTextStyle(),
                 modifier      = Modifier
                     .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     .fillMaxWidth(),
-                trailingIcon  = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+                trailingIcon  = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = textColor,
+                    unfocusedTextColor = textColor,
+                    focusedContainerColor = backgroundColor,
+                    unfocusedContainerColor = backgroundColor,
+                    focusedBorderColor = textColor,
+                    unfocusedBorderColor = textColor,
+                    focusedTrailingIconColor = textColor,
+                    unfocusedTrailingIconColor = textColor
+                )
             )
             ExposedDropdownMenu(
                 expanded        = expanded,
-                onDismissRequest = { expanded = false }
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(backgroundColor)
             ) {
                 pregunta.opciones.forEachIndexed { index, opcion ->
                     DropdownMenuItem(
-                        text    = { Text(opcion) },
+                        text    = { Text(opcion, style = pregunta.estilos.toTextStyle()) },
+                        colors = MenuDefaults.itemColors(
+                            textColor = textColor
+                        ),
                         onClick = {
                             seleccionada          = index
                             pregunta.seleccionada = index

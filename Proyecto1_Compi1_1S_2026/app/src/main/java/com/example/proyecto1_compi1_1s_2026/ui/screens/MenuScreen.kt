@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.proyecto1_compi1_1s_2026.ui.util.decodeTextRobust
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -208,7 +209,9 @@ private fun guardarTextoEnUri(context: Context, uri: Uri, contenido: String): Bo
 
 private fun leerTextoDesdeUri(context: Context, uri: Uri): String? {
     return try {
-        context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+        context.contentResolver.openInputStream(uri)?.use { entrada ->
+            decodeTextRobust(entrada.readBytes())
+        }
     } catch (_: Exception) {
         null
     }

@@ -24,12 +24,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario
 import com.example.proyecto1_compi1_1s_2026.ui.forms.FormularioRenderer
+import com.example.proyecto1_compi1_1s_2026.ui.forms.guardarRespuestasEnDocumentos
+import com.example.proyecto1_compi1_1s_2026.ui.forms.serializarRespuestasComoPkm
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,6 +43,7 @@ fun FillFormScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -99,13 +103,23 @@ fun FillFormScreen(
             } else {
                 FormularioRenderer(
                     formulario = formulario,
-                    onEnviar = {
+                    onEnviarRespuestas = { respuestas ->
+                        val contenido = serializarRespuestasComoPkm(respuestas)
+                        val guardado = guardarRespuestasEnDocumentos(context, contenido)
+
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar(
-                                message = "Formulario enviado",
+                                message = if (guardado.exitoso) {
+                                    "Formulario enviado (${respuestas.size} respuestas). Guardado en ${guardado.rutaMostrada}"
+                                } else {
+                                    "Formulario enviado (${respuestas.size} respuestas), pero no se pudo guardar archivo local"
+                                },
                                 duration = SnackbarDuration.Short
                             )
                         }
+                    },
+                    onEnviar = {
+                        // Punto de extension para enviar respuestas a API.
                     }
                 )
             }

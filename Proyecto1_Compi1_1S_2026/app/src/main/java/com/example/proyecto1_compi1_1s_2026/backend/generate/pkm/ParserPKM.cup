@@ -106,7 +106,6 @@ non terminal Orientacion orientacion;
 non terminal Object valor_simple;
 non terminal List lista_valores_opt, lista_valores;
 non terminal Object metadata_block, metadata_valor;
-non terminal Integer numero_entero;
 non terminal List lista_strings, lista_cadenas, lista_enteros_opt, lista_enteros;
 non terminal String cadena, cadena_partes_opt, cadena_parte;
 
@@ -281,6 +280,8 @@ content_item ::=
     {: RESULT = m; :}
     | table_block:t
     {: RESULT = t; :}
+    | section_block:s
+    {: RESULT = s; :}
     ;
 
 // table_block consume la cabecera <table> y delega el resto a table_rest.
@@ -339,26 +340,26 @@ element_content_opt ::=
     content_item:c
     {: RESULT = c; :}
     | valor_simple:v
-    {: RESULT = new TextoFormulario(null, null, String.valueOf(v), experto.estiloDefault()); :}
+    {: RESULT = new TextoFormulario(null, null, experto.procesarTexto(v), experto.estiloDefault()); :}
     | /* vacio */
     {: RESULT = null; :}
     ;
 
 open_block ::=
-    LT OPEN EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label SLASH_GT
+    LT OPEN EQUALS valor_simple:w COMMA valor_simple:h COMMA cadena:label SLASH_GT
     {: RESULT = new PreguntaAbierta(
-            Float.valueOf(w.floatValue()),
-            Float.valueOf(h.floatValue()),
-            label,
+            Float.valueOf(experto.toFloat(w)),
+            Float.valueOf(experto.toFloat(h)),
+            experto.procesarTexto(label),
             experto.estiloDefault(),
             ""
         );
     :}
-    | LT OPEN EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label GT style_opt:s LT_SLASH OPEN GT
+    | LT OPEN EQUALS valor_simple:w COMMA valor_simple:h COMMA cadena:label GT style_opt:s LT_SLASH OPEN GT
     {: RESULT = new PreguntaAbierta(
-            Float.valueOf(w.floatValue()),
-            Float.valueOf(h.floatValue()),
-            label,
+            Float.valueOf(experto.toFloat(w)),
+            Float.valueOf(experto.toFloat(h)),
+            experto.procesarTexto(label),
             s,
             ""
         );
@@ -366,22 +367,22 @@ open_block ::=
     ;
 
 drop_block ::=
-    LT DROP EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA NUMBER:correcta SLASH_GT
+    LT DROP EQUALS valor_simple:w COMMA valor_simple:h COMMA cadena:label COMMA lista_strings:opts COMMA NUMBER:correcta SLASH_GT
     {: RESULT = new PreguntaDesplegable(
-            Float.valueOf(w.floatValue()),
-            Float.valueOf(h.floatValue()),
-            label,
+            Float.valueOf(experto.toFloat(w)),
+            Float.valueOf(experto.toFloat(h)),
+            experto.procesarTexto(label),
             opts,
             experto.normalizarIndice(experto.toInt(correcta), opts, "drop.correcta"),
             experto.estiloDefault(),
             -1
         );
     :}
-    | LT DROP EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA NUMBER:correcta GT style_opt:s LT_SLASH DROP GT
+    | LT DROP EQUALS valor_simple:w COMMA valor_simple:h COMMA cadena:label COMMA lista_strings:opts COMMA NUMBER:correcta GT style_opt:s LT_SLASH DROP GT
     {: RESULT = new PreguntaDesplegable(
-            Float.valueOf(w.floatValue()),
-            Float.valueOf(h.floatValue()),
-            label,
+            Float.valueOf(experto.toFloat(w)),
+            Float.valueOf(experto.toFloat(h)),
+            experto.procesarTexto(label),
             opts,
             experto.normalizarIndice(experto.toInt(correcta), opts, "drop.correcta"),
             s,
@@ -391,22 +392,22 @@ drop_block ::=
     ;
 
 select_block ::=
-    LT SELECT EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA NUMBER:correcta SLASH_GT
+    LT SELECT EQUALS valor_simple:w COMMA valor_simple:h COMMA cadena:label COMMA lista_strings:opts COMMA NUMBER:correcta SLASH_GT
     {: RESULT = new PreguntaSeleccionUnica(
-            Float.valueOf(w.floatValue()),
-            Float.valueOf(h.floatValue()),
-            label,
+            Float.valueOf(experto.toFloat(w)),
+            Float.valueOf(experto.toFloat(h)),
+            experto.procesarTexto(label),
             opts,
             experto.normalizarIndice(experto.toInt(correcta), opts, "select.correcta"),
             experto.estiloDefault(),
             -1
         );
     :}
-    | LT SELECT EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA NUMBER:correcta GT style_opt:s LT_SLASH SELECT GT
+    | LT SELECT EQUALS valor_simple:w COMMA valor_simple:h COMMA cadena:label COMMA lista_strings:opts COMMA NUMBER:correcta GT style_opt:s LT_SLASH SELECT GT
     {: RESULT = new PreguntaSeleccionUnica(
-            Float.valueOf(w.floatValue()),
-            Float.valueOf(h.floatValue()),
-            label,
+            Float.valueOf(experto.toFloat(w)),
+            Float.valueOf(experto.toFloat(h)),
+            experto.procesarTexto(label),
             opts,
             experto.normalizarIndice(experto.toInt(correcta), opts, "select.correcta"),
             s,
@@ -416,22 +417,22 @@ select_block ::=
     ;
 
 multiple_block ::=
-    LT MULTIPLE EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA LBRACE lista_enteros_opt:correctas RBRACE SLASH_GT
+    LT MULTIPLE EQUALS valor_simple:w COMMA valor_simple:h COMMA cadena:label COMMA lista_strings:opts COMMA LBRACE lista_enteros_opt:correctas RBRACE SLASH_GT
     {: RESULT = new PreguntaSeleccionMultiple(
-            Float.valueOf(w.floatValue()),
-            Float.valueOf(h.floatValue()),
-            label,
+            Float.valueOf(experto.toFloat(w)),
+            Float.valueOf(experto.toFloat(h)),
+            experto.procesarTexto(label),
             opts,
             experto.filtrarIndicesValidos(correctas, opts, "multiple.correctas"),
             experto.estiloDefault(),
             new HashSet()
         );
     :}
-    | LT MULTIPLE EQUALS numero_entero:w COMMA numero_entero:h COMMA cadena:label COMMA lista_strings:opts COMMA LBRACE lista_enteros_opt:correctas RBRACE GT style_opt:s LT_SLASH MULTIPLE GT
+    | LT MULTIPLE EQUALS valor_simple:w COMMA valor_simple:h COMMA cadena:label COMMA lista_strings:opts COMMA LBRACE lista_enteros_opt:correctas RBRACE GT style_opt:s LT_SLASH MULTIPLE GT
     {: RESULT = new PreguntaSeleccionMultiple(
-            Float.valueOf(w.floatValue()),
-            Float.valueOf(h.floatValue()),
-            label,
+            Float.valueOf(experto.toFloat(w)),
+            Float.valueOf(experto.toFloat(h)),
+            experto.procesarTexto(label),
             opts,
             experto.filtrarIndicesValidos(correctas, opts, "multiple.correctas"),
             s,
@@ -439,8 +440,6 @@ multiple_block ::=
         );
     :}
     ;
-
-numero_entero ::= NUMBER:n {: RESULT = Integer.valueOf(experto.toInt(n)); :};
 
 lista_strings ::=
     LBRACE lista_cadenas:lista RBRACE
@@ -451,9 +450,9 @@ lista_strings ::=
 
 lista_cadenas ::=
     cadena:c
-    {: List lista = experto.listaVacia(); lista.add(c); RESULT = lista; :}
+    {: List lista = experto.listaVacia(); lista.add(experto.procesarTexto(c)); RESULT = lista; :}
     | lista_cadenas:lista COMMA cadena:c
-    {: lista.add(c); RESULT = lista; :}
+    {: lista.add(experto.procesarTexto(c)); RESULT = lista; :}
     ;
 
 lista_enteros_opt ::=
@@ -488,6 +487,8 @@ valor_simple ::=
     {: RESULT = c; :}
     | BORDER_STYLE:b
     {: RESULT = b; :}
+    | LINE
+    {: RESULT = "LINE"; :}
     | MONO
     {: RESULT = "MONO"; :}
     | SANS_SERIF

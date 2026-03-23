@@ -8,7 +8,7 @@ import androidx.compose.ui.unit.dp
  */
 object FormularioConstants {
     
-    const val ESCALA_DIMENSION = 20f
+    const val ESCALA_DIMENSION = 1f
 
     /**
      * Espaciado vertical estándar entre elementos principales
@@ -39,6 +39,17 @@ object FormularioConstants {
      * Espacio entre elementos en layout vertical
      */
     val SPACING_VERTICAL = 5.dp
+
+    /**
+     * Limite recomendado para distribucion horizontal en telefono.
+     * Si hay mas elementos, se envuelven en filas nuevas.
+     */
+    const val MAX_COLUMNAS_MOVIL = 3
+
+    /**
+     * Altura mínima para celdas de tabla para alineación visual uniforme
+     */
+    val MIN_ALTURA_CELDA_TABLA = 60.dp
 
     /**
      * Convierte una dimensión del DSL a dp aplicando la escala

@@ -14,10 +14,11 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.
 
 class PkmComponentWriter(
     private val expressionWriter: PkmExpressionWriter,
-    private val stats: PkmStatsCollector
+    private val stats: PkmStatsCollector,
+    private val reportarErrorSemantico: (String, Int, Int) -> Unit
 ) {
 
-    private val styleWriter = PkmStyleWriter(expressionWriter, stats)
+    private val styleWriter = PkmStyleWriter(expressionWriter, stats, reportarErrorSemantico)
     private val questionWriter = PkmQuestionWriter(expressionWriter, styleWriter, stats)
 
     fun crearSeccion(node: ComponenteSeccion, hijosInternos: List<PkmTagNode>): List<PkmTagNode> {
@@ -27,12 +28,12 @@ class PkmComponentWriter(
         val height = valorTexto(node.atributos, "height", PkmSerializationContract.DEFAULT_SECTION_HEIGHT)
         val pointX = valorTexto(node.atributos, "pointX", PkmSerializationContract.DEFAULT_POINT_X)
         val pointY = valorTexto(node.atributos, "pointY", PkmSerializationContract.DEFAULT_POINT_Y)
-        val orientacion = valorTexto(node.atributos, "orientation", PkmSerializationContract.DEFAULT_ORIENTATION)
+        val orientacion = valorOrientacion(node.atributos)
 
         val nodos = mutableListOf<PkmTagNode>()
 
         val hijosSeccion = mutableListOf<PkmTagNode>()
-        val styleNode = styleWriter.crearBloqueStylesSiExiste(node.atributos)
+        val styleNode = styleWriter.crearBloqueStylesSiExiste(node.atributos, "SECTION", node.linea, node.columna)
         if (styleNode != null) {
             hijosSeccion.add(styleNode)
         }
@@ -51,7 +52,7 @@ class PkmComponentWriter(
     fun crearTabla(node: ComponenteTabla, filasRenderizadas: List<List<List<PkmTagNode>>>): PkmTagNode {
         stats.registrarTabla()
         val hijosTabla = mutableListOf<PkmTagNode>()
-        val styleNode = styleWriter.crearBloqueStylesSiExiste(node.atributos)
+        val styleNode = styleWriter.crearBloqueStylesSiExiste(node.atributos, "TABLE", node.linea, node.columna)
         if (styleNode != null) {
             hijosTabla.add(styleNode)
         }
@@ -88,7 +89,7 @@ class PkmComponentWriter(
         val content = valorTexto(node.atributos, "content", "\"\"")
 
         val hijos = mutableListOf<PkmTagNode>()
-        val styleNode = styleWriter.crearBloqueStylesSiExiste(node.atributos)
+        val styleNode = styleWriter.crearBloqueStylesSiExiste(node.atributos, "TEXT", node.linea, node.columna)
         if (styleNode != null) {
             hijos.add(styleNode)
         }
@@ -127,5 +128,16 @@ class PkmComponentWriter(
             return defecto
         }
         return expressionWriter.valorComoTexto(valor)
+    }
+
+    // La gramatica PKM espera orientacion sin comillas: VERTICAL | HORIZONTAL.
+    private fun valorOrientacion(attrs: List<NodoAtributo>): String {
+        val bruto = valorTexto(attrs, "orientation", PkmSerializationContract.DEFAULT_ORIENTATION)
+        val limpio = bruto.trim().removeSurrounding("\"")
+        return if (limpio.equals("HORIZONTAL", ignoreCase = true)) {
+            "HORIZONTAL"
+        } else {
+            "VERTICAL"
+        }
     }
 }
