@@ -138,7 +138,7 @@ terminal String IDENTIFICADOR, NUMBER_LITERAL;
 terminal String INICIO_CADENA, FIN_CADENA, CONTENIDO_CADENA;
 
 // Emojis dentro de cadenas
-terminal String EMOJI_SMILE, EMOJI_SAD, EMOJI_SERIOUS, EMOJI_HEART;
+terminal String EMOJI_SMILE, EMOJI_SAD, EMOJI_SERIOUS, EMOJI_HEART, EMOJI_CAT, EMOJI_STAR;
 
 // Error léxico
 //terminal ERROR;
@@ -1093,5 +1093,9 @@ parteCadena ::=
     | EMOJI_SERIOUS:e
     {: RESULT = e; :}
     | EMOJI_HEART:e
+    {: RESULT = e; :}
+    | EMOJI_CAT:e
+    {: RESULT = e; :}
+    | EMOJI_STAR:e
     {: RESULT = e; :}
     ;

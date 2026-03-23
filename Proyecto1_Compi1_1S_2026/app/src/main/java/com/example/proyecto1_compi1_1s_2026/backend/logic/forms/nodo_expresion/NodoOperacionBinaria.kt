@@ -61,15 +61,6 @@ class NodoOperacionBinaria(
                         columna
                     )
                 }
-
-                // Regla del lenguaje: '!!' no se usa para lógica booleana.
-                if (operador == "!!" && tipoIzq == "boolean" && tipoDer == "boolean") {
-                    contexto.reportarError(
-                        "No se permite usar '!!' entre booleanos; utiliza operadores lógicos (&& o ||)",
-                        linea,
-                        columna
-                    )
-                }
             }
         }
     }

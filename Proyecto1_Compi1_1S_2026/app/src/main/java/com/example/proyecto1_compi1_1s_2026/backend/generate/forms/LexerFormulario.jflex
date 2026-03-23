@@ -231,18 +231,36 @@ ESPACIO = [ \t\r\n\f]+
     \"                  { yybegin(YYINITIAL);
                           return symbol(sym.FIN_CADENA, yytext()); }
 
-    // ----- EMOJIS DINÁMICOS -----
-    // @[:)] / @[:smile:]  — uno o más ')' para la boca
+    // ----- EMOJIS VÁLIDOS -----
+    // Sonrisa
     @\[:\)+\]           { return symbol(sym.EMOJI_SMILE,   yytext()); }
+    @\[:smile:\]         { return symbol(sym.EMOJI_SMILE,   yytext()); }
 
-    // @[:(] / @[:sad:]   — uno o más '(' para la boca
+    // Triste
     @\[:\(+\]           { return symbol(sym.EMOJI_SAD,     yytext()); }
+    @\[:sad:\]           { return symbol(sym.EMOJI_SAD,     yytext()); }
 
-    // @[:|] / @[:serious:] — uno o más '|' para la boca
+    // Serio
     @\[:\|+\]           { return symbol(sym.EMOJI_SERIOUS, yytext()); }
+    @\[:serious:\]       { return symbol(sym.EMOJI_SERIOUS, yytext()); }
 
-    // @[<3] / @[:heart:]  — una o más repeticiones de '<' seguidas de uno o más '3'
-    @\[<+3+\]           { return symbol(sym.EMOJI_HEART,   yytext()); }
+    // Corazón
+    @\[:<+3+\]           { return symbol(sym.EMOJI_HEART,   yytext()); }
+    @\[:heart:\]         { return symbol(sym.EMOJI_HEART,   yytext()); }
+
+    // Gato
+    @\[:cat:\]           { return symbol(sym.EMOJI_CAT,     yytext()); }
+    @\[:\^\^:\]        { return symbol(sym.EMOJI_CAT,     yytext()); }
+
+    // Estrella: @[:star:], @[:star:5:], @[:star-5:]
+    @\[:star:\]          { return symbol(sym.EMOJI_STAR,    yytext()); }
+    @\[:star[:\-][0-9]+:\] { return symbol(sym.EMOJI_STAR, yytext()); }
+
+    // Cualquier especificación @[...] no reconocida se reporta como error.
+    @\[[^\]\n]+\]      {
+        String mensaje = "Formato de emoji no válido: '" + yytext() + "'";
+        addLexicalError(mensaje);
+    }
 
     // --- SECUENCIAS DE ESCAPE DENTRO DE CADENA ---
 
