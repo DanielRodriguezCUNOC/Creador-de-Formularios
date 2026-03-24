@@ -61,6 +61,7 @@ dependencies {
     implementation("com.itextpdf:itextpdf:5.5.13.5")
     // Para color Picker
     implementation("com.github.skydoves:colorpicker-compose:1.0.7")
+    implementation(libs.androidx.compose.foundation)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
