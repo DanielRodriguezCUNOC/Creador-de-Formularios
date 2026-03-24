@@ -9,6 +9,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -21,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +34,8 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInf
 import com.example.proyecto1_compi1_1s_2026.ui.forms.FormularioRenderer
 import com.example.proyecto1_compi1_1s_2026.ui.integration.FormularioUiCoordinator
 import com.example.proyecto1_compi1_1s_2026.ui.integration.ResultadoAnalisisUi
+import com.example.proyecto1_compi1_1s_2026.ui.util.bloquesDisponibles
+import com.example.proyecto1_compi1_1s_2026.ui.util.ColorPickerDialog
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
@@ -62,11 +66,13 @@ fun MainScreen(
     var pkmPendienteFinalizar by remember { mutableStateOf("") }
     var autorInput by remember { mutableStateOf("") }
     var nombreFormularioInput by remember { mutableStateOf("") }
-
+    var mostrarDialogoAgregar by remember { mutableStateOf(false) }
+    var mostrarDialogoColor by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val coordinator = remember { FormularioUiCoordinator() }
     val context = LocalContext.current
+    val bloquesDisponibles = remember { bloquesDisponibles }
 
     fun aplicarResultado(resultado: ResultadoAnalisisUi, navegarAlFormulario: Boolean) {
         erroresLexicos = resultado.erroresLexicos
@@ -265,14 +271,14 @@ fun MainScreen(
             ) {
 
                 Button(
-                    onClick = { /* TODO: Add */ },
+                    onClick = { mostrarDialogoColor = true },
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("Colores")
                 }
 
                 Button(
-                    onClick = { /* TODO: Add */ },
+                    onClick = { mostrarDialogoAgregar = true },
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("Agregar")
@@ -300,6 +306,70 @@ fun MainScreen(
             }
         }
     }
+
+    // Dialogo de selección de color personalizado
+    if (mostrarDialogoColor) {
+        ColorPickerDialog(
+            onDismiss = { mostrarDialogoColor = false },
+            onColorSelected = { colorString ->
+                // Insertar el color en la posición del cursor
+                val cursor = editorValue.selection.start
+                val textoAntes = editorValue.text.substring(0, cursor)
+                val textoDespues = editorValue.text.substring(cursor)
+                val nuevoTexto = textoAntes + colorString + textoDespues
+                val nuevaPos = (textoAntes + colorString).length
+                onEditorValueChange(
+                    TextFieldValue(
+                        text = nuevoTexto,
+                        selection = TextRange(nuevaPos)
+                    )
+                )
+            }
+        )
+    }
+
+    //* Permite que el usuario pueda seleccionar un elemento para agregar al editor
+    if (mostrarDialogoAgregar) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoAgregar = false },
+            title = { Text("Selecciona un bloque") },
+            text = {
+                Column {
+                    bloquesDisponibles.forEach { bloque ->
+                        Button(
+                            onClick = {
+                                // Inserta el bloque en la posición del cursor
+                                val cursor = editorValue.selection.start
+                                val textoAntes = editorValue.text.substring(0, cursor)
+                                val textoDespues = editorValue.text.substring(cursor)
+                                val nuevoTexto = textoAntes + bloque.plantilla + textoDespues
+                                val nuevaPos = (textoAntes + bloque.plantilla).length
+                                onEditorValueChange(
+                                    TextFieldValue(
+                                        text = nuevoTexto,
+                                        selection = TextRange(nuevaPos)
+                                    )
+                                )
+                                mostrarDialogoAgregar = false
+                            },
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        ) {
+                            Text(bloque.nombre)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { mostrarDialogoAgregar = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+
+
 
     if (mostrarDialogoGuardarDb && formularioPendienteFinalizar != null) {
         AlertDialog(
@@ -394,6 +464,7 @@ fun MainScreen(
         )
     }
 }
+
 
 private data class ResultadoGuardadoPkm(
     val exitoso: Boolean,

@@ -59,6 +59,8 @@ dependencies {
     implementation("de.jflex:cup_runtime:11b-20160615")
     // https://mvnrepository.com/artifact/com.itextpdf/itextpdf
     implementation("com.itextpdf:itextpdf:5.5.13.5")
+    // Para color Picker
+    implementation("com.github.skydoves:colorpicker-compose:1.0.7")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
