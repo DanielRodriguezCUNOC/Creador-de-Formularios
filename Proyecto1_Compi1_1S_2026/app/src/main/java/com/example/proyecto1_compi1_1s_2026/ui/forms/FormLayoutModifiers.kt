@@ -21,8 +21,7 @@ fun Modifier.applyFormDimensions(
         .then(
             if (widthEscalado != null) {
                 // En móviles, usamos fillMaxWidth para que tome el espacio de la celda/columna,
-                // usando el width del DSL solo como mínimo si es necesario, 
-                // resolviendo el bug de "texto vertical"
+                // usando el width del DSL solo como mínimo si es necesario
                 Modifier.widthIn(min = widthEscalado.dp).fillMaxWidth()
             } else if (fillWidthByDefault) {
                 Modifier.fillMaxWidth()

@@ -1,7 +1,7 @@
 package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.integracion
 
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.*
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ExpressionNodeBuilder
+import com.example.proyecto1_compi1_1s_2026.backend.forms.ExpressionNodeBuilder
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.*
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.*
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TablaSimbolos

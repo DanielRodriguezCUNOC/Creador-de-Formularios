@@ -32,7 +32,7 @@ class PkmStyleWriter(
 
     private fun crearLineasStyle(stylesRaw: Any, contexto: String, linea: Int, columna: Int): List<String> {
         if (stylesRaw !is List<*>) {
-            // Compatibilidad minima: si no llega la lista esperada, dejamos el valor crudo.
+            
             return listOf(expressionWriter.valorComoTexto(stylesRaw))
         }
 

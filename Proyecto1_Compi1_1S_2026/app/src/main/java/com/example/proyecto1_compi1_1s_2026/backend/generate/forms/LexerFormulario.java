@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError;
+    import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.TokenInfo;
+    import java.io.StringReader;
 
 
 @SuppressWarnings("fallthrough")
@@ -1076,7 +1078,6 @@ public class LexerFormulario implements java_cup.runtime.Scanner {
   private int yycolumn;
 
   /** Number of characters up to the start of the matched text. */
-  @SuppressWarnings("unused")
   private long yychar;
 
   /** Whether the scanner is currently at the beginning of a line. */
@@ -1095,6 +1096,28 @@ public class LexerFormulario implements java_cup.runtime.Scanner {
     
     public List<ErrorInfo> getLexicalErrors(){
         return this.errorList;
+    }
+
+ public static List<TokenInfo> analizar(String codigo) {
+        List<TokenInfo> tokens = new ArrayList<>();
+        LexerFormulario lexer = new LexerFormulario(new StringReader(codigo));
+        
+        Symbol tokenActual; 
+        
+        try {
+            while ((tokenActual = lexer.next_token()).sym != sym.EOF) {
+                tokens.add(new TokenInfo(
+                    tokenActual.sym,
+                    tokenActual.value != null ? tokenActual.value.toString() : lexer.yytext(),
+                    (int) lexer.yychar,
+                    (int) lexer.yychar + lexer.yylength()
+                ));   
+            }
+        } catch (Exception e) {
+            
+            lexer.getLexicalErrors().add(new ErrorInfo(TipoError.LEXICO, "Error al analizar: " + e.getMessage(), 0, 0));
+        }
+        return tokens;
     }
 
      //-----------------------------------------------
@@ -1418,6 +1441,8 @@ public class LexerFormulario implements java_cup.runtime.Scanner {
 
     while (true) {
       zzMarkedPosL = zzMarkedPos;
+
+      yychar+= zzMarkedPosL-zzStartRead;
 
       boolean zzR = false;
       int zzCh;

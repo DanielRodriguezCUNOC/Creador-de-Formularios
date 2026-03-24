@@ -15,6 +15,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoErro
 %column
 %ignorecase
 %state STRING
+%state METADATA
 %eofval{
 	return symbol(sym.EOF, "<EOF>");
 %eofval}
@@ -75,16 +76,16 @@ K_TEXT_SIZE = "text"[ ]+"size"
 
 %%
 
+
 <YYINITIAL> {
-
+	
 	[\u200B\u200C\u200D\uFEFF] { /* Ignora invisibles */ }
-
+	
 	{ESPACIO} { /* Ignora espacios */ }
 
-	// Separador del bloque de metadatos.
-	"###" { return symbol(sym.METADATA_DELIM); }
-
-	// Etiquetas de metadatos.
+	// Si detecta inicio de metadatos, cambia a estado METADATA
+	"###" { yybegin(METADATA); return symbol(sym.METADATA_DELIM); }
+	
 	"Author" { return symbol(sym.AUTHOR); }
 	"Fecha" { return symbol(sym.FECHA); }
 	"Hora" { return symbol(sym.HORA); }
@@ -100,8 +101,6 @@ K_TEXT_SIZE = "text"[ ]+"size"
 	"Tablas"               { return symbol(sym.TABLAS); }
 	"Con estilos"          { return symbol(sym.CON_ESTILOS); }
 	"Draws ejecutados"     { return symbol(sym.DRAWS_EJECUTADOS); }
-
-	// Nombres de etiquetas.
 	"section" { return symbol(sym.SECTION); }
 	"style" { return symbol(sym.STYLE); }
 	"content" { return symbol(sym.CONTENT); }
@@ -112,30 +111,21 @@ K_TEXT_SIZE = "text"[ ]+"size"
 	"drop" { return symbol(sym.DROP); }
 	"select" { return symbol(sym.SELECT); }
 	"multiple" { return symbol(sym.MULTIPLE); }
-
-	// Claves de estilo.
 	"color" { return symbol(sym.COLOR_KEY); }
 	{K_BACKGROUND_COLOR} { return symbol(sym.BACKGROUND_COLOR_KEY); }
 	{K_FONT_FAMILY} { return symbol(sym.FONT_FAMILY_KEY); }
 	{K_TEXT_SIZE} { return symbol(sym.TEXT_SIZE_KEY); }
 	"border" { return symbol(sym.BORDER_KEY); }
-
-	// Valores reservados.
 	"VERTICAL" { return symbol(sym.VERTICAL); }
 	"HORIZONTAL" { return symbol(sym.HORIZONTAL); }
 	"MONO" { return symbol(sym.MONO); }
 	"SANS_SERIF" { return symbol(sym.SANS_SERIF); }
 	"CURSIVE" { return symbol(sym.CURSIVE); }
 	"LINE" | "DOTTED" | "DOUBLE" { return symbol(sym.BORDER_STYLE, yytext()); }
-
 	"true" | "false" { return symbol(sym.BOOLEAN, yytext()); }
-
-	// Literales de color.
 	{COLOR_HEX_RE} { return symbol(sym.COLOR_HEX, yytext()); }
 	{COLOR_RGB_RE} { return symbol(sym.COLOR_RGB, yytext()); }
 	{COLOR_HSL_RE} { return symbol(sym.COLOR_HSL, yytext()); }
-
-	// Delimitadores y signos.
 	"</" { return symbol(sym.LT_SLASH); }
 	"/>" { return symbol(sym.SLASH_GT); }
 	"/" { return symbol(sym.SLASH); }
@@ -146,24 +136,24 @@ K_TEXT_SIZE = "text"[ ]+"size"
 	":" { return symbol(sym.COLON); }
 	"{" { return symbol(sym.LBRACE); }
 	"}" { return symbol(sym.RBRACE); }
-
-	// Numeros e identificadores.
 	{NUMERO} { return symbol(sym.NUMBER, yytext()); }
 	{IDENT} { return symbol(sym.IDENTIFIER, yytext()); }
-
-	// Inicio de cadena.
 	\" { yybegin(STRING); return symbol(sym.STRING_START, yytext()); }
-
 	[^] {
 		addLexicalError("Caracter no reconocido '" + yytext() + "'");
 	}
-	}
+}
+
+<METADATA> {
+	"###" { yybegin(YYINITIAL); return symbol(sym.METADATA_DELIM); }
+	[^]+  { /* Ignorar todo el contenido de metadatos */ }
+}
 
 <STRING> {
 	// Fin de cadena.
 	\" { yybegin(YYINITIAL); return symbol(sym.STRING_END, yytext()); }
 
-	// Detecta emojis unicode (astral plane) como pares sustitutos UTF-16.
+	// Detecta emojis unicode como pares sustitutos UTF-16.
 	[\uD83C-\uDBFF][\uDC00-\uDFFF] {
 		addLexicalError("Emoji unicode no permitido; use notacion @[...]");
 	}

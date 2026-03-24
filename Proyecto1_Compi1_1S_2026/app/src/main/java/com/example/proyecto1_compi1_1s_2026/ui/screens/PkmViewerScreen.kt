@@ -24,6 +24,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -33,6 +38,8 @@ import androidx.compose.ui.unit.sp
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
 import com.example.proyecto1_compi1_1s_2026.ui.integration.PkmUiCoordinator
+import com.example.proyecto1_compi1_1s_2026.ui.screens.LexerSyntaxHighlighter
+import com.example.proyecto1_compi1_1s_2026.ui.screens.analizarTokensPKM
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,6 +54,23 @@ fun PkmViewerScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val pkmCoordinator = remember { PkmUiCoordinator() }
+
+
+    var tokensPkm by rememberSaveable(codigoPkm) { mutableStateOf<List<com.example.proyecto1_compi1_1s_2026.backend.generate.forms.TokenInfo>?>(null) }
+    var analizando by rememberSaveable(codigoPkm) { mutableStateOf(true) }
+
+    LaunchedEffect(codigoPkm) {
+        analizando = true
+        // Analiza en background
+        tokensPkm = try {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                analizarTokensPKM(codigoPkm)
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+        analizando = false
+    }
 
     Scaffold(
         topBar = {
@@ -82,25 +106,42 @@ fun PkmViewerScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .border(1.dp, Color(0xFF404040), RoundedCornerShape(8.dp))
-                    .background(SyntaxHighlighter.bgColor, RoundedCornerShape(8.dp))
+                    .background(Color(0xFF232323), RoundedCornerShape(8.dp))
             ) {
                 val verticalScroll = rememberScrollState()
                 val horizontalScroll = rememberScrollState()
 
-                Text(
-                    text = SyntaxHighlighter.highlight(codigoPkm),
-                    style = TextStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 14.sp,
-                        color = SyntaxHighlighter.textColor,
-                        lineHeight = 22.sp
-                    ),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(verticalScroll)
-                        .horizontalScroll(horizontalScroll)
-                        .padding(12.dp)
-                )
+                if (analizando) {
+                    Text(
+                        text = codigoPkm,
+                        style = TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 14.sp,
+                            color = LexerSyntaxHighlighter.colorDefault,
+                            lineHeight = 22.sp
+                        ),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(verticalScroll)
+                            .horizontalScroll(horizontalScroll)
+                            .padding(12.dp)
+                    )
+                } else {
+                    Text(
+                        text = LexerSyntaxHighlighter.highlight(codigoPkm, tokensPkm),
+                        style = TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 14.sp,
+                            color = LexerSyntaxHighlighter.colorDefault,
+                            lineHeight = 22.sp
+                        ),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(verticalScroll)
+                            .horizontalScroll(horizontalScroll)
+                            .padding(12.dp)
+                    )
+                }
             }
 
             Row(
