@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo;
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError;
+    import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.TokenInfo;
+    import java.io.StringReader;
 
 %%
 %public
@@ -187,6 +189,7 @@ ESPACIO = [ \t\r\n\f]+
     // --- OPERADORES LÓGICOS ---
 
     "||"                { return symbol(sym.OR); }
+
     "&&"                { return symbol(sym.AND); }
     "~"                 { return symbol(sym.NOT); }
 

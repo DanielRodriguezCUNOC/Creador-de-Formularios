@@ -82,38 +82,40 @@ fun MainScreen(
         if (resultado.exitoso) {
             onFormularioActualChange(resultado.formulario)
             onMostrarFormularioChange(true)
-            onCodigoPkmGenerado(resultado.codigoPkm)
-            tipoMensaje = "exito"
-
-            val resultadoGuardado = guardarCodigoPkmEnDocumentos(context, resultado.codigoPkm)
-            val mensajeBase = if (navegarAlFormulario) {
-                "Formulario listo para contestar"
-            } else {
-                "Formulario construido exitosamente"
-            }
-
-            coroutineScope.launch {
-                if (resultadoGuardado.exitoso) {
-                    val accion = if (resultadoGuardado.uri != null) "Abrir" else null
-                    val resultadoSnackbar = snackbarHostState.showSnackbar(
-                        message = "$mensajeBase. Guardado en ${resultadoGuardado.rutaMostrada}",
-                        actionLabel = accion,
-                        duration = SnackbarDuration.Long
-                    )
-
-                    if (resultadoSnackbar == SnackbarResult.ActionPerformed && resultadoGuardado.uri != null) {
-                        abrirArchivoGuardado(context, resultadoGuardado.uri)
-                    }
-                } else {
-                    snackbarHostState.showSnackbar(
-                        message = "$mensajeBase. No se pudo guardar PKM en Documentos",
-                        duration = SnackbarDuration.Short
-                    )
-                }
-            }
-
-            if (navegarAlFormulario && resultado.formulario != null) {
-                formularioPendienteFinalizar = resultado.formulario
+                    if (mostrarFormulario && formularioActual != null) {
+                        // ── Formulario construido ────────────────────────────
+                        FormularioRenderer(
+                            formulario = formularioActual!!,
+                            onEnviar   = {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message  = "Formulario enviado",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                }
+                            }
+                        )
+                    } else {
+                        // ── Vista previa con resaltado de sintaxis usando el lexer ───────────
+                        val verticalScroll  = rememberScrollState()
+                        val horizontalScroll = rememberScrollState()
+                        val tokens = remember(editorValue.text) {
+                            LexerFormulario.analizar(editorValue.text)
+                        }
+                        Text(
+                            text = LexerSyntaxHighlighter.highlightWithTokens(editorValue.text, tokens),
+                            style = TextStyle(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize   = 14.sp,
+                                color      = LexerSyntaxHighlighter.colorDefault,
+                                lineHeight = 22.sp
+                            ),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(verticalScroll)
+                                .horizontalScroll(horizontalScroll)
+                                .padding(12.dp)
+                        )
                 pkmPendienteFinalizar = resultado.codigoPkm
                 mostrarDialogoGuardarDb = true
             }
