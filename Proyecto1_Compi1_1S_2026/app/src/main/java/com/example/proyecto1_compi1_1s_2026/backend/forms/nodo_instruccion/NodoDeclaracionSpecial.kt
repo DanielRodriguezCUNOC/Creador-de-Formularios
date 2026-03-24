@@ -21,7 +21,7 @@ class NodoDeclaracionSpecial(
 
     override fun validarSemantica(contexto: ContextoSemantico) {
         // La tabla ya tiene esta variable (registrada por RecolectorSimbolos).
-        // Solo validamos el componente interno.
+        // Solo validar el componente interno.
         pregunta.validarSemantica(contexto)
     }
 }

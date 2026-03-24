@@ -13,12 +13,12 @@ object FormularioConstants {
     /**
      * Espaciado vertical estándar entre elementos principales
      */
-    val PADDING_PRINCIPAL = 6.dp
+    val PADDING_PRINCIPAL = 3.dp
 
     /**
      * Espaciado entre elementos en secciones/columnas
      */
-    val PADDING_ELEMENTO = 4.dp
+    val PADDING_ELEMENTO = 3.dp
 
     /**
      * Espaciado interno dentro de componentes
@@ -33,12 +33,12 @@ object FormularioConstants {
     /**
      * Espacio entre elementos en layout horizontal
      */
-    val SPACING_HORIZONTAL = 5.dp
+    val SPACING_HORIZONTAL = 3.dp
 
     /**
      * Espacio entre elementos en layout vertical
      */
-    val SPACING_VERTICAL = 5.dp
+    val SPACING_VERTICAL = 3.dp
 
     /**
      * Limite recomendado para distribucion horizontal en telefono.

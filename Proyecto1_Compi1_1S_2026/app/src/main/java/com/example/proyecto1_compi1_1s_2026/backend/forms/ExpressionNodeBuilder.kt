@@ -23,11 +23,11 @@ class ExpressionNodeBuilder(
     private fun normalizarTextoConEmojis(texto: String): String {
         var out = texto
 
-        // Formas simbólicas
-        out = out.replace(Regex("@\\[:\\)+\\]"), "😄")
-        out = out.replace(Regex("@\\[:\\(+\\]"), "😢")
-        out = out.replace(Regex("@\\[:\\|+\\]"), "😐")
-        out = out.replace(Regex("@\\[<+3+\\]"), "❤️")
+        // Reemplazo manual de formas simbólicas
+        out = reemplazarEmojiSimbolico(out, "@[:)]", "😄")
+        out = reemplazarEmojiSimbolico(out, "@[:(]", "😢")
+        out = reemplazarEmojiSimbolico(out, "@[:|]", "😐")
+        out = reemplazarEmojiSimbolico(out, "@[:<3]", "❤️")
 
         // Formas nombradas
         out = out.replace("@[:smile:]", "😄")
@@ -38,15 +38,47 @@ class ExpressionNodeBuilder(
         out = out.replace("@[:^^:]", "😺")
 
         // Soporte para estrellas con multiplicador ej @[:star:5:]
-        // Se corrige la regex para evitar el error "Incorrect Unicode property"
-        val regexStar = Regex("""@\[:star:(\d+):]""")
-        out = regexStar.replace(out) { match ->
-            val cant = match.groupValues[1].toIntOrNull()?.coerceIn(1, 50) ?: 1
-            "⭐".repeat(cant)
-        }
+        out = reemplazarEstrellas(out)
         out = out.replace("@[:star:]", "⭐")
 
         return out
+    }
+
+    private fun reemplazarEmojiSimbolico(texto: String, patron: String, emoji: String): String {
+        val sb = StringBuilder()
+        var i = 0
+        while (i < texto.length) {
+            if (texto.startsWith(patron, i)) {
+                sb.append(emoji)
+                i += patron.length
+            } else {
+                sb.append(texto[i])
+                i++
+            }
+        }
+        return sb.toString()
+    }
+
+    private fun reemplazarEstrellas(texto: String): String {
+        val sb = StringBuilder()
+        var i = 0
+        while (i < texto.length) {
+            if (texto.startsWith("@[:star:", i)) {
+                val start = i + 8
+                var end = start
+                while (end < texto.length && texto[end].isDigit()) end++
+                if (end < texto.length && texto.substring(end, end + 2) == ":]") {
+                    val numStr = texto.substring(start, end)
+                    val cant = numStr.toIntOrNull()?.coerceIn(1, 50) ?: 1
+                    sb.append("⭐".repeat(cant))
+                    i = end + 2
+                    continue
+                }
+            }
+            sb.append(texto[i])
+            i++
+        }
+        return sb.toString()
     }
 
     fun construirAccesoVariable(node: NodoAccesoVariable): Any? {
