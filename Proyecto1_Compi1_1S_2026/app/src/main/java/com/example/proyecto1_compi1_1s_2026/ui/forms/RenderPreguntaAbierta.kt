@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.PreguntaAbierta
+import com.example.proyecto1_compi1_1s_2026.ui.util.EmojiUiUtils
 
 /**
  * Renderiza una [PreguntaAbierta] con su etiqueta y un campo de texto libre.
@@ -28,7 +29,7 @@ fun RenderPreguntaAbierta(pregunta: PreguntaAbierta) {
         verticalArrangement = Arrangement.spacedBy(FormularioConstants.SPACING_VERTICAL)
     ) {
         Text(
-            text  = pregunta.label,
+            text  = EmojiUiUtils.decodificarParaPantalla(pregunta.label),
             style = pregunta.estilos.toTextStyle()
         )
         OutlinedTextField(

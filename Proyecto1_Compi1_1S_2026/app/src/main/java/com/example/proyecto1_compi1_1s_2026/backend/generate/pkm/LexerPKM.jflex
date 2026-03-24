@@ -168,8 +168,24 @@ K_TEXT_SIZE = "text"[ ]+"size"
 		addLexicalError("Emoji unicode no permitido; use notacion @[...]");
 	}
 
-	// Notacion emoji tipo @[...].
-	@\[[^\]\n]+\] { return symbol(sym.EMOJI_SPEC, yytext()); }
+	// Emojis validos (formas simbolicas y nombradas).
+	@\[:\)+\] { return symbol(sym.EMOJI_SPEC, yytext()); }
+	@\[:smile:\] { return symbol(sym.EMOJI_SPEC, yytext()); }
+	@\[:\(+\] { return symbol(sym.EMOJI_SPEC, yytext()); }
+	@\[:sad:\] { return symbol(sym.EMOJI_SPEC, yytext()); }
+	@\[:\|+\] { return symbol(sym.EMOJI_SPEC, yytext()); }
+	@\[:serious:\] { return symbol(sym.EMOJI_SPEC, yytext()); }
+	@\[:<+3+\] { return symbol(sym.EMOJI_SPEC, yytext()); }
+	@\[:heart:\] { return symbol(sym.EMOJI_SPEC, yytext()); }
+	@\[:cat:\] { return symbol(sym.EMOJI_SPEC, yytext()); }
+	@\[:\^\^:\] { return symbol(sym.EMOJI_SPEC, yytext()); }
+	@\[:star:\] { return symbol(sym.EMOJI_SPEC, yytext()); }
+	@\[:star[:\-][0-9]+:\] { return symbol(sym.EMOJI_SPEC, yytext()); }
+
+	// Cualquier especificacion @[...] no reconocida se reporta como error.
+	@\[[^\]\n]+\] {
+		addLexicalError("Formato de emoji no valido: '" + yytext() + "'");
+	}
 
 	// Escapes basicos dentro de texto.
 	\\\" { return symbol(sym.STRING_TEXT, yytext()); }

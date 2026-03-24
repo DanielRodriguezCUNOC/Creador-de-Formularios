@@ -38,6 +38,7 @@ class ExpressionNodeBuilder(
         out = out.replace("@[:^^:]", "😺")
 
         // Soporte para estrellas con multiplicador ej @[:star:5:]
+        // Se corrige la regex para evitar el error "Incorrect Unicode property"
         val regexStar = Regex("""@\[:star:(\d+):]""")
         out = regexStar.replace(out) { match ->
             val cant = match.groupValues[1].toIntOrNull()?.coerceIn(1, 50) ?: 1

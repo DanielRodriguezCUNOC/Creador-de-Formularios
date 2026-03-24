@@ -1,4 +1,4 @@
-package com.example.proyecto1_compi1_1s_2026.ui.integration
+package com.example.proyecto1_compi1_1s_2026.ui.integration.forms
 
 import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.LexerFormulario
 import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.ParserFormulario

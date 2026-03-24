@@ -6,14 +6,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.TextoFormulario
+import com.example.proyecto1_compi1_1s_2026.ui.util.EmojiUiUtils
 
-/**
- * Renderiza un [TextoFormulario] (etiqueta o contenido estático).
- */
 @Composable
 fun RenderTexto(texto: TextoFormulario) {
     Text(
-        text  = texto.contenido,
+        text  = EmojiUiUtils.decodificarParaPantalla(texto.contenido),
         style = texto.estilos.toTextStyle(),
         modifier = Modifier
             .applyFormDimensions(texto.width, texto.height)

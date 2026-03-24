@@ -1,0 +1,223 @@
+package com.example.proyecto1_compi1_1s_2026.ui.util
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.github.skydoves.colorpicker.compose.ColorEnvelope
+import com.github.skydoves.colorpicker.compose.HsvColorPicker
+import com.github.skydoves.colorpicker.compose.rememberColorPickerController
+
+@Composable
+fun ColorPickerDialog(
+    onDismiss: () -> Unit,
+    onColorSelected: (String) -> Unit
+) {
+    var selectedColor by remember { mutableStateOf(Color(0xFF00BFAE)) }
+    var selectedFormat by remember { mutableStateOf("HEX") }
+    var selectedPresetName by remember { mutableStateOf<String?>(null) }
+    var alpha by remember { mutableStateOf(1f) }
+    val controller = rememberColorPickerController()
+
+    AlertDialog(
+        containerColor = Color(0xFFF5F5F5),
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(
+                onClick = {
+                    val result = selectedPresetName ?: when (selectedFormat) {
+                        "HEX" -> selectedColor.copy(alpha = alpha).toHex()
+                        "RGB" -> selectedColor.copy(alpha = alpha).toRgb()
+                        "HSL" -> selectedColor.copy(alpha = alpha).toHsl()
+                        else -> selectedColor.copy(alpha = alpha).toHex()
+                    }
+                    onColorSelected(result)
+                    onDismiss()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00BFAE))
+            ) {
+                Text("¡Listo!", color = Color.White)
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("Cerrar", color = Color(0xFF00BFAE))
+            }
+        },
+        title = {
+            Text(
+                text = "Selector de Color",
+                color = Color(0xFF00BFAE),
+                fontFamily = FontFamily.Serif,
+                fontSize = 22.sp
+            )
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val presets = listOf(
+                    "AQUA" to Color(0xFF00BFAE),
+                    "ORANGE" to Color(0xFFFF9800),
+                    "LIME" to Color(0xFFCDDC39),
+                    "PINK" to Color(0xFFE91E63),
+                    "INDIGO" to Color(0xFF3F51B5),
+                    "BROWN" to Color(0xFF795548),
+                    "GRAY" to Color(0xFF607D8B),
+                    "GOLD" to Color(0xFFFFD600)
+                )
+                Text(
+                    text = "Colores rápidos",
+                    color = Color(0xFF333333),
+                    fontFamily = FontFamily.SansSerif,
+                    fontSize = 15.sp
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    presets.forEach { (name, colorValue) ->
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .background(colorValue, RoundedCornerShape(8.dp))
+                                .border(
+                                    width = if (selectedColor == colorValue) 3.dp else 1.dp,
+                                    color = if (selectedColor == colorValue)
+                                        Color(0xFF00BFAE)
+                                    else
+                                        Color.LightGray,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .clickable {
+                                    selectedColor = colorValue
+                                    selectedPresetName = name
+                                    controller.selectByColor(colorValue, fromUser = true)
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = name.take(2),
+                                color = if (colorValue.luminance() > 0.5f)
+                                    Color.Black else Color.White,
+                                fontFamily = FontFamily.SansSerif,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(18.dp))
+                HsvColorPicker(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp),
+                    controller = controller,
+                    onColorChanged = { envelope: ColorEnvelope ->
+                        selectedColor = envelope.color
+                        selectedPresetName = null
+                    }
+                )
+                Spacer(Modifier.height(10.dp))
+                Text("Transparencia", color = Color(0xFF333333), fontSize = 13.sp)
+                Slider(
+                    value = alpha,
+                    onValueChange = { alpha = it },
+                    valueRange = 0f..1f,
+                    steps = 9,
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    listOf("HEX", "RGB", "HSL").forEach { format ->
+                        OutlinedButton(
+                            onClick = { selectedFormat = format },
+                            border = if (selectedFormat == format) BorderStroke(2.dp, Color(0xFF00BFAE)) else null,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            val icon = when (format) {
+                                "HEX" -> "#"
+                                "RGB" -> "R"
+                                "HSL" -> "H"
+                                else -> "?"
+                            }
+                            Text("$icon $format", color = if (selectedFormat == format) Color(0xFF00BFAE) else Color(0xFF333333))
+                        }
+                    }
+                }
+                Spacer(Modifier.height(14.dp))
+                val previewText = when (selectedFormat) {
+                    "HEX" -> selectedColor.copy(alpha = alpha).toHex()
+                    "RGB" -> selectedColor.copy(alpha = alpha).toRgb()
+                    "HSL" -> selectedColor.copy(alpha = alpha).toHsl()
+                    else -> selectedColor.copy(alpha = alpha).toHex()
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .background(selectedColor.copy(alpha = alpha), RoundedCornerShape(10.dp))
+                        .border(1.dp, Color(0xFF00BFAE), RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "  A0 ",
+                        color = Color.Transparent
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = "Código: $previewText",
+                    color = Color(0xFF333333),
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 14.sp
+                )
+            }
+        }
+    )
+}
+
+// Utilidades para convertir Color a string en diferentes formatos
+fun Color.toHex(): String = "#%02X%02X%02X".format((red * 255).toInt(), (green * 255).toInt(), (blue * 255).toInt())
+fun Color.toRgb(): String = "(${(red * 255).toInt()},${(green * 255).toInt()},${(blue * 255).toInt()})"
+fun Color.toHsl(): String {
+    val r = red
+    val g = green
+    val b = blue
+    val max = maxOf(r, g, b)
+    val min = minOf(r, g, b)
+    var h = 0f
+    var s: Float
+    val l = (max + min) / 2f
+    if (max == min) {
+        h = 0f
+        s = 0f
+    } else {
+        val d = max - min
+        s = if (l > 0.5f) d / (2f - max - min) else d / (max + min)
+        h = when (max) {
+            r -> (g - b) / d + (if (g < b) 6 else 0)
+            g -> (b - r) / d + 2
+            else -> (r - g) / d + 4
+        }
+        h /= 6f
+    }
+    return "<%.0f,%.0f,%.0f>".format(h * 360, s * 100, l * 100)
+}

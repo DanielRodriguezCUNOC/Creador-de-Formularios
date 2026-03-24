@@ -11,7 +11,6 @@ import androidx.compose.ui.text.font.FontWeight
  * Utilidad de resaltado de sintaxis.
  *
  * Convierte un [String] de código en un [AnnotatedString] con colores
- * inspirados en el tema VS Code Dark+.
  *
  * Prioridad de tokens (de menor a mayor):
  *   números → tipos → palabras clave → cadenas → comentarios

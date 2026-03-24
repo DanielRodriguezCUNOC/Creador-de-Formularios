@@ -2,6 +2,7 @@ package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso
 
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.*
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Color
+import kotlin.math.abs
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.ComponenteSeccion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.ComponenteTabla
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.ComponenteTexto
@@ -11,6 +12,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.PreguntaSeleccionUnica
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_componente.PreguntaSeleccionadaMultiple
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoExpresion
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoListaExpresiones
 
 // Aliases para evitar conflicto de nombres entre nodos y modelos
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.PreguntaAbierta as ModeloPreguntaAbierta
@@ -182,52 +184,11 @@ class UiNodeBuilder(
                     } else if (evaluado != null) {
                         resultado.add(evaluado.toString())
                     }
-                } else if (item is String) {
-                    // Caso 3: soporte sencillo de comando textual:
-                    // "who_is_that_pokemon(NUMBER, 1, 10)" o "who_is_that_pokemon(1, 10)"
-                    val expandido = expandirComandoPokemon(item)
-                    if (expandido.isNotEmpty()) {
-                        for (nombrePokemon in expandido) {
-                            resultado.add(nombrePokemon)
-                        }
-                    } else {
-                        resultado.add(item)
-                    }
                 } else if (item != null) {
                     resultado.add(item.toString())
                 }
             }
             return resultado
-        }
-
-        return emptyList()
-    }
-
-    /**
-     * Expande un comando textual de pokémon a una lista de nombres.
-     * Si no coincide con el formato esperado, retorna lista vacía.
-     */
-    private fun expandirComandoPokemon(texto: String): List<String> {
-        val limpio = texto.trim()
-
-        // Formato con prefijo NUMBER:
-        // who_is_that_pokemon(NUMBER, 1, 10)
-        val r1 = Regex("""^who_is_that_pokemon\(\s*NUMBER\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$""", RegexOption.IGNORE_CASE)
-        val m1 = r1.find(limpio)
-        if (m1 != null) {
-            val inicio = m1.groupValues[1].toIntOrNull() ?: return emptyList()
-            val fin = m1.groupValues[2].toIntOrNull() ?: return emptyList()
-            return PokemonApiService.obtenerNombresEnRango(inicio, fin)
-        }
-
-        // Formato corto:
-        // who_is_that_pokemon(1, 10)
-        val r2 = Regex("""^who_is_that_pokemon\(\s*(\d+)\s*,\s*(\d+)\s*\)$""", RegexOption.IGNORE_CASE)
-        val m2 = r2.find(limpio)
-        if (m2 != null) {
-            val inicio = m2.groupValues[1].toIntOrNull() ?: return emptyList()
-            val fin = m2.groupValues[2].toIntOrNull() ?: return emptyList()
-            return PokemonApiService.obtenerNombresEnRango(inicio, fin)
         }
 
         return emptyList()
@@ -290,39 +251,113 @@ class UiNodeBuilder(
     }
 
     private fun parsearColor(valor: Any?): Color {
-        val str = when (valor) {
-            is NodoExpresion -> evaluarExpresion(valor)?.toString()
-            else -> valor?.toString()
-        } ?: return Color.defecto()
+        // Soporte para listas directas evaluadas (RGB/HSL dinámico)
+        if (valor is List<*>) {
+            return try {
+                val r = toInt(valor.getOrNull(0)) ?: 0
+                val g = toInt(valor.getOrNull(1)) ?: 0
+                val b = toInt(valor.getOrNull(2)) ?: 0
+                Color(r, g, b)
+            } catch (_: Exception) { Color.defecto() }
+        }
 
-        val s = str.trim()
+        val evaluado = if (valor is NodoExpresion) evaluarExpresion(valor) else valor
+        
+        // Si el resultado de la evaluación es una lista, re-procesar
+        if (evaluado is List<*>) return parsearColor(evaluado)
+        
+        val s = evaluado?.toString()?.trim() ?: return Color.defecto()
 
-        // Nombre de color (BLACK, PURPLE, SKY, etc.)
-        Color.desdeNombre(s)?.let { return it }
+        // --- RGB: (r, g, b) ---
+        if (s.startsWith("(") && s.endsWith(")")) {
+            return try {
+                val partes = s.substring(1, s.length - 1).split(",")
+                val r = partes[0].trim().toDouble().toInt().coerceIn(0, 255)
+                val g = partes[1].trim().toDouble().toInt().coerceIn(0, 255)
+                val b = partes[2].trim().toDouble().toInt().coerceIn(0, 255)
+                Color(r, g, b)
+            } catch (_: Exception) { Color.defecto() }
+        }
 
-        // Hexadecimal (#RGB, #RRGGBB, #RRGGBBAA)
-        Color.desdeHex(s)?.let { return it }
+        // --- HSL: <h, s, l> ---
+        if (s.startsWith("<") && s.endsWith(">")) {
+            return try {
+                val partes = s.substring(1, s.length - 1).split(",")
+                val h = partes[0].trim().toDouble().toInt()
+                val sl = partes[1].trim().toDouble().toInt()
+                val l = partes[2].trim().toDouble().toInt()
+                hslToRgb(h, sl, l)
+            } catch (_: Exception) { Color.defecto() }
+        }
 
-        // RGB/RGBA y variante corta (r,g,b)
-        val rgbNormalizado = if (s.startsWith("(") && s.endsWith(")")) "rgb$s" else s
-        Color.desdeRgb(rgbNormalizado)?.let { return it }
+        // --- HEX: #RRGGBB o #RGB ---
+        return try {
+            val hex = s.trimStart('#')
+            when (hex.length) {
+                3 -> {
+                    val r = hex.substring(0, 1).repeat(2).toInt(16)
+                    val g = hex.substring(1, 2).repeat(2).toInt(16)
+                    val b = hex.substring(2, 3).repeat(2).toInt(16)
+                    Color(r, g, b)
+                }
+                6 -> {
+                    val argb = (0xFF000000L or hex.toLong(16)).toInt()
+                    val r = (argb shr 16) and 0xFF
+                    val g = (argb shr 8) and 0xFF
+                    val b = argb and 0xFF
+                    Color(r, g, b)
+                }
+                8 -> {
+                    val argb = hex.toLong(16).toInt()
+                    val a = (argb shr 24) and 0xFF
+                    val r = (argb shr 16) and 0xFF
+                    val g = (argb shr 8) and 0xFF
+                    val b = argb and 0xFF
+                    Color(r, g, b, a)
+                }
+                else -> Color.desdeNombre(s) ?: Color.defecto()
+            }
+        } catch (_: Exception) {
+            Color.desdeNombre(s) ?: Color.defecto()
+        }
+    }
 
-        // HSL (hsl(h,s,l) o <h,s,l>)
-        Color.desdeHsl(s)?.let { return it }
-
-        return Color.defecto()
+    private fun hslToRgb(h: Int, s: Int, l: Int): Color {
+        val hf = h.toFloat()
+        val sf = s.toFloat() / 100f
+        val lf = l.toFloat() / 100f
+        val c = (1f - abs(2f * lf - 1f)) * sf
+        val x = c * (1f - abs((hf / 60f) % 2f - 1f))
+        val m = lf - c / 2f
+        var r1: Float
+        var g1: Float
+        var b1: Float
+        when {
+            hf < 60f -> { r1 = c; g1 = x; b1 = 0f }
+            hf < 120f -> { r1 = x; g1 = c; b1 = 0f }
+            hf < 180f -> { r1 = 0f; g1 = c; b1 = x }
+            hf < 240f -> { r1 = 0f; g1 = x; b1 = c }
+            hf < 300f -> { r1 = x; g1 = 0f; b1 = c }
+            else -> { r1 = c; g1 = 0f; b1 = x }
+        }
+        val r = ((r1 + m) * 255f).toInt().coerceIn(0, 255)
+        val g = ((g1 + m) * 255f).toInt().coerceIn(0, 255)
+        val b = ((b1 + m) * 255f).toInt().coerceIn(0, 255)
+        return Color(r, g, b)
     }
 
     private fun toDouble(v: Any?): Double? {
-        return when (v) {
-            is Double -> v
-            is Int -> v.toDouble()
-            is Float -> v.toDouble()
-            is Long -> v.toDouble()
-            is Number -> v.toDouble()
-            is String -> v.toDoubleOrNull()
-            else -> null
-        }
+        return try {
+            when (v) {
+                is Double -> v
+                is Int -> v.toDouble()
+                is Float -> v.toDouble()
+                is Long -> v.toDouble()
+                is Number -> v.toDouble()
+                is String -> v.toDoubleOrNull()
+                else -> null
+            }
+        } catch (_: Exception) { null }
     }
 
     private fun toFloat(v: Any?): Float? = toDouble(v)?.toFloat()
