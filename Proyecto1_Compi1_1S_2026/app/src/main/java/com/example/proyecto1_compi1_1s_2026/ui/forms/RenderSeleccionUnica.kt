@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.PreguntaSeleccionUnica
+import com.example.proyecto1_compi1_1s_2026.ui.util.EmojiUiUtils
 
 /**
  * Renderiza una [PreguntaSeleccionUnica] con su etiqueta y botones de radio.
@@ -27,7 +28,7 @@ fun RenderSeleccionUnica(pregunta: PreguntaSeleccionUnica) {
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Text(
-            text  = pregunta.label,
+            text  = EmojiUiUtils.decodificarParaPantalla(pregunta.label),
             style = pregunta.estilos.toTextStyle(),
             modifier = Modifier.padding(bottom = 2.dp)
         )
@@ -49,7 +50,8 @@ fun RenderSeleccionUnica(pregunta: PreguntaSeleccionUnica) {
                         )
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = opcion, style = pregunta.estilos.toTextStyle())
+                    Text(text = EmojiUiUtils.decodificarParaPantalla(opcion),
+                        style = pregunta.estilos.toTextStyle())
                 }
             }
         }

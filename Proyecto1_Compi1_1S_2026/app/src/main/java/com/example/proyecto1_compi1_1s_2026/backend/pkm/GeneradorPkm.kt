@@ -26,6 +26,8 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.NodoInstruccion
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_instruccion.NodoSentenciaIf
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_principal.Visitor
+import com.example.proyecto1_compi1_1s_2026.backend.pkm.PkmTextSanitizer
+
 
 // Genera el contenido base del archivo .pkm usando el AST validado.
 

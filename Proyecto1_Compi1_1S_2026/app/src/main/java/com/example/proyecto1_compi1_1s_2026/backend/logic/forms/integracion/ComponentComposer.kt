@@ -103,7 +103,19 @@ class ComponentComposer(
         return when (exp) {
             is NodoLiteral -> {
                 if (exp.tipo == "comodin") {
-                    siguienteParametro(state) ?: exp
+                    val param = siguienteParametro(state)
+                    if (param != null) {
+                        val valorEvaluado = evaluarExpresion(param as NodoExpresion)
+                        // Deducimos el tipo para crear un literal limpio basado en el resultado
+                        val tipoDeducido = when (valorEvaluado) {
+                            is Number -> "number"
+                            is Boolean -> "boolean"
+                            else -> "string"
+                        }
+                        NodoLiteral(valorEvaluado ?: "", tipoDeducido, exp.linea, exp.columna)
+                    } else {
+                        exp
+                    }
                 } else if (exp.tipo == "color" && exp.valor.toString().contains('?')) {
                     val reemplazado = reemplazarComodinesEnColor(exp.valor.toString(), state)
                     NodoLiteral(reemplazado, exp.tipo, exp.linea, exp.columna)
@@ -135,7 +147,6 @@ class ComponentComposer(
             else -> exp
         }
     }
-
     private fun reemplazarComodinesEnValor(valor: Any, state: WildcardState): Any {
         return when (valor) {
             is NodoExpresion -> reemplazarComodinesEnExpresion(valor, state)

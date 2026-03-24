@@ -247,9 +247,14 @@ ESPACIO = [ \t\r\n\f]+
     @\[:cat:\]           { return symbol(sym.EMOJI_CAT,     yytext()); }
     @\[:\^\^:\]        { return symbol(sym.EMOJI_CAT,     yytext()); }
 
-    // Estrella: @[:star:], @[:star:5:], @[:star-5:]
-    @\[:star:\]          { return symbol(sym.EMOJI_STAR,    yytext()); }
-    @\[:star[:\-][0-9]+:\] { return symbol(sym.EMOJI_STAR, yytext()); }
+    // Estrella estática simple: @[:star:]
+    @\[:star:\]         { return symbol(sym.EMOJI_STAR, yytext()); }
+    
+    // Estrella estática con guion o más: @[:star-5:] o @[:star+5:]
+    @\[:star([-+][^:]+):\] { return symbol(sym.EMOJI_STAR, yytext()); }
+    
+    // Estrella estática con dos puntos: @[:star:5:]
+    @\[:star:([^\]:]+):\] { return symbol(sym.EMOJI_STAR, yytext()); }
 
     // Cualquier especificación @[...] no reconocida se reporta como error.
     @\[[^\]\n]+\]      {

@@ -305,6 +305,6 @@ class Interprete(entornoActual: TablaSimbolos) : Visitor<Any?> {
 
     companion object {
         /** Límite de iteraciones para detectar bucles infinitos. */
-        private const val MAX_ITER = 1_000
+        private const val MAX_ITER = 10
     }
 }

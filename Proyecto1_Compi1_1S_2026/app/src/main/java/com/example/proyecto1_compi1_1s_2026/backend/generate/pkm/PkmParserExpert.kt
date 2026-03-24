@@ -5,8 +5,8 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Color
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.ElementoFormulario
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.EstiloElemento
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
-import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.PkmTextSanitizer
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoError
+import com.example.proyecto1_compi1_1s_2026.backend.pkm.PkmTextSanitizer
 
 /**
  * Encapsula conversiones y validaciones semanticas usadas por el parser PKM.
@@ -65,8 +65,7 @@ class PkmParserExpert(
         if (texto == null) return ""
         val raw = texto.toString()
         val desescapado = sanitizer.desescaparCadena(raw)
-        val reparado = sanitizer.normalizarMojibake(desescapado)
-        return sanitizer.restaurarEmojisDesdePkm(reparado)
+        return sanitizer.restaurarEmojisDesdePkm(desescapado)
     }
 
     fun normalizarIndice(indice: Int, opciones: List<*>?, campo: String): Int? {

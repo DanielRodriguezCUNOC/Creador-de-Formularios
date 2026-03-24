@@ -20,96 +20,79 @@ class NodoCicloFor(
     override fun <T> accept(visitor: Visitor<T>): T = visitor.visit(this)
 
     override fun validarSemantica(contexto: ContextoSemantico) {
-        rangoFin.validarSemantica(contexto)
-        rangoInicio?.validarSemantica(contexto)
-        incremento?.validarSemantica(contexto)
 
-        val tipoInicio = rangoInicio?.inferirTipo(contexto)
-        val tipoFin = rangoFin.inferirTipo(contexto)
+    val entornoPrevio = contexto.entornoActual
+    try {
+        //* Crear el nuevo entorno del FOR
+        val entornoFor = TablaSimbolos(entornoPrevio)
+        contexto.entornoActual = entornoFor
 
         if (!esImperativo) {
             val nombreVariable = idVariable
             if (nombreVariable == null || rangoInicio == null) {
-                contexto.reportarError(
-                    "FOR clásico inválido: faltan variable o rango inicial",
-                    linea,
-                    columna
-                )
+                contexto.reportarError("FOR clásico inválido: faltan variable o rango inicial", linea, columna)
                 return
             }
 
-            val tipoExistente = contexto.entornoActual.obtenerTipo(nombreVariable)
+            //*  Aplicar la regla: verificar si ya existe y es distinto de number
+            val tipoExistente = entornoFor.obtenerTipo(nombreVariable)
             if (tipoExistente != null && tipoExistente != "number") {
-                contexto.reportarError(
-                    "La variable '$nombreVariable' del FOR ya existe y no es de tipo number",
-                    linea,
-                    columna
-                )
+                contexto.reportarError("La variable '$nombreVariable' del FOR ya existe y no es de tipo number", linea, columna)
+            } else if (tipoExistente == null) {
+                // Declaración implícita en el entorno del For
+                entornoFor.almacenarVariable(nombreVariable, 0.0, "number")
             }
 
-            // FOR clásica: inicio..fin debe ser number
+            //* AHORA validamos los rangos (ya estamos en el contexto donde 'i' existe)
+            rangoInicio.validarSemantica(contexto)
+            rangoFin.validarSemantica(contexto)
+
+            val tipoInicio = rangoInicio.inferirTipo(contexto)
+            val tipoFin = rangoFin.inferirTipo(contexto)
+
             if (tipoInicio != "number" || tipoFin != "number") {
-                contexto.reportarError(
-                    "Los rangos del FOR deben ser números",
-                    linea,
-                    columna
-                )
+                contexto.reportarError("Los rangos del FOR deben ser números", linea, columna)
             }
+
         } else {
+            //* FOR Imperativo
             if (inicializacionImperativa == null || actualizacionImperativa == null) {
-                contexto.reportarError(
-                    "El FOR imperativo requiere instrucción de inicialización y actualización",
-                    linea,
-                    columna
-                )
+                contexto.reportarError("El FOR imperativo requiere instrucción de inicialización y actualización", linea, columna)
+                return
             }
-        }
 
-        val entornoPrevio = contexto.entornoActual
-        try {
-            val entornoFor = TablaSimbolos(entornoPrevio)
-            contexto.entornoActual = entornoFor
+            if (inicializacionImperativa is NodoAsignacion) {
+                val nombreVariable = inicializacionImperativa.id
+                val tipoExistente = entornoFor.obtenerTipo(nombreVariable)
 
-            if (!esImperativo && idVariable != null) {
-                entornoFor.almacenarVariable(idVariable, 0.0, "number")
-            } else {
-                if (inicializacionImperativa is NodoAsignacion) {
-                    val nombreVariable = inicializacionImperativa.id
-                    val tipoExistente = entornoFor.obtenerTipo(nombreVariable)
-
-                    if (tipoExistente == null) {
-                        // Regla del enunciado: en FOR se asume declaración implícita number.
-                        entornoFor.almacenarVariable(nombreVariable, 0.0, "number")
-                    } else if (tipoExistente != "number") {
-                        contexto.reportarError(
-                            "La variable '$nombreVariable' del FOR ya existe y no es de tipo number",
-                            linea,
-                            columna
-                        )
-                    }
-                }
-
-                inicializacionImperativa?.validarSemantica(contexto)
-
-                val tipoCondicionImperativa = rangoFin.inferirTipo(contexto)
-                if (tipoCondicionImperativa != "boolean") {
-                    contexto.reportarError(
-                        "La condición del FOR imperativo debe ser booleana",
-                        linea,
-                        columna
-                    )
+                if (tipoExistente == null) {
+                    //* Se asume declaración implícita number.
+                    entornoFor.almacenarVariable(nombreVariable, 0.0, "number")
+                } else if (tipoExistente != "number") {
+                    contexto.reportarError("La variable '$nombreVariable' del FOR ya existe y no es de tipo number", linea, columna)
                 }
             }
 
-            for (instruccion in instruccionesFor) {
-                instruccion.validarSemantica(contexto)
-            }
+            //*  validamos inicialización, condición y actualización de forma segura
+            inicializacionImperativa.validarSemantica(contexto)
+            rangoFin.validarSemantica(contexto)    
+            //* Validar condición */     
+            actualizacionImperativa.validarSemantica(contexto) 
 
-            if (esImperativo) {
-                actualizacionImperativa?.validarSemantica(contexto)
+            val tipoCondicionImperativa = rangoFin.inferirTipo(contexto)
+            if (tipoCondicionImperativa != "boolean") {
+                contexto.reportarError("La condición del FOR imperativo debe ser booleana", linea, columna)
             }
-        } finally {
-            contexto.entornoActual = entornoPrevio
         }
+
+        //* Finalmente, validamos el bloque de instrucciones internas
+        for (instruccion in instruccionesFor) {
+            instruccion.validarSemantica(contexto)
+        }
+
+    } finally {
+        //*Restaurar el scope padre siempre
+        contexto.entornoActual = entornoPrevio
     }
+}
 }

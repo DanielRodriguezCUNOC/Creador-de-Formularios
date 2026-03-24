@@ -6,6 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.PreguntaDesplegable
+import com.example.proyecto1_compi1_1s_2026.ui.util.EmojiUiUtils
 
 /**
  * Renderiza una [PreguntaDesplegable] con su etiqueta y un menú desplegable.
@@ -28,7 +29,7 @@ fun RenderPreguntaDesplegable(pregunta: PreguntaDesplegable) {
         verticalArrangement = Arrangement.spacedBy(FormularioConstants.SPACING_VERTICAL)
     ) {
         Text(
-            text  = pregunta.label,
+            text  = EmojiUiUtils.decodificarParaPantalla(pregunta.label),
             style = pregunta.estilos.toTextStyle()
         )
 
@@ -63,7 +64,8 @@ fun RenderPreguntaDesplegable(pregunta: PreguntaDesplegable) {
             ) {
                 pregunta.opciones.forEachIndexed { index, opcion ->
                     DropdownMenuItem(
-                        text    = { Text(opcion, style = pregunta.estilos.toTextStyle()) },
+                        text    = { Text(text = EmojiUiUtils.decodificarParaPantalla(opcion),
+                            style = pregunta.estilos.toTextStyle()) },
                         colors = MenuDefaults.itemColors(
                             textColor = textColor
                         ),
