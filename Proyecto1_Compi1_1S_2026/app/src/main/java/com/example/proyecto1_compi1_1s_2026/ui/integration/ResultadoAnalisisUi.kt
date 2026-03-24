@@ -1,5 +1,8 @@
 package com.example.proyecto1_compi1_1s_2026.ui.integration
 
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
+
 
 data class ResultadoAnalisisUi(
     val formulario: Formulario? = null,

@@ -15,6 +15,7 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoErro
 %cup
 %line
 %column
+%char
 %state STRING
 %eofval{
     return symbol(sym.EOF, "<EOF>");
@@ -29,6 +30,28 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TipoErro
     
     public List<ErrorInfo> getLexicalErrors(){
         return this.errorList;
+    }
+
+ public static List<TokenInfo> analizar(String codigo) {
+        List<TokenInfo> tokens = new ArrayList<>();
+        LexerFormulario lexer = new LexerFormulario(new StringReader(codigo));
+        
+        Symbol tokenActual; 
+        
+        try {
+            while ((tokenActual = lexer.next_token()).sym != sym.EOF) {
+                tokens.add(new TokenInfo(
+                    tokenActual.sym,
+                    tokenActual.value != null ? tokenActual.value.toString() : lexer.yytext(),
+                    (int) lexer.yychar,
+                    (int) lexer.yychar + lexer.yylength()
+                ));   
+            }
+        } catch (Exception e) {
+            
+            lexer.getLexicalErrors().add(new ErrorInfo(TipoError.LEXICO, "Error al analizar: " + e.getMessage(), 0, 0));
+        }
+        return tokens;
     }
 
      //-----------------------------------------------
@@ -253,11 +276,8 @@ ESPACIO = [ \t\r\n\f]+
     // Estrella estática simple: @[:star:]
     @\[:star:\]         { return symbol(sym.EMOJI_STAR, yytext()); }
     
-    // Estrella estática con guion o más: @[:star-5:] o @[:star+5:]
-    @\[:star([-+][^:]+):\] { return symbol(sym.EMOJI_STAR, yytext()); }
-    
-    // Estrella estática con dos puntos: @[:star:5:]
-    @\[:star:([^\]:]+):\] { return symbol(sym.EMOJI_STAR, yytext()); }
+    // Acepta @[:star:5:], @[:star-5:], @[:star+5:], @[:star-999:], etc.
+    @\[:star(:|-|\+){DIGITO}+:\] { return symbol(sym.EMOJI_STAR, yytext()); }
 
     // Cualquier especificación @[...] no reconocida se reporta como error.
     @\[[^\]\n]+\]      {

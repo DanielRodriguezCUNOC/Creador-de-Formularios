@@ -9,7 +9,6 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -29,6 +28,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.LexerFormulario
+import com.example.proyecto1_compi1_1s_2026.backend.generate.forms.TokenInfo
+import kotlinx.coroutines.Dispatchers
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.models.Formulario
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.ErrorInfo
 import com.example.proyecto1_compi1_1s_2026.ui.forms.FormularioRenderer
@@ -37,6 +39,7 @@ import com.example.proyecto1_compi1_1s_2026.ui.integration.ResultadoAnalisisUi
 import com.example.proyecto1_compi1_1s_2026.ui.util.bloquesDisponibles
 import com.example.proyecto1_compi1_1s_2026.ui.util.ColorPickerDialog
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -74,7 +77,8 @@ fun MainScreen(
     val context = LocalContext.current
     val bloquesDisponibles = remember { bloquesDisponibles }
 
-    fun aplicarResultado(resultado: ResultadoAnalisisUi, navegarAlFormulario: Boolean) {
+    // Función normal (no @Composable) para procesar el evento del clic y actualizar el estado
+    val aplicarResultado: (ResultadoAnalisisUi, Boolean) -> Unit = { resultado, navegarAlFormulario ->
         erroresLexicos = resultado.erroresLexicos
         erroresSintacticos = resultado.erroresSintacticos
         erroresSemanticos = resultado.erroresSemanticos
@@ -82,62 +86,33 @@ fun MainScreen(
         if (resultado.exitoso) {
             onFormularioActualChange(resultado.formulario)
             onMostrarFormularioChange(true)
-                    if (mostrarFormulario && formularioActual != null) {
-                        // ── Formulario construido ────────────────────────────
-                        FormularioRenderer(
-                            formulario = formularioActual!!,
-                            onEnviar   = {
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        message  = "Formulario enviado",
-                                        duration = SnackbarDuration.Short
-                                    )
-                                }
-                            }
-                        )
-                    } else {
-                        // ── Vista previa con resaltado de sintaxis usando el lexer ───────────
-                        val verticalScroll  = rememberScrollState()
-                        val horizontalScroll = rememberScrollState()
-                        val tokens = remember(editorValue.text) {
-                            LexerFormulario.analizar(editorValue.text)
-                        }
-                        Text(
-                            text = LexerSyntaxHighlighter.highlightWithTokens(editorValue.text, tokens),
-                            style = TextStyle(
-                                fontFamily = FontFamily.Monospace,
-                                fontSize   = 14.sp,
-                                color      = LexerSyntaxHighlighter.colorDefault,
-                                lineHeight = 22.sp
-                            ),
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .verticalScroll(verticalScroll)
-                                .horizontalScroll(horizontalScroll)
-                                .padding(12.dp)
-                        )
+            
+            if (navegarAlFormulario) {
+                formularioPendienteFinalizar = resultado.formulario
                 pkmPendienteFinalizar = resultado.codigoPkm
                 mostrarDialogoGuardarDb = true
             }
-            return
-        }
+        } else {
+            onFormularioActualChange(null)
+            onMostrarFormularioChange(false)
+            onCodigoPkmGenerado("")
+            tipoMensaje = "error"
 
-        onFormularioActualChange(null)
-        onMostrarFormularioChange(false)
-        onCodigoPkmGenerado("")
-        tipoMensaje = "error"
+            val primerError = resultado.primerError
+            val todosLosErrores = resultado.errores
 
-        val primerError = resultado.primerError
-        val todosLosErrores = resultado.errores
-
-        coroutineScope.launch {
-            val resultadoSnackbar = snackbarHostState.showSnackbar(
-                message = primerError?.toDetailedString() ?: "Errores encontrados",
-                actionLabel = "Ver Todos",
-                duration = SnackbarDuration.Long
-            )
-            if (resultadoSnackbar == SnackbarResult.ActionPerformed) {
-                onViewErrors(todosLosErrores)
+            if (primerError != null) {
+                // Lanzar la corrutina para mostrar el Snackbar sin necesitar un LaunchedEffect
+                coroutineScope.launch {
+                    val resultadoSnackbar = snackbarHostState.showSnackbar(
+                        message = primerError.toDetailedString() ?: "Errores encontrados",
+                        actionLabel = "Ver Todos",
+                        duration = SnackbarDuration.Long
+                    )
+                    if (resultadoSnackbar == SnackbarResult.ActionPerformed) {
+                        onViewErrors(todosLosErrores)
+                    }
+                }
             }
         }
     }
@@ -190,41 +165,76 @@ fun MainScreen(
                         shape = RoundedCornerShape(8.dp)
                     )
                     .background(
-                        if (mostrarFormulario) Color.White else SyntaxHighlighter.bgColor,
+                        if (mostrarFormulario) Color.White else LexerSyntaxHighlighter.colorBackground,
                         RoundedCornerShape(8.dp)
                     )
             ) {
                 if (mostrarFormulario && formularioActual != null) {
                     // ── Formulario construido ────────────────────────────
+                    var mostrarSnackbar by remember { mutableStateOf(false) }
                     FormularioRenderer(
                         formulario = formularioActual!!,
-                        onEnviar   = {
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar(
-                                    message  = "Formulario enviado",
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
-                        }
+                        onEnviar   = { mostrarSnackbar = true }
                     )
+                    if (mostrarSnackbar) {
+                        LaunchedEffect(mostrarSnackbar) {
+                            snackbarHostState.showSnackbar(
+                                message  = "Formulario enviado",
+                                duration = SnackbarDuration.Short
+                            )
+                            mostrarSnackbar = false
+                        }
+                    }
                 } else {
                     // ── Vista previa con resaltado de sintaxis ───────────
                     val verticalScroll  = rememberScrollState()
                     val horizontalScroll = rememberScrollState()
-                    Text(
-                        text = SyntaxHighlighter.highlight(editorValue.text),
-                        style = TextStyle(
-                            fontFamily = FontFamily.Monospace,
-                            fontSize   = 14.sp,
-                            color      = SyntaxHighlighter.textColor,
-                            lineHeight = 22.sp
-                        ),
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(verticalScroll)
-                            .horizontalScroll(horizontalScroll)
-                            .padding(12.dp)
-                    )
+                    var tokens by remember(editorValue.text) { mutableStateOf<List<TokenInfo>?>(null) }
+                    var analizando by remember(editorValue.text) { mutableStateOf(true) }
+
+                    LaunchedEffect(editorValue.text) {
+                        analizando = true
+                        tokens = try {
+                            withContext(Dispatchers.Default) {
+                                LexerFormulario.analizar(editorValue.text)
+                            }
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
+                        analizando = false
+                    }
+
+                    if (analizando) {
+                        Text(
+                            text = editorValue.text,
+                            style = TextStyle(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize   = 14.sp,
+                                color      = LexerSyntaxHighlighter.colorDefault,
+                                lineHeight = 22.sp
+                            ),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(verticalScroll)
+                                .horizontalScroll(horizontalScroll)
+                                .padding(12.dp)
+                        )
+                    } else {
+                        Text(
+                            text = LexerSyntaxHighlighter.highlight(editorValue.text, tokens),
+                            style = TextStyle(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize   = 14.sp,
+                                color      = LexerSyntaxHighlighter.colorDefault,
+                                lineHeight = 22.sp
+                            ),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(verticalScroll)
+                                .horizontalScroll(horizontalScroll)
+                                .padding(12.dp)
+                        )
+                    }
                 }
             }
 
@@ -232,13 +242,7 @@ fun MainScreen(
             OutlinedTextField(
                 value = editorValue,
                 onValueChange = { newValue ->
-                    onEditorValueChange(
-                        TextFieldValue(
-                        annotatedString = SyntaxHighlighter.highlight(newValue.text),
-                        selection = newValue.selection,
-                        composition = newValue.composition
-                    )
-                    )
+                    onEditorValueChange(newValue)
                     tipoMensaje = ""
                     onMostrarFormularioChange(false)
                     onCodigoPkmGenerado("")
@@ -253,13 +257,13 @@ fun MainScreen(
                     fontSize = 14.sp
                 ),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = SyntaxHighlighter.bgColor,
-                    unfocusedContainerColor = SyntaxHighlighter.bgColor,
-                    focusedTextColor = SyntaxHighlighter.textColor,
-                    unfocusedTextColor = SyntaxHighlighter.textColor,
+                    focusedContainerColor = LexerSyntaxHighlighter.colorDefault,
+                    unfocusedContainerColor = LexerSyntaxHighlighter.colorDefault,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
                     focusedBorderColor = Color(0xFF569CD6),
                     unfocusedBorderColor = Color(0xFF404040),
-                    cursorColor = Color.White,
+                    cursorColor = Color.Black,
                     focusedLabelColor = Color(0xFF9CDCFE),
                     unfocusedLabelColor = Color(0xFF6E7681)
                 ),
@@ -289,7 +293,7 @@ fun MainScreen(
                 Button(
                     onClick = {
                         val resultado = coordinator.analizar(editorValue.text)
-                        aplicarResultado(resultado, navegarAlFormulario = true)
+                        aplicarResultado(resultado, true)
                     },
                     modifier = Modifier.weight(1f)
                 ) {
@@ -299,7 +303,7 @@ fun MainScreen(
                 Button(
                     onClick = {
                         val resultado = coordinator.analizar(editorValue.text)
-                        aplicarResultado(resultado, navegarAlFormulario = false)
+                        aplicarResultado(resultado, false)
                     },
                     modifier = Modifier.weight(1f)
                 ) {
@@ -314,7 +318,6 @@ fun MainScreen(
         ColorPickerDialog(
             onDismiss = { mostrarDialogoColor = false },
             onColorSelected = { colorString ->
-                // Insertar el color en la posición del cursor
                 val cursor = editorValue.selection.start
                 val textoAntes = editorValue.text.substring(0, cursor)
                 val textoDespues = editorValue.text.substring(cursor)
@@ -330,7 +333,6 @@ fun MainScreen(
         )
     }
 
-    //* Permite que el usuario pueda seleccionar un elemento para agregar al editor
     if (mostrarDialogoAgregar) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoAgregar = false },
@@ -340,7 +342,6 @@ fun MainScreen(
                     bloquesDisponibles.forEach { bloque ->
                         Button(
                             onClick = {
-                                // Inserta el bloque en la posición del cursor
                                 val cursor = editorValue.selection.start
                                 val textoAntes = editorValue.text.substring(0, cursor)
                                 val textoDespues = editorValue.text.substring(cursor)
@@ -369,9 +370,6 @@ fun MainScreen(
             }
         )
     }
-
-
-
 
     if (mostrarDialogoGuardarDb && formularioPendienteFinalizar != null) {
         AlertDialog(
@@ -467,7 +465,7 @@ fun MainScreen(
     }
 }
 
-
+// Funciones utilitarias (sin cambios)
 private data class ResultadoGuardadoPkm(
     val exitoso: Boolean,
     val rutaMostrada: String,

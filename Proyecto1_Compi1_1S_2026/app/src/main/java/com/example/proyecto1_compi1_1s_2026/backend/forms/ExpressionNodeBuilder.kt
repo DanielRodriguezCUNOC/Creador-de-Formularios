@@ -1,4 +1,4 @@
-package com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso
+package com.example.proyecto1_compi1_1s_2026.backend.forms
 
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoAccesoVariable
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoExpresion
@@ -6,6 +6,8 @@ import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.N
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoLlamadaApi
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoOperacionBinaria
 import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.nodo_expresion.NodoOperacionUnaria
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.PokemonApiService
+import com.example.proyecto1_compi1_1s_2026.backend.logic.forms.proceso.TablaSimbolos
 import kotlin.math.pow
 
 class ExpressionNodeBuilder(
